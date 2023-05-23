@@ -25,8 +25,8 @@ abstract class IKEPayload {
 abstract class SAPayload : IKEPayload() {
     override val typeByte = 33
 
-    protected fun transformStruct(isLast: Boolean, transformType: Int, transformId: Int): ByteArray {
-        val length = 8
+    protected fun transformStruct(isLast: Boolean, transformType: Int, transformId: Int, data: ByteArray = byteArrayOf()): ByteArray {
+        val length = 8 + data.size
         val lastSubstruct = if (isLast) 0x00 else 0x03
         val buf = ByteBuffer.allocate(length)
         buf.put(lastSubstruct.toByte()) // last substruct?
@@ -35,6 +35,7 @@ abstract class SAPayload : IKEPayload() {
         buf.put(transformType.toByte()) // transform type
         buf.put(0) // reserved
         buf.putShort(transformId.toShort()) // transform id
+        buf.put(data)
         return buf.array()
     }
 }
@@ -62,9 +63,10 @@ class ESPSAPayload(espSpi: ByteArray) : SAPayload() {
     override val payload: ByteArray
 
     init {
-        val buf = ByteBuffer.allocate(28)
+        val length = 28 + 4 // 4 extra bytes for AES keylen
+        val buf = ByteBuffer.allocate(length)
         buf.putShort(0) // last substruct, reserved
-        buf.putShort(28) // length
+        buf.putShort(length.toShort()) // length
         buf.put(1) // proposal num
         buf.put(3) // protocol ESP
         buf.put(4) // spi size (4 bytes)
@@ -72,9 +74,10 @@ class ESPSAPayload(espSpi: ByteArray) : SAPayload() {
         buf.put(espSpi.sliceArray(0 until 4)) // ESP SPI should always be 4 bytes but let's be safe
 
         // Note: In the wild, watch and phone negotiate ENCR_CHACHA20_POLY1305_IIV, but android has no support for implicit IVs
-        // so if we want to have any hope of speaking with the watch, we have to negotiate the non-IIV version instead
+        // so if we want to have any hope of speaking with the watch, we have to negotiate something else
         //buf.put(transformStruct(false, 1, 0x1f)) // Encryption Algorithm: ENCR_CHACHA20_POLY1305_IIV (note implicit IV!)
-        buf.put(transformStruct(false, 1, 0x1c)) // Encryption Algorithm: ENCR_CHACHA20_POLY1305
+        //buf.put(transformStruct(false, 1, 0x1c)) // Encryption Algorithm: ENCR_CHACHA20_POLY1305
+        buf.put(transformStruct(false, 1, 0x14, "800e0100".hexBytes())) // ENCR_AES_GCM_16 with 256bit keys
 
         buf.put(transformStruct(true, 5, 0x00)) // Extended Sequence Numbers: disabled
         payload = buf.array()

@@ -18,7 +18,7 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
 
     private val responderSPI = randomBytes(8)
     private var nextMsgId = 0
-    private var isClassC = true // we'll set this to the correct value before we ever need it
+    private var dataProtectionClass = 0 // we'll set this to the correct value before we ever need it
 
     private val cryptoValues = mutableMapOf<String, ByteArray>()
     private val x25519LocalKeys: AsymmetricCipherKeyPair
@@ -175,7 +175,13 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
             }
             "IDinit" -> {
                 cryptoValues["IDi"] = data
-                isClassC = data.toString(Charsets.UTF_8).endsWith("classC")
+                val idStr = data.toString(Charsets.UTF_8)
+                dataProtectionClass = when(idStr.last()) {
+                    'A' -> 1
+                    'C' -> 3
+                    'D' -> 4
+                    else -> throw Exception("Unknown data protection class: $idStr")
+                }
             }
             "IDresp" -> {
                 cryptoValues["IDr"] = data
@@ -213,7 +219,7 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
                 //print("AUTH -> asn1: ${asn1.hex()} sig: ${sig.sliceArray(0 until 8).hex()}...")
             }
             "SA" -> {
-                //log("-> SA")
+                log("-> SA")
                 var remainingData = data
                 while(remainingData.isNotEmpty()) {
                     val proposalLen = UInt.fromBytesBig(remainingData.sliceArray(2 until 4)).toInt()
@@ -332,10 +338,12 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
             cryptoValues["skpr"]!!,
             cryptoValues["IDr"]!!
         )
-        val key =
-            if (isClassC) LongTermKeys.getEd25519PrivateKey(LongTermKeys.PRIVATE_CLASS_C) else LongTermKeys.getEd25519PrivateKey(
-                LongTermKeys.PRIVATE_CLASS_D
-            )
+
+        val key = when(dataProtectionClass) {
+            1 -> LongTermKeys.getEd25519PrivateKey(LongTermKeys.PRIVATE_CLASS_A)
+            3 -> LongTermKeys.getEd25519PrivateKey(LongTermKeys.PRIVATE_CLASS_C)
+            else -> LongTermKeys.getEd25519PrivateKey(LongTermKeys.PRIVATE_CLASS_D)
+        }
 
         val signer = Ed25519Signer()
         signer.init(true, key)
@@ -346,7 +354,12 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
 
     private fun verifyAuthSignature(sig: ByteArray) {
         val signedBytes = cryptoValues["peerSAinit"]!! + cryptoValues["nr"]!! + Utils.HMAC(cryptoValues["skpi"]!!, cryptoValues["IDi"]!!)
-        val key = if(isClassC) LongTermKeys.getEd25519PublicKey(LongTermKeys.PUBLIC_CLASS_C) else LongTermKeys.getEd25519PublicKey(LongTermKeys.PUBLIC_CLASS_D)
+
+        val key = when(dataProtectionClass) {
+            1 -> LongTermKeys.getEd25519PublicKey(LongTermKeys.PUBLIC_CLASS_A)
+            3 -> LongTermKeys.getEd25519PublicKey(LongTermKeys.PUBLIC_CLASS_C)
+            else -> LongTermKeys.getEd25519PublicKey(LongTermKeys.PUBLIC_CLASS_D)
+        }
 
         val verifier = Ed25519Signer()
         verifier.init(false, key)

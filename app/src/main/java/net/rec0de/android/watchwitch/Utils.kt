@@ -1,19 +1,22 @@
 package net.rec0de.android.watchwitch
 
-import org.bouncycastle.crypto.digests.SHA256Digest
 import org.bouncycastle.crypto.digests.SHA512Digest
 import org.bouncycastle.crypto.modes.ChaCha20Poly1305
 import org.bouncycastle.crypto.params.AEADParameters
 import org.bouncycastle.crypto.params.KeyParameter
+import java.net.Inet4Address
+import java.net.InetAddress
 import java.net.NetworkInterface
 
 
 object Utils {
-    fun getLocalIP(): String {
+    fun getLocalIP(): String = getLocalInetAddr().hostAddress!!
+
+    private fun getLocalInetAddr(): InetAddress {
         val interfaces = NetworkInterface.getNetworkInterfaces()
 
         val ips = interfaces.toList().flatMap { ni ->
-            ni.inetAddresses.toList().filter { !it.isLoopbackAddress && !it.isLinkLocalAddress && it.isSiteLocalAddress }.map{ it.hostAddress }
+            ni.inetAddresses.toList().filter { !it.isLoopbackAddress && !it.isLinkLocalAddress && it.isSiteLocalAddress && it is Inet4Address }
         }
 
         return ips.first()
