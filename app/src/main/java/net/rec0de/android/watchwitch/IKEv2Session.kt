@@ -74,6 +74,8 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
                 cryptoValues["ownSAinit"] = reply
             }
             "AUTH" -> {
+                if(!sessionKeysReady)
+                    return
                 val reply = replyToAuth()
                 val packet = DatagramPacket(reply, reply.size, sourceAddress, sourcePort)
                 socket.send(packet)
@@ -81,6 +83,8 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
                 println(reply.hex())
             }
             "INFO" -> {
+                if(!sessionKeysReady)
+                    return
                 val reply = replyToHeartbeat()
                 val packet = DatagramPacket(reply, reply.size, sourceAddress, sourcePort)
                 socket.send(packet)
@@ -168,7 +172,8 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
                     if(protocol == 0x03) { // ESP
                         val spiSize = proposal[6].toInt()
                         val spi = proposal.sliceArray(8 until 8+spiSize)
-                        cryptoValues["spiI"] = spi
+                        cryptoValues["espSPIi"] = spi
+                        createTunnelIfReady()
                     }
                     remainingData = remainingData.fromIndex(proposalLen)
                 }
@@ -331,6 +336,25 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
 
         //log("DERIVED KEY MATERIAL")
         sessionKeysReady = true
+
+        createTunnelIfReady()
+    }
+
+    private fun createTunnelIfReady() {
+        if(!sessionKeysReady || !cryptoValues.containsKey("espSPIi") || !cryptoValues.containsKey("espSPIr"))
+            return
+
+        val remoteAddrKey = if(dataProtectionClass == 3) LongTermKeys.REMOTE_ADDRESS_CLASS_C else LongTermKeys.REMOTE_ADDRESS_CLASS_D
+        val localAddrKey = if(dataProtectionClass == 3) LongTermKeys.LOCAL_ADDRESS_CLASS_C else LongTermKeys.LOCAL_ADDRESS_CLASS_D
+        val remoteV6 = LongTermKeys.getAddress(remoteAddrKey)!!
+        val localV6 = LongTermKeys.getAddress(localAddrKey)!!
+
+        // ip xfrm expects key and salt material in a single bytestring
+        val ki = cryptoValues["espKeyI"]!! + cryptoValues["espSaltI"]!!
+        val kr = cryptoValues["espKeyR"]!! + cryptoValues["espSaltR"]!!
+
+        val thread = TunnelBuilder(sourceAddress.hostAddress!!, localV6, remoteV6, cryptoValues["espSPIi"]!!, cryptoValues["espSPIr"]!!, ki, kr)
+        thread.start()
     }
 
     private fun generateAuthSignature(): ByteArray {

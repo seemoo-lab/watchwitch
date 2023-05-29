@@ -37,7 +37,7 @@ class UDPHandler(private val main: MainActivity, private val serverPort: Int) : 
 
                 IKEDispatcher.dispatch(packet, socket, main)
 
-                main.runOnUiThread { main.logData("rcv on $serverPort") }
+                //main.runOnUiThread { main.logData("rcv on $serverPort") }
             }
         } catch (e: Throwable) {
             e.printStackTrace()

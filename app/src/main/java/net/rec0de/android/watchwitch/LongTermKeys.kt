@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
-import java.lang.Exception
 
 @SuppressLint("StaticFieldLeak")
 object LongTermKeys {

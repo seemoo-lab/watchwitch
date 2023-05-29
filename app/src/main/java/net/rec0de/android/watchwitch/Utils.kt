@@ -10,17 +10,7 @@ import java.net.NetworkInterface
 
 
 object Utils {
-    fun getLocalIP(): String = getLocalInetAddr().hostAddress!!
-
-    private fun getLocalInetAddr(): InetAddress {
-        val interfaces = NetworkInterface.getNetworkInterfaces()
-
-        val ips = interfaces.toList().flatMap { ni ->
-            ni.inetAddresses.toList().filter { !it.isLoopbackAddress && !it.isLinkLocalAddress && it.isSiteLocalAddress && it is Inet4Address }
-        }
-
-        return ips.first()
-    }
+    fun getLocalIP(): String = RoutingManager.getLocalIPv4Address().hostAddress!!
 
     fun HMAC(k: ByteArray, v: ByteArray): ByteArray {
         val hmac = org.bouncycastle.crypto.macs.HMac(SHA512Digest())

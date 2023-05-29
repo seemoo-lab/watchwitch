@@ -56,6 +56,7 @@ class KeyReceiver(private val main: MainActivity) : Thread() {
                 if(map.containsKey("rad"))
                     LongTermKeys.setAddress(LongTermKeys.REMOTE_ADDRESS_CLASS_D, map["rad"]!!)
 
+                RoutingManager.registerAddresses()
                 main.runOnUiThread { main.logData("got keys! $map") }
             }
         } catch (e: Throwable) {

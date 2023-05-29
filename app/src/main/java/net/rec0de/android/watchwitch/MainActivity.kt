@@ -1,9 +1,12 @@
 package net.rec0de.android.watchwitch
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class MainActivity : AppCompatActivity() {
     private lateinit var statusLabel: TextView
@@ -21,12 +24,11 @@ class MainActivity : AppCompatActivity() {
         val serverToggle: Switch = findViewById(R.id.swToggleServer)
 
         serverToggle.setOnCheckedChangeListener { _, isChecked ->
-            if(isChecked) {
+            if (isChecked) {
                 statusLabel.text = "starting..."
                 udpHandler = UDPHandler(this, 5000)
                 udpHandler!!.start()
-            }
-            else {
+            } else {
                 statusLabel.text = "stopping..."
                 udpHandler?.kill()
             }
@@ -37,7 +39,20 @@ class MainActivity : AppCompatActivity() {
         val keyReceiver = KeyReceiver(this)
         keyReceiver.start()
 
+        AddressAllocator().start()
+        RoutingManager.startup()
 
+        /*RoutingManager.createTunnel(
+            "192.168.133.25",
+            LongTermKeys.getAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_C)!!,
+            LongTermKeys.getAddress(LongTermKeys.REMOTE_ADDRESS_CLASS_C)!!,
+            "c0c0da7e".hexBytes(),
+            "cafeda7e".hexBytes(),
+            "288cc9beaacff22d53668df8bba37bd1f905b229a8b9204c8311eabb749abe6bc0c0c0c0".hexBytes(),
+            "288cc9beaacff22d53668df8bba37bd1f905b229a8b9204c8311eabb749abe6bcafecafe".hexBytes()
+        )*/
+
+        startForegroundService(Intent(applicationContext, TcpServerService::class.java))
     }
 
     fun logData(data: String) {
