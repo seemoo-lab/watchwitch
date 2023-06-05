@@ -15,7 +15,7 @@ object RoutingManager {
 
     fun startup() {
         Logger.logCmd("Clearing ip xfrm states & policies", 0)
-        exec(listOf("ip xfrm state deleteall", "ip xfrm policy deletall"))
+        exec(listOf("ip xfrm state flush", "ip xfrm policy flush"))
     }
 
     fun getLocalIPv4Address(): Inet4Address {
@@ -80,8 +80,6 @@ object RoutingManager {
             exec(listOf(
                 "ip xfrm state deleteall reqid 0x$a",
                 "ip xfrm state deleteall reqid 0x$b",
-                "ip xfrm policy deletall reqid 0x$a",
-                "ip xfrm policy deletall reqid 0x$b",
                 "ip xfrm policy deleteall src $remoteV6/112 dst $localV6/112",
                 "ip xfrm policy deleteall src $localV6/112 dst $remoteV6/112"
             ))
@@ -95,8 +93,6 @@ object RoutingManager {
             exec(listOf(
                 "ip xfrm state deleteall reqid 0x$a",
                 "ip xfrm state deleteall reqid 0x$b",
-                "ip xfrm policy deletall reqid 0x$a",
-                "ip xfrm policy deletall reqid 0x$b",
                 "ip xfrm policy deleteall src $remoteV6D/112 dst $localV6D/112",
                 "ip xfrm policy deleteall src $localV6D/112 dst $remoteV6D/112"
             ))
@@ -105,15 +101,16 @@ object RoutingManager {
         val receiveState = "ip xfrm state add src $localV4 dst $remoteV4 proto esp spi $hexSpiI reqid $hexSpiI mode tunnel aead 'rfc4106(gcm(aes))' $hexKr 128 sel src \"::0/0\" dst \"::0/0\""
         val sendState =    "ip xfrm state add src $remoteV4 dst $localV4 proto esp spi $hexSpiR reqid $hexSpiR mode tunnel aead 'rfc4106(gcm(aes))' $hexKi 128 sel src \"::0/0\" dst \"::0/0\""
         val policyOut =    "ip -6 xfrm policy add src $localV6/112 dst $remoteV6/112 dir out tmpl src $localV4 dst $remoteV4 proto esp reqid $hexSpiI mode tunnel"
-        val policyFwd =    "ip -6 xfrm policy add src $remoteV6/112 dst $localV6/112 dir fwd tmpl src $remoteV4 dst $localV4 proto esp reqid $hexSpiR mode tunnel"
+        //val policyFwd =    "ip -6 xfrm policy add src $remoteV6/112 dst $localV6/112 dir fwd tmpl src $remoteV4 dst $localV4 proto esp reqid $hexSpiR mode tunnel"
         val policyIn =     "ip -6 xfrm policy add src $remoteV6/112 dst $localV6/112 dir in tmpl src $remoteV4 dst $localV4 proto esp reqid $hexSpiR mode tunnel"
 
         // Class C is a higher security context than class D, therefore a class C tunnel may be used to carry class D data
         val policyOutD =    "ip -6 xfrm policy add src $localV6D/112 dst $remoteV6D/112 dir out tmpl src $localV4 dst $remoteV4 proto esp reqid $hexSpiI mode tunnel"
-        val policyFwdD =    "ip -6 xfrm policy add src $remoteV6D/112 dst $localV6D/112 dir fwd tmpl src $remoteV4 dst $localV4 proto esp reqid $hexSpiR mode tunnel"
+        //val policyFwdD =    "ip -6 xfrm policy add src $remoteV6D/112 dst $localV6D/112 dir fwd tmpl src $remoteV4 dst $localV4 proto esp reqid $hexSpiR mode tunnel"
         val policyInD =     "ip -6 xfrm policy add src $remoteV6D/112 dst $localV6D/112 dir in tmpl src $remoteV4 dst $localV4 proto esp reqid $hexSpiR mode tunnel"
 
-        exec(listOf(receiveState, sendState, policyOut, policyFwd, policyIn, policyOutD, policyFwdD, policyInD))
+        // i think we can keep the policy table a bit leaner by excluding FWD rules since all traffic should be point-to-point
+        exec(listOf(receiveState, sendState, policyOut, policyIn, policyOutD, policyInD))
         addRoutes()
         activeSpiForRemote[remoteV6] = Pair(initSpi, respSpi)
     }
@@ -140,8 +137,6 @@ object RoutingManager {
             exec(listOf(
                 "ip xfrm state deleteall reqid 0x$a",
                 "ip xfrm state deleteall reqid 0x$b",
-                "ip xfrm policy deletall reqid 0x$a",
-                "ip xfrm policy deletall reqid 0x$b",
                 "ip xfrm policy deleteall src $remoteV6/112 dst $localV6/112",
                 "ip xfrm policy deleteall src $localV6/112 dst $remoteV6/112"
             ))
@@ -150,10 +145,10 @@ object RoutingManager {
         val receiveState = "ip xfrm state add src $localV4 dst $remoteV4 proto esp spi $hexSpiI reqid $hexSpiI mode tunnel aead 'rfc4106(gcm(aes))' $hexKr 128 sel src \"::0/0\" dst \"::0/0\""
         val sendState =    "ip xfrm state add src $remoteV4 dst $localV4 proto esp spi $hexSpiR reqid $hexSpiR mode tunnel aead 'rfc4106(gcm(aes))' $hexKi 128 sel src \"::0/0\" dst \"::0/0\""
         val policyOut =    "ip -6 xfrm policy add src $localV6/112 dst $remoteV6/112 dir out tmpl src $localV4 dst $remoteV4 proto esp reqid $hexSpiI mode tunnel"
-        val policyFwd =    "ip -6 xfrm policy add src $remoteV6/112 dst $localV6/112 dir fwd tmpl src $remoteV4 dst $localV4 proto esp reqid $hexSpiR mode tunnel"
+        //val policyFwd =    "ip -6 xfrm policy add src $remoteV6/112 dst $localV6/112 dir fwd tmpl src $remoteV4 dst $localV4 proto esp reqid $hexSpiR mode tunnel"
         val policyIn =     "ip -6 xfrm policy add src $remoteV6/112 dst $localV6/112 dir in tmpl src $remoteV4 dst $localV4 proto esp reqid $hexSpiR mode tunnel"
 
-        exec(listOf(receiveState, sendState, policyOut, policyFwd, policyIn))
+        exec(listOf(receiveState, sendState, policyOut, policyIn))
         addRoutes()
         activeSpiForRemote[remoteV6] = Pair(initSpi, respSpi)
     }
