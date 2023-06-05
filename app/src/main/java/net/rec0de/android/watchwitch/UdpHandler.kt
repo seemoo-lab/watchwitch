@@ -14,7 +14,7 @@ object IKEDispatcher {
         if(ikeSessions.containsKey(hexspi))
             ikeSessions[hexspi]!!.ingestPacket(payload)
         else {
-            val session = IKEv2Session(socket, packet.address, packet.port, initiatorSPI, main)
+            val session = IKEv2Session(socket, packet.address, packet.port, initiatorSPI)
             session.ingestPacket(payload)
             ikeSessions[hexspi] = session
         }
@@ -36,8 +36,6 @@ class UDPHandler(private val main: MainActivity, private val serverPort: Int) : 
                 socket.receive(packet)
 
                 IKEDispatcher.dispatch(packet, socket, main)
-
-                //main.runOnUiThread { main.logData("rcv on $serverPort") }
             }
         } catch (e: Throwable) {
             e.printStackTrace()

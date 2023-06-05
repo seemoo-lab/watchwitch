@@ -79,8 +79,7 @@ class TcpServer(private val port: Int) : Thread() {
             val serverSocket = ServerSocket(port)
             while (true) {
                 socket = serverSocket.accept()
-                println("new client on port $port: $socket")
-                //val dataInputStream = DataInputStream(socket.getInputStream())
+                Logger.logIDS("IDS connect on $port: src port ${socket.port}", 0)
                 val dataInputStream = BufferedReader(InputStreamReader(socket.getInputStream()))
                 val dataOutputStream = DataOutputStream(socket.getOutputStream())
 
@@ -101,19 +100,19 @@ class TcpServer(private val port: Int) : Thread() {
 
 class TcpClientHandler(private val dataInputStream: BufferedReader, private val dataOutputStream: DataOutputStream) : Thread() {
     override fun run() {
-        while (true) {
+        try {
+            while(true) {
+                val line = dataInputStream.readLine()?.toByteArray()
+                if (line != null)
+                    Logger.logIDS("rcv IDS ${line.hex()}", 0)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
             try {
-                val line = dataInputStream.readLine()
-                if(line != null)
-                    println("Received: " + dataInputStream.readLine())
-            } catch (e: Exception) {
-                e.printStackTrace()
-                try {
-                    dataInputStream.close()
-                    dataOutputStream.close()
-                } catch (ex: IOException) {
-                    ex.printStackTrace()
-                }
+                dataInputStream.close()
+                dataOutputStream.close()
+            } catch (ex: IOException) {
+                ex.printStackTrace()
             }
         }
     }

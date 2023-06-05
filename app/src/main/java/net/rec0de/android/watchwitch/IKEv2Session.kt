@@ -12,7 +12,12 @@ import java.net.InetAddress
 import java.security.SecureRandom
 
 
-class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress: InetAddress, private val sourcePort: Int, private val initiatorSPI: ByteArray, private val main: MainActivity) {
+class IKEv2Session(
+    private val socket: DatagramSocket,
+    private val sourceAddress: InetAddress,
+    private val sourcePort: Int,
+    private val initiatorSPI: ByteArray
+) {
 
     private val random = SecureRandom()
 
@@ -29,11 +34,10 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
         keygen.init(X25519KeyGenerationParameters(random))
         x25519LocalKeys = keygen.generateKeyPair()
 
-
         cryptoValues["nr"] = randomBytes(32) // our nonce
         cryptoValues["espSPIr"] = randomBytes(4) // eventually, our ESP SPI
 
-        log("init session: ${initiatorSPI.sliceArray(0 until 4).hex()}-${responderSPI.sliceArray(0 until 4).hex()}")
+        Logger.logIKE("init session: ${initiatorSPI.sliceArray(0 until 4).hex()}-${responderSPI.sliceArray(0 until 4).hex()}", 2)
     }
 
     private fun randomBytes(size: Int): ByteArray {
@@ -46,16 +50,15 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
         val initiatorSPI = data.sliceArray(0 until 8)
         val responderSPI = data.sliceArray(8 until 16)
         val nextHeader = data[16]
-        val version = data[17]
+        //val version = data[17]
         val exchange = data[18]
-        val flags = data[19]
-        val msgID = data.sliceArray(20 until 24)
-        val length = data.sliceArray(24 until 28)
+        //val flags = data[19]
+        //val msgID = data.sliceArray(20 until 24)
+        //val length = data.sliceArray(24 until 28)
 
-        log("rcv: ${initiatorSPI.sliceArray(0 until 4).hex()}-${responderSPI.sliceArray(0 until 4).hex()} ${IKEDefs.exchangeType(exchange)} ${IKEDefs.nextPayload(nextHeader.toInt())}")
+        Logger.logIKE("rcv: ${initiatorSPI.sliceArray(0 until 4).hex()}-${responderSPI.sliceArray(0 until 4).hex()} ${IKEDefs.exchangeType(exchange)} ${IKEDefs.nextPayload(nextHeader.toInt())}", 0)
 
         val payloads = parsePayloads(nextHeader.toInt(), data.fromIndex(28), data)
-        println(payloads)
         payloads.forEach {
             processPayload(it)
             logPayload(it)
@@ -66,8 +69,8 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
                 val reply = replyToSAInit()
                 val packet = DatagramPacket(reply, reply.size, sourceAddress, sourcePort)
                 socket.send(packet)
-                log("snd: SA_INIT")
-                println(reply.hex())
+                Logger.logIKE("snd: SA_INIT", 0)
+                Logger.logIKE(reply.hex(), 3)
 
                 // save for authentication purposes
                 cryptoValues["peerSAinit"] = data
@@ -79,8 +82,8 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
                 val reply = replyToAuth()
                 val packet = DatagramPacket(reply, reply.size, sourceAddress, sourcePort)
                 socket.send(packet)
-                log("snd: AUTH")
-                println(reply.hex())
+                Logger.logIKE("snd: AUTH", 0)
+                Logger.logIKE(reply.hex(), 3)
             }
             "INFO" -> {
                 if(!sessionKeysReady)
@@ -88,8 +91,8 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
                 val reply = replyToHeartbeat()
                 val packet = DatagramPacket(reply, reply.size, sourceAddress, sourcePort)
                 socket.send(packet)
-                log("snd: HEARTBEAT")
-                println(reply.hex())
+                Logger.logIKE("snd: HEARTBEAT", 0)
+                Logger.logIKE(reply.hex(), 3)
             }
         }
     }
@@ -118,7 +121,7 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
                 return containedPayloads + parsePayloads(remainingData[0].toInt(), plaintext, plaintext) // we have to pass something as rawPacket but we won't use it
             }
             else if(nextPayload == 46) {
-                log("Ignoring encrypted payload before keys ready")
+                Logger.logIKE("Ignoring encrypted payload before keys ready", 1)
                 return containedPayloads
             }
 
@@ -145,7 +148,7 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
 
                 // we're expecting curve25519 DH exchange and support nothing else
                 if(dhGroup != 31u) {
-                    log("ERROR: Unsupported KEx DH group $dhGroup")
+                    Logger.logIKE("ERROR: Unsupported KEx DH group $dhGroup", 0)
                     throw Exception("Unsupported DH group used in key exchange: $dhGroup, expecting 31 (x25519)")
                 }
 
@@ -202,29 +205,29 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
             "NOTIFY" -> {
                 val notifyType = UInt.fromBytesBig(data.sliceArray(2 until 4))
                 if(notifyType < 16384u)
-                    log("-> NOTIFY - error: ${IKEDefs.errorTypes[notifyType.toInt()]}")
+                    Logger.logIKE("-> NOTIFY - error: ${IKEDefs.errorTypes[notifyType.toInt()]}", 1)
                 else if (notifyType > 40960u) {
                     if(IKEDefs.privateNotifyTypes.containsKey(notifyType.toInt()))
-                        log("-> NOTIFY - ${IKEDefs.privateNotifyTypes[notifyType.toInt()]}")
+                        Logger.logIKE("-> NOTIFY - ${IKEDefs.privateNotifyTypes[notifyType.toInt()]}", 1)
                     else
-                        log("-> NOTIFY - unknown private type $notifyType")
+                        Logger.logIKE("-> NOTIFY - unknown private type $notifyType", 1)
                 }
                 else
-                    log("-> NOTIFY - ${IKEDefs.notifyTypes[notifyType.toInt() - 16384]} ${data.hex()}")
+                    Logger.logIKE("-> NOTIFY - ${IKEDefs.notifyTypes[notifyType.toInt() - 16384]} ${data.hex()}", 1)
             }
             "KEx" -> {
                 val dhGroup = data.sliceArray(0 until 2)
                 val dhData = data.fromIndex(4)
-                //log("-> KEx - group ${dhGroup.hex()}: ${dhData.sliceArray(0 until 8).hex()}...")
+                Logger.logIKE("-> KEx - group ${dhGroup.hex()}: ${dhData.hex()}", 3)
             }
             "AUTH" -> {
                 val asn1Length = data[4].toInt()
                 val asn1 = data.sliceArray(5 until 5+asn1Length)
                 val sig = data.fromIndex(5+asn1Length)
-                //print("AUTH -> asn1: ${asn1.hex()} sig: ${sig.sliceArray(0 until 8).hex()}...")
+                Logger.logIKE("AUTH -> asn1: ${asn1.hex()} sig: ${sig.hex()}", 3)
             }
             "SA" -> {
-                log("-> SA")
+                Logger.logIKE("-> SA", 1)
                 var remainingData = data
                 while(remainingData.isNotEmpty()) {
                     val proposalLen = UInt.fromBytesBig(remainingData.sliceArray(2 until 4)).toInt()
@@ -233,15 +236,15 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
                     val protocol = listOf("IKE", "AH", "ESP")[proposal[5].toInt() - 1]
                     val spiSize = proposal[6].toInt()
                     val numTransforms = proposal[7].toInt()
-                    val spi = proposal.sliceArray(8 until 8+spiSize)
+                    //val spi = proposal.sliceArray(8 until 8+spiSize)
                     remainingData = remainingData.fromIndex(proposalLen)
-                    //log("--> #$propNum: $protocol SPI size $spiSize, $numTransforms tfms")
-                    //println(proposal.hex())
+                    Logger.logIKE("--> #$propNum: $protocol SPI size $spiSize, $numTransforms tfms", 2)
+                    Logger.logIKE(proposal.hex(), 3)
                 }
             }
-            "NONCE" -> log("-> NONCE ${data.hex()}")
-            "IDinit", "IDresp" -> log("-> $typeStr - ${data.fromIndex(4).toString(Charsets.UTF_8)}")
-            else -> log("-> $typeStr (no logging implemented)")
+            "NONCE" -> Logger.logIKE("-> NONCE ${data.hex()}", 2)
+            "IDinit", "IDresp" -> Logger.logIKE("-> $typeStr - ${data.fromIndex(4).toString(Charsets.UTF_8)}", 2)
+            else -> Logger.logIKE("-> $typeStr (no logging implemented)", 1)
         }
     }
 
@@ -334,7 +337,7 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
         cryptoValues["espKeyR"] = keymat.sliceArray(36 until 68)
         cryptoValues["espSaltR"] = keymat.sliceArray(68 until 72)
 
-        //log("DERIVED KEY MATERIAL")
+        Logger.logIKE("derived key material", 3)
         sessionKeysReady = true
 
         createTunnelIfReady()
@@ -344,16 +347,11 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
         if(!sessionKeysReady || !cryptoValues.containsKey("espSPIi") || !cryptoValues.containsKey("espSPIr"))
             return
 
-        val remoteAddrKey = if(dataProtectionClass == 3) LongTermKeys.REMOTE_ADDRESS_CLASS_C else LongTermKeys.REMOTE_ADDRESS_CLASS_D
-        val localAddrKey = if(dataProtectionClass == 3) LongTermKeys.LOCAL_ADDRESS_CLASS_C else LongTermKeys.LOCAL_ADDRESS_CLASS_D
-        val remoteV6 = LongTermKeys.getAddress(remoteAddrKey)!!
-        val localV6 = LongTermKeys.getAddress(localAddrKey)!!
-
         // ip xfrm expects key and salt material in a single bytestring
         val ki = cryptoValues["espKeyI"]!! + cryptoValues["espSaltI"]!!
         val kr = cryptoValues["espKeyR"]!! + cryptoValues["espSaltR"]!!
 
-        val thread = TunnelBuilder(sourceAddress.hostAddress!!, localV6, remoteV6, cryptoValues["espSPIi"]!!, cryptoValues["espSPIr"]!!, ki, kr)
+        val thread = TunnelBuilder(sourceAddress.hostAddress!!, cryptoValues["espSPIi"]!!, cryptoValues["espSPIr"]!!, ki, kr, dataProtectionClass == 3)
         thread.start()
     }
 
@@ -391,14 +389,9 @@ class IKEv2Session(private val socket: DatagramSocket, private val sourceAddress
         val valid = verifier.verifySignature(sig)
 
         if(!valid) {
-            log("Auth signature verification failed")
+            Logger.logIKE("Auth signature verification failed", 0)
             throw Exception("Auth signature verification failed")
         }
-    }
-
-    private fun log(msg: String) {
-        println(msg)
-        main.runOnUiThread { main.logData(msg) }
     }
 }
 

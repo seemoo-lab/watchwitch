@@ -18,7 +18,7 @@ class KeyReceiver(private val main: MainActivity) : Thread() {
         var socket: DatagramSocket? = null
         try {
             socket = DatagramSocket(serverPort)
-            main.runOnUiThread { main.logData("listening for keys on :$serverPort") }
+            Logger.log("listening for keys on :$serverPort", 1)
             while (bKeepRunning) {
                 socket.receive(packet)
                 val trimmed = packet.data.sliceArray(0 until packet.length)
@@ -57,7 +57,7 @@ class KeyReceiver(private val main: MainActivity) : Thread() {
                     LongTermKeys.setAddress(LongTermKeys.REMOTE_ADDRESS_CLASS_D, map["rad"]!!)
 
                 RoutingManager.registerAddresses()
-                main.runOnUiThread { main.logData("got keys! $map") }
+                Logger.log("got keys! $map", 0)
             }
         } catch (e: Throwable) {
             e.printStackTrace()
