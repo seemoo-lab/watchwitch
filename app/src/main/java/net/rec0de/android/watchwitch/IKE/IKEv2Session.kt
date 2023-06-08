@@ -1,5 +1,13 @@
-package net.rec0de.android.watchwitch
+package net.rec0de.android.watchwitch.IKE
 
+import net.rec0de.android.watchwitch.Logger
+import net.rec0de.android.watchwitch.LongTermStorage
+import net.rec0de.android.watchwitch.TunnelBuilder
+import net.rec0de.android.watchwitch.Utils
+import net.rec0de.android.watchwitch.fromBytesBig
+import net.rec0de.android.watchwitch.fromIndex
+import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.hexBytes
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair
 import org.bouncycastle.crypto.agreement.X25519Agreement
 import org.bouncycastle.crypto.generators.X25519KeyPairGenerator
@@ -37,7 +45,11 @@ class IKEv2Session(
         cryptoValues["nr"] = randomBytes(32) // our nonce
         cryptoValues["espSPIr"] = randomBytes(4) // eventually, our ESP SPI
 
-        Logger.logIKE("init session: ${initiatorSPI.sliceArray(0 until 4).hex()}-${responderSPI.sliceArray(0 until 4).hex()}", 2)
+        Logger.logIKE(
+            "init session: ${
+                initiatorSPI.sliceArray(0 until 4).hex()
+            }-${responderSPI.sliceArray(0 until 4).hex()}", 2
+        )
     }
 
     private fun randomBytes(size: Int): ByteArray {
@@ -56,7 +68,13 @@ class IKEv2Session(
         //val msgID = data.sliceArray(20 until 24)
         //val length = data.sliceArray(24 until 28)
 
-        Logger.logIKE("rcv: ${initiatorSPI.sliceArray(0 until 4).hex()}-${responderSPI.sliceArray(0 until 4).hex()} ${IKEDefs.exchangeType(exchange)} ${IKEDefs.nextPayload(nextHeader.toInt())}", 0)
+        Logger.logIKE(
+            "rcv: ${
+                initiatorSPI.sliceArray(0 until 4).hex()
+            }-${
+                responderSPI.sliceArray(0 until 4).hex()
+            } ${IKEDefs.exchangeType(exchange)} ${IKEDefs.nextPayload(nextHeader.toInt())}", 0
+        )
 
         val payloads = parsePayloads(nextHeader.toInt(), data.fromIndex(28), data)
         payloads.forEach {
@@ -116,7 +134,8 @@ class IKEv2Session(
                 // this is a bit inconvenient
                 val aad = rawPacket.sliceArray(0 until offset+28+4) // from start of packet: 28 bytes main IKE header, possible preceding payloads, 4 bytes encrypted payload header
                 val nonce = cryptoValues["skiSalt"]!! + iv
-                val plaintext = Utils.chachaPolyDecrypt(key = cryptoValues["ski"]!!, nonce, aad, ciphertext)
+                val plaintext =
+                    Utils.chachaPolyDecrypt(key = cryptoValues["ski"]!!, nonce, aad, ciphertext)
 
                 return containedPayloads + parsePayloads(remainingData[0].toInt(), plaintext, plaintext) // we have to pass something as rawPacket but we won't use it
             }
@@ -208,12 +227,18 @@ class IKEv2Session(
                     Logger.logIKE("-> NOTIFY - error: ${IKEDefs.errorTypes[notifyType.toInt()]}", 1)
                 else if (notifyType > 40960u) {
                     if(IKEDefs.privateNotifyTypes.containsKey(notifyType.toInt()))
-                        Logger.logIKE("-> NOTIFY - ${IKEDefs.privateNotifyTypes[notifyType.toInt()]}", 1)
+                        Logger.logIKE(
+                            "-> NOTIFY - ${IKEDefs.privateNotifyTypes[notifyType.toInt()]}",
+                            1
+                        )
                     else
                         Logger.logIKE("-> NOTIFY - unknown private type $notifyType", 1)
                 }
                 else
-                    Logger.logIKE("-> NOTIFY - ${IKEDefs.notifyTypes[notifyType.toInt() - 16384]} ${data.hex()}", 1)
+                    Logger.logIKE(
+                        "-> NOTIFY - ${IKEDefs.notifyTypes[notifyType.toInt() - 16384]} ${data.hex()}",
+                        1
+                    )
             }
             "KEx" -> {
                 val dhGroup = data.sliceArray(0 until 2)
@@ -238,12 +263,19 @@ class IKEv2Session(
                     val numTransforms = proposal[7].toInt()
                     //val spi = proposal.sliceArray(8 until 8+spiSize)
                     remainingData = remainingData.fromIndex(proposalLen)
-                    Logger.logIKE("--> #$propNum: $protocol SPI size $spiSize, $numTransforms tfms", 2)
+                    Logger.logIKE(
+                        "--> #$propNum: $protocol SPI size $spiSize, $numTransforms tfms",
+                        2
+                    )
                     Logger.logIKE(proposal.hex(), 3)
                 }
             }
             "NONCE" -> Logger.logIKE("-> NONCE ${data.hex()}", 2)
-            "IDinit", "IDresp" -> Logger.logIKE("-> $typeStr - ${data.fromIndex(4).toString(Charsets.UTF_8)}", 2)
+            "IDinit", "IDresp" -> Logger.logIKE(
+                "-> $typeStr - ${
+                    data.fromIndex(4).toString(Charsets.UTF_8)
+                }", 2
+            )
             else -> Logger.logIKE("-> $typeStr (no logging implemented)", 1)
         }
     }
@@ -306,7 +338,7 @@ class IKEv2Session(
         val nr = cryptoValues["nr"]!!
         val dh = cryptoValues["dhShared"]!!
 
-        val skeyseed = Utils.HMAC(ni+nr, dh)
+        val skeyseed = Utils.HMAC(ni + nr, dh)
 
         // compute SK_d (used for derivation of ESP keys) as well as IKE communication keys (auth/enc for initiator and responder each)
         val keystream = Utils.PRFplus(skeyseed, ni + nr + ci + cr, 264)
@@ -362,9 +394,9 @@ class IKEv2Session(
         )
 
         val key = when(dataProtectionClass) {
-            1 -> LongTermKeys.getEd25519PrivateKey(LongTermKeys.PRIVATE_CLASS_A)
-            3 -> LongTermKeys.getEd25519PrivateKey(LongTermKeys.PRIVATE_CLASS_C)
-            else -> LongTermKeys.getEd25519PrivateKey(LongTermKeys.PRIVATE_CLASS_D)
+            1 -> LongTermStorage.getEd25519PrivateKey(LongTermStorage.PRIVATE_CLASS_A)
+            3 -> LongTermStorage.getEd25519PrivateKey(LongTermStorage.PRIVATE_CLASS_C)
+            else -> LongTermStorage.getEd25519PrivateKey(LongTermStorage.PRIVATE_CLASS_D)
         }
 
         val signer = Ed25519Signer()
@@ -375,12 +407,15 @@ class IKEv2Session(
     }
 
     private fun verifyAuthSignature(sig: ByteArray) {
-        val signedBytes = cryptoValues["peerSAinit"]!! + cryptoValues["nr"]!! + Utils.HMAC(cryptoValues["skpi"]!!, cryptoValues["IDi"]!!)
+        val signedBytes = cryptoValues["peerSAinit"]!! + cryptoValues["nr"]!! + Utils.HMAC(
+            cryptoValues["skpi"]!!,
+            cryptoValues["IDi"]!!
+        )
 
         val key = when(dataProtectionClass) {
-            1 -> LongTermKeys.getEd25519PublicKey(LongTermKeys.PUBLIC_CLASS_A)
-            3 -> LongTermKeys.getEd25519PublicKey(LongTermKeys.PUBLIC_CLASS_C)
-            else -> LongTermKeys.getEd25519PublicKey(LongTermKeys.PUBLIC_CLASS_D)
+            1 -> LongTermStorage.getEd25519PublicKey(LongTermStorage.PUBLIC_CLASS_A)
+            3 -> LongTermStorage.getEd25519PublicKey(LongTermStorage.PUBLIC_CLASS_C)
+            else -> LongTermStorage.getEd25519PublicKey(LongTermStorage.PUBLIC_CLASS_D)
         }
 
         val verifier = Ed25519Signer()

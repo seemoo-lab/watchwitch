@@ -1,12 +1,12 @@
 package net.rec0de.android.watchwitch
 
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
 import android.os.Bundle
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 class MainActivity : AppCompatActivity() {
     private lateinit var statusLabel: TextView
@@ -36,13 +36,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        LongTermKeys.context = applicationContext
+        LongTermStorage.context = applicationContext
 
-        val keyReceiver = KeyReceiver(this)
-        keyReceiver.start()
-
+        KeyReceiver(this).start()
         AddressAllocator().start()
-        RoutingManager.startup()
+        RoutingManager.startup(this.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager)
 
         /*RoutingManager.createTunnel(
             "192.168.133.25",

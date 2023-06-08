@@ -1,5 +1,7 @@
 package net.rec0de.android.watchwitch
 
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import java.io.DataOutputStream
 import java.io.IOException
 import java.net.Inet4Address
@@ -10,12 +12,14 @@ import java.net.NetworkInterface
 object RoutingManager {
 
     private lateinit var primaryInterface: NetworkInterface
+    private lateinit var connectivityManager: ConnectivityManager
 
     private val activeSpiForRemote = mutableMapOf<String,Pair<ByteArray, ByteArray>>()
 
-    fun startup() {
+    fun startup(conMan: ConnectivityManager) {
         Logger.logCmd("Clearing ip xfrm states & policies", 0)
         exec(listOf("ip xfrm state flush", "ip xfrm policy flush"))
+        connectivityManager = conMan
     }
 
     fun getLocalIPv4Address(): Inet4Address {
@@ -45,8 +49,8 @@ object RoutingManager {
     }
 
     fun registerAddresses() {
-        val localC = LongTermKeys.getAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_C)
-        val localD = LongTermKeys.getAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_D)
+        val localC = LongTermStorage.getAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_C)
+        val localD = LongTermStorage.getAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_D)
         if(localC != null)
             allocateIPv6AddressIfNotPresent(Inet6Address.getByName(localC) as Inet6Address)
         if(localD != null)
@@ -66,11 +70,11 @@ object RoutingManager {
         Logger.logCmd("Key/SPI mappings: $localV4 $hexSpiI $hexKr", 1)
         Logger.logCmd("Key/SPI mappings: $remoteV4 $hexSpiR $hexKi", 1)
 
-        val localV6 = LongTermKeys.getAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_C)!!
-        val remoteV6 = LongTermKeys.getAddress(LongTermKeys.REMOTE_ADDRESS_CLASS_C)!!
+        val localV6 = LongTermStorage.getAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_C)!!
+        val remoteV6 = LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_C)!!
 
-        val localV6D = LongTermKeys.getAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_D)!!
-        val remoteV6D = LongTermKeys.getAddress(LongTermKeys.REMOTE_ADDRESS_CLASS_D)!!
+        val localV6D = LongTermStorage.getAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_D)!!
+        val remoteV6D = LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_D)!!
 
         // Remove existing tunnel for the same class
         if(activeSpiForRemote.containsKey(remoteV6)) {
@@ -122,8 +126,8 @@ object RoutingManager {
         val hexSpiI = "0x${initSpi.hex()}"
         val localV4 = getLocalIPv4Address().hostAddress
 
-        val localV6 = LongTermKeys.getAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_D)!!
-        val remoteV6 = LongTermKeys.getAddress(LongTermKeys.REMOTE_ADDRESS_CLASS_D)!!
+        val localV6 = LongTermStorage.getAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_D)!!
+        val remoteV6 = LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_D)!!
 
         Logger.logCmd("Setting up class D tunnel for $hexSpiI/$hexSpiR", 0)
         Logger.logCmd("Key/SPI mappings: $localV4 $hexSpiI $hexKr", 1)
@@ -154,8 +158,8 @@ object RoutingManager {
     }
 
     fun clearRoutes() {
-        val remoteC = LongTermKeys.getAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_C)
-        val remoteD = LongTermKeys.getAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_D)
+        val remoteC = LongTermStorage.getAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_C)
+        val remoteD = LongTermStorage.getAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_D)
 
         if(remoteC != null)
             exec("ip -6 route del $remoteC/112")
@@ -164,10 +168,10 @@ object RoutingManager {
     }
 
     fun addRoutes() {
-        val localC = LongTermKeys.getAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_C)
-        val remoteC = LongTermKeys.getAddress(LongTermKeys.REMOTE_ADDRESS_CLASS_C)
-        val localD = LongTermKeys.getAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_D)
-        val remoteD = LongTermKeys.getAddress(LongTermKeys.REMOTE_ADDRESS_CLASS_D)
+        val localC = LongTermStorage.getAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_C)
+        val remoteC = LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_C)
+        val localD = LongTermStorage.getAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_D)
+        val remoteD = LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_D)
 
         /*
         IMPORTANT:
@@ -202,6 +206,10 @@ object RoutingManager {
     }
 
     private fun exec(cmd: String) = exec(listOf(cmd))
+
+    fun isConnectionExpensive(): Boolean = connectivityManager.isActiveNetworkMetered
+    fun isConnectionWifi(): Boolean = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)!!.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+    fun isConnectionCellular(): Boolean = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)!!.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
 }
 
 class AddressAllocator : Thread() {

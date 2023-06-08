@@ -32,29 +32,29 @@ class KeyReceiver(private val main: MainActivity) : Thread() {
 
                 // store local private keys
                 if(map.containsKey("al"))
-                    LongTermKeys.setKey(LongTermKeys.PRIVATE_CLASS_A, Base64.decode(map["al"]!!, Base64.DEFAULT))
+                    LongTermStorage.setKey(LongTermStorage.PRIVATE_CLASS_A, Base64.decode(map["al"]!!, Base64.DEFAULT))
                 if(map.containsKey("cl"))
-                    LongTermKeys.setKey(LongTermKeys.PRIVATE_CLASS_C, Base64.decode(map["cl"]!!, Base64.DEFAULT))
+                    LongTermStorage.setKey(LongTermStorage.PRIVATE_CLASS_C, Base64.decode(map["cl"]!!, Base64.DEFAULT))
                 if(map.containsKey("dl"))
-                    LongTermKeys.setKey(LongTermKeys.PRIVATE_CLASS_D, Base64.decode(map["dl"]!!, Base64.DEFAULT))
+                    LongTermStorage.setKey(LongTermStorage.PRIVATE_CLASS_D, Base64.decode(map["dl"]!!, Base64.DEFAULT))
 
                 // store remote public keys
                 if(map.containsKey("ar"))
-                    LongTermKeys.setKey(LongTermKeys.PUBLIC_CLASS_A, Base64.decode(map["ar"]!!, Base64.DEFAULT))
+                    LongTermStorage.setKey(LongTermStorage.PUBLIC_CLASS_A, Base64.decode(map["ar"]!!, Base64.DEFAULT))
                 if(map.containsKey("cr"))
-                    LongTermKeys.setKey(LongTermKeys.PUBLIC_CLASS_C, Base64.decode(map["cr"]!!, Base64.DEFAULT))
+                    LongTermStorage.setKey(LongTermStorage.PUBLIC_CLASS_C, Base64.decode(map["cr"]!!, Base64.DEFAULT))
                 if(map.containsKey("dr"))
-                    LongTermKeys.setKey(LongTermKeys.PUBLIC_CLASS_D, Base64.decode(map["dr"]!!, Base64.DEFAULT))
+                    LongTermStorage.setKey(LongTermStorage.PUBLIC_CLASS_D, Base64.decode(map["dr"]!!, Base64.DEFAULT))
 
                 // store inner IPv6 addresses
                 if(map.containsKey("lac"))
-                    LongTermKeys.setAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_C, map["lac"]!!)
+                    LongTermStorage.setAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_C, map["lac"]!!)
                 if(map.containsKey("lad"))
-                    LongTermKeys.setAddress(LongTermKeys.LOCAL_ADDRESS_CLASS_D, map["lad"]!!)
+                    LongTermStorage.setAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_D, map["lad"]!!)
                 if(map.containsKey("rac"))
-                    LongTermKeys.setAddress(LongTermKeys.REMOTE_ADDRESS_CLASS_C, map["rac"]!!)
+                    LongTermStorage.setAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_C, map["rac"]!!)
                 if(map.containsKey("rad"))
-                    LongTermKeys.setAddress(LongTermKeys.REMOTE_ADDRESS_CLASS_D, map["rad"]!!)
+                    LongTermStorage.setAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_D, map["rad"]!!)
 
                 RoutingManager.registerAddresses()
                 Logger.log("got keys! $map", 0)

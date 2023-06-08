@@ -1,5 +1,6 @@
-package net.rec0de.android.watchwitch
+package net.rec0de.android.watchwitch.IKE
 
+import net.rec0de.android.watchwitch.hexBytes
 import org.bouncycastle.crypto.digests.SHA1Digest
 import org.bouncycastle.crypto.params.X25519PublicKeyParameters
 import java.nio.ByteBuffer

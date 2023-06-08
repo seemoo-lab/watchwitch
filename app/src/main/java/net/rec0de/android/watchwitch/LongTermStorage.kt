@@ -6,7 +6,7 @@ import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
 
 @SuppressLint("StaticFieldLeak")
-object LongTermKeys {
+object LongTermStorage {
     lateinit var context: Context
     private const val appID = "net.rec0de.android.watchwitch"
 
