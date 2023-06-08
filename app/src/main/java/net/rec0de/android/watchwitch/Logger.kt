@@ -11,7 +11,7 @@ object Logger {
     private const val IKE_LOG_LVL = 1
 
     private const val IDS_SCREEN_LVL = 0
-    private const val IDS_LOG_LVL = 10
+    private const val IDS_LOG_LVL = 9
 
     private const val CMD_SCREEN_LVL = -1
     private const val CMD_LOG_LVL = 2

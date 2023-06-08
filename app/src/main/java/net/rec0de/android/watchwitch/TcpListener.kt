@@ -9,12 +9,16 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import org.bouncycastle.crypto.signers.Ed25519Signer
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.net.ServerSocket
 import java.net.Socket
+import java.nio.ByteBuffer
+import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
 
@@ -85,9 +89,9 @@ class TcpServer(private val port: Int) : Thread() {
 
                 // Use threads for each client to communicate with them simultaneously
                 val t: Thread = if(port == 62742)
-                        TLSProxyHandler(dataInputStream, dataOutputStream)
+                        ShoesProxyHandler(dataInputStream, dataOutputStream)
                     else
-                        TcpClientHandler(dataInputStream, dataOutputStream, socket)
+                        NWServiceConnectorHandler(dataInputStream, dataOutputStream, socket.localPort)
 
                 t.start()
             }
@@ -127,59 +131,61 @@ class TcpClientHandler(private val dataInputStream: DataInputStream, private val
     }
 }
 
-class TLSProxyHandler(private val fromWatch: DataInputStream, private val toWatch: DataOutputStream) : Thread() {
+class NWServiceConnectorHandler(private val fromWatch: DataInputStream, private val toWatch: DataOutputStream, private val port: Int) : Thread() {
     override fun run() {
         try {
-            val headerLen = fromWatch.readUnsignedShort()
+            // receive NWSC start request
+            // see libnetwork.dylib, _nw_service_connector_create_initial_payload_for_request
+            val reqLen = fromWatch.readUnsignedShort()
 
-            Logger.logIDS("TLS rcv trying to read $headerLen header bytes", 1)
+            Logger.logIDS("NWSC rcv trying to read $reqLen bytes", 1)
 
-            val header = ByteArray(headerLen)
-            fromWatch.readFully(header, 0, header.size)
+            val request = ByteArray(reqLen)
+            fromWatch.readFully(request, 0, request.size)
 
-            // connection request header starts with 0x0101bb (why?), then hostname length and hostname
-            val headerMagic = header.slice(0 until 3)
-            val hostnameLen = header[3].toUByte().toInt()
-            val hostname = header.sliceArray(4 until 4+hostnameLen).toString(Charsets.UTF_8)
+            Logger.logIDS("NWSC rcv req ${request.hex()}", 1)
 
-            Logger.logIDS("TLS req to $hostname", 0)
+            // 2 bytes target port
+            val targetPort = UInt.fromBytesBig(request.sliceArray(0 until 2)).toInt()
+            // 8 byte sequence number (why so long???)
+            val seq = request.sliceArray(2 until 10)
+            // 16 byte UUID
+            val uuid = request.sliceArray(10 until 26)
+            // 1 byte service name len
+            val serviceNameLen = request[26].toUByte().toInt()
+            // var length service name
+            val serviceName = request.sliceArray(27 until 27+serviceNameLen).toString(Charsets.UTF_8)
+            // 64 byte ed25519 signature
+            val signature = request.fromIndex(27+serviceNameLen)
 
-            // next up we have what looks like TLVs
-            var offset = 4 + hostnameLen
-            while(offset < headerLen) {
-                val type = header[offset].toInt()
-                val len = UInt.fromBytesBig(header.sliceArray(offset+1 until offset+3)).toInt()
-                offset += 3
-                val content = header.sliceArray(offset until offset+len)
-                if(type == 0x03)
-                    Logger.logIDS("from process ${content.toString(Charsets.UTF_8)}", 1)
-                else
-                    Logger.logIDS("TLS req unknown TLV: type $type, payload ${content.hex()}", 1)
-                offset += len
-            }
+            if(targetPort != port)
+                throw Exception("Got NWSC request for port $targetPort on port $port")
 
-            val clientSocket = Socket(hostname, 443)
-            val toRemote = clientSocket.getOutputStream()
-            val fromRemote = DataInputStream(clientSocket.getInputStream())
+            Logger.logIDS("NWSC req for $serviceName on $port", 0)
 
-            // send acknowledge, exact purpose unknown
-            toWatch.write("0006000004000120".hexBytes())
+            // send a very crude acknowledge, roughly like _nwsc_send_feedback but likely with garbage data
+            val ack = ByteBuffer.allocate(0x2c)
+            ack.putShort(0x2a) // message length
+            ack.putShort(0x80) // connection accept flag
+            ack.putLong(NWSCState.freshSequenceNumber()) // sequence number
+            ack.put(LongTermStorage.getKey(LongTermStorage.PUBLIC_CLASS_C)!!) // ed25519 pubkey - should be a different key than the terminus IKE keys, but we'll just put this for now
+
+            val payload = ack.array()
+            Logger.logIDS("NWSC snd accept ${payload.hex()}", 2)
+            toWatch.write(payload)
             toWatch.flush()
 
-            TLSProxyReplyForwarder(fromRemote, toWatch).start()
+            NWServiceConnectorInitiator(port, serviceName).start()
 
             while(true) {
-                // we expect a TLS record header here, which is 1 byte record type, 2 bytes TLS version, 2 bytes length
-                val recordHeader = ByteArray(5)
-                fromWatch.readFully(recordHeader)
-                val len = UInt.fromBytesBig(recordHeader.sliceArray(3 until 5)).toInt()
-                val packet = ByteArray(5+len)
-                recordHeader.copyInto(packet)
-                fromWatch.readFully(packet, 5, len)
+                val length = fromWatch.readUnsignedShort() // read length of incoming message
+                Logger.logIDS("IDS rcv on ${port}, trying to read $length bytes", 0)
 
-                Logger.logIDS("TLS to remote: ${packet.hex()}", 3)
-                toRemote.write(packet)
-                toRemote.flush()
+                if (length > 0) {
+                    val message = ByteArray(length)
+                    fromWatch.readFully(message, 0, message.size)
+                    Logger.logIDS("rcv IDS on ${port}: ${message.hex()}", 1)
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -193,27 +199,56 @@ class TLSProxyHandler(private val fromWatch: DataInputStream, private val toWatc
     }
 }
 
-class TLSProxyReplyForwarder(private val fromRemoteStream: DataInputStream, private val toLocalStream: OutputStream) : Thread() {
-    override fun run() {
-        try {
-            while(true) {
-                // we expect a TLS record header here, which is 1 byte record type, 2 bytes TLS version, 2 bytes length
-                val recordHeader = ByteArray(5)
-                fromRemoteStream.readFully(recordHeader)
-                val len = UInt.fromBytesBig(recordHeader.sliceArray(3 until 5)).toInt()
-                val packet = ByteArray(5+len)
-                recordHeader.copyInto(packet)
-                fromRemoteStream.readFully(packet, 5, len)
+class NWServiceConnectorInitiator(private val port: Int, private val serviceName: String) : Thread() {
 
-                Logger.logIDS("TLS from remote: ${packet.hex()}", 3)
-                toLocalStream.write(packet)
-                toLocalStream.flush()
+    override fun run() {
+        val socket = Socket(LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_C), port) // does it matter which address we use here?
+        val toWatch = socket.getOutputStream()
+        val fromWatch = DataInputStream(socket.getInputStream())
+
+        try {
+            // send NWSC start request
+
+            // 2 byte port, 8 byte seq, 16 byte uuid, 1 byte sname len, service name, 64 byte signature
+            val reqLen = 2 + 8 + 16 + (serviceName.length + 1) + 64
+            val req = ByteBuffer.allocate(reqLen + 2)
+            req.putShort(reqLen.toShort())
+            req.putLong(NWSCState.freshSequenceNumber())
+
+            val uuid = UUID.randomUUID()
+            req.putLong(uuid.mostSignificantBits)
+            req.putLong(uuid.leastSignificantBits)
+
+            req.put(serviceName.length.toByte())
+            req.put(serviceName.toByteArray(Charsets.US_ASCII))
+
+            val signer = Ed25519Signer()
+            signer.init(true, LongTermStorage.getEd25519PrivateKey(LongTermStorage.PRIVATE_CLASS_C))
+            signer.update(req.array(), 0, reqLen+2)
+            val sig = signer.generateSignature()
+            req.put(sig)
+
+            val payload = req.array()
+            Logger.logIDS("NWSC snd req ${payload.hex()}", 1)
+            toWatch.write(payload)
+            toWatch.flush()
+
+            while(true) {
+                val length = fromWatch.readUnsignedShort() // read length of incoming message
+                Logger.logIDS("IDS rcv on ${port}, trying to read $length bytes", 0)
+
+                if (length > 0) {
+                    val message = ByteArray(length)
+                    fromWatch.readFully(message, 0, message.size)
+                    Logger.logIDS("rcv IDS on ${port}: ${message.hex()}", 1)
+                }
             }
+
         } catch (e: Exception) {
             e.printStackTrace()
             try {
-                fromRemoteStream.close()
-                toLocalStream.close()
+                fromWatch.close()
+                toWatch.close()
             } catch (ex: IOException) {
                 ex.printStackTrace()
             }
