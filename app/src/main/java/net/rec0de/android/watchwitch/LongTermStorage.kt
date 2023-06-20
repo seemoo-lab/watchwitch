@@ -25,13 +25,13 @@ object LongTermStorage {
 
     private val addresstypes = listOf(LOCAL_ADDRESS_CLASS_C, LOCAL_ADDRESS_CLASS_D, REMOTE_ADDRESS_CLASS_C, REMOTE_ADDRESS_CLASS_D)
 
-    fun getEd25519PublicKey(type: String): Ed25519PublicKeyParameters {
+    fun getEd25519RemotePublicKey(type: String): Ed25519PublicKeyParameters {
         if (type != PUBLIC_CLASS_A && type != PUBLIC_CLASS_C && type != PUBLIC_CLASS_D)
             throw Exception("trying to get public key for invalid type $type")
         return Ed25519PublicKeyParameters(getKey(type))
     }
 
-    fun getEd25519PrivateKey(type: String): Ed25519PrivateKeyParameters {
+    fun getEd25519LocalPrivateKey(type: String): Ed25519PrivateKeyParameters {
         if (type != PRIVATE_CLASS_A && type != PRIVATE_CLASS_C && type != PRIVATE_CLASS_D)
             throw Exception("trying to get private key for invalid type $type")
         return Ed25519PrivateKeyParameters(getKey(type))

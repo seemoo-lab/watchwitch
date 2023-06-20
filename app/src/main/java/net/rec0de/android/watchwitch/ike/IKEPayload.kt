@@ -1,4 +1,4 @@
-package net.rec0de.android.watchwitch.IKE
+package net.rec0de.android.watchwitch.ike
 
 import net.rec0de.android.watchwitch.hexBytes
 import org.bouncycastle.crypto.digests.SHA1Digest
@@ -162,6 +162,11 @@ class TSiPayload(override val payload: ByteArray) : IKEPayload() {
 
 class TSrPayload(override val payload: ByteArray) : IKEPayload() {
     override val typeByte = 45
+}
+
+class DeletePayload() : IKEPayload() {
+    override val payload = "01000000".hexBytes() // protocol 1 (IKE), spi size 0, spi number 0
+    override val typeByte = 42
 }
 
 class NotifyPayload(notifyType: Int, data: ByteArray = byteArrayOf()) : IKEPayload() {

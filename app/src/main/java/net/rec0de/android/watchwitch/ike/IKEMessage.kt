@@ -1,4 +1,4 @@
-package net.rec0de.android.watchwitch.IKE
+package net.rec0de.android.watchwitch.ike
 
 import net.rec0de.android.watchwitch.Utils
 import java.nio.ByteBuffer

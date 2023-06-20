@@ -1,6 +1,8 @@
 package net.rec0de.android.watchwitch
 
-import net.rec0de.android.watchwitch.IKE.IKEv2Session
+import net.rec0de.android.watchwitch.ike.DeletePayload
+import net.rec0de.android.watchwitch.ike.IKEMessage
+import net.rec0de.android.watchwitch.ike.IKEv2Session
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 
@@ -10,14 +12,27 @@ object IKEDispatcher {
     fun dispatch(packet: DatagramPacket, socket: DatagramSocket, main: MainActivity) {
         val payload = packet.data.sliceArray(0 until packet.length)
         val initiatorSPI = payload.sliceArray(0 until 8)
+        val responderSPI = payload.sliceArray(8 until 16)
         val hexspi = initiatorSPI.hex()
 
+        // existing session
         if(ikeSessions.containsKey(hexspi))
             ikeSessions[hexspi]!!.ingestPacket(payload)
-        else {
+        // fresh session
+        else if(ULong.fromBytesBig(responderSPI) == 0uL) {
             val session = IKEv2Session(socket, packet.address, packet.port, initiatorSPI)
             session.ingestPacket(payload)
             ikeSessions[hexspi] = session
+        }
+        // existing session that we have no memory of
+        else {
+            Logger.logIKE("Got orphaned IKE, sending delete", 0) // this does not seem to actually do anything
+            // informational exchange
+            val msg = IKEMessage(37, 0, initiatorSPI, responderSPI, false)
+            msg.addPayload(DeletePayload())
+            val delete = msg.assemble()
+            val reply = DatagramPacket(delete, delete.size, packet.address, packet.port)
+            socket.send(reply)
         }
     }
 }

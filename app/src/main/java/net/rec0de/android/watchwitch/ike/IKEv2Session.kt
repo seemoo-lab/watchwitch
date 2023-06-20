@@ -1,4 +1,4 @@
-package net.rec0de.android.watchwitch.IKE
+package net.rec0de.android.watchwitch.ike
 
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
@@ -26,7 +26,6 @@ class IKEv2Session(
     private val sourcePort: Int,
     private val initiatorSPI: ByteArray
 ) {
-
     private val random = SecureRandom()
 
     private val responderSPI = randomBytes(8)
@@ -394,9 +393,9 @@ class IKEv2Session(
         )
 
         val key = when(dataProtectionClass) {
-            1 -> LongTermStorage.getEd25519PrivateKey(LongTermStorage.PRIVATE_CLASS_A)
-            3 -> LongTermStorage.getEd25519PrivateKey(LongTermStorage.PRIVATE_CLASS_C)
-            else -> LongTermStorage.getEd25519PrivateKey(LongTermStorage.PRIVATE_CLASS_D)
+            1 -> LongTermStorage.getEd25519LocalPrivateKey(LongTermStorage.PRIVATE_CLASS_A)
+            3 -> LongTermStorage.getEd25519LocalPrivateKey(LongTermStorage.PRIVATE_CLASS_C)
+            else -> LongTermStorage.getEd25519LocalPrivateKey(LongTermStorage.PRIVATE_CLASS_D)
         }
 
         val signer = Ed25519Signer()
@@ -413,9 +412,9 @@ class IKEv2Session(
         )
 
         val key = when(dataProtectionClass) {
-            1 -> LongTermStorage.getEd25519PublicKey(LongTermStorage.PUBLIC_CLASS_A)
-            3 -> LongTermStorage.getEd25519PublicKey(LongTermStorage.PUBLIC_CLASS_C)
-            else -> LongTermStorage.getEd25519PublicKey(LongTermStorage.PUBLIC_CLASS_D)
+            1 -> LongTermStorage.getEd25519RemotePublicKey(LongTermStorage.PUBLIC_CLASS_A)
+            3 -> LongTermStorage.getEd25519RemotePublicKey(LongTermStorage.PUBLIC_CLASS_C)
+            else -> LongTermStorage.getEd25519RemotePublicKey(LongTermStorage.PUBLIC_CLASS_D)
         }
 
         val verifier = Ed25519Signer()

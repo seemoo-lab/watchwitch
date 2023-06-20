@@ -7,6 +7,7 @@ import org.bouncycastle.crypto.params.KeyParameter
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.NetworkInterface
+import java.util.UUID
 
 
 object Utils {
@@ -61,6 +62,18 @@ object Utils {
 
         return ciphertext
     }
+
+    fun uuidFromBytes(bytes: ByteArray): UUID {
+        if(bytes.size != 16)
+            throw Exception("Trying to build UUID from ${bytes.size} bytes, expected 16")
+
+        val a = bytes.sliceArray(0 until 4).hex()
+        val b = bytes.sliceArray(4 until 6).hex()
+        val c = bytes.sliceArray(6 until 8).hex()
+        val d = bytes.sliceArray(8 until 10).hex()
+        val e = bytes.sliceArray(10 until 16).hex()
+        return UUID.fromString("$a-$b-$c-$d-$e")
+    }
 }
 
 fun ByteArray.hex() = joinToString("") { "%02x".format(it) }
@@ -77,4 +90,8 @@ fun UInt.Companion.fromBytesSmall(bytes: ByteArray): UInt {
 }
 fun UInt.Companion.fromBytesBig(bytes: ByteArray): UInt {
     return bytes.reversed().mapIndexed { index, byte ->  byte.toUByte().toUInt() shl (index * 8)}.sum()
+}
+
+fun ULong.Companion.fromBytesBig(bytes: ByteArray): ULong {
+    return bytes.reversed().mapIndexed { index, byte ->  byte.toUByte().toULong() shl (index * 8)}.sum()
 }
