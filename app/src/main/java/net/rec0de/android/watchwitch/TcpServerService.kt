@@ -84,14 +84,14 @@ class TcpServer(private val port: Int) : Thread() {
             val serverSocket = ServerSocket(port)
             while (true) {
                 socket = serverSocket.accept()
-                Logger.logIDS("IDS connect on $port: src port ${socket.port}", 2)
                 val dataInputStream = DataInputStream(socket.getInputStream())
                 val dataOutputStream = DataOutputStream(socket.getOutputStream())
 
-                // Use threads for each client to communicate with them simultaneously
+                // Use global coroutines for each client to communicate with them simultaneously
                 if(port == 62742)
-                    ShoesProxyHandler(dataInputStream, dataOutputStream).start()
+                    GlobalScope.launch { ShoesProxyHandler.handleConnection(dataInputStream, dataOutputStream) }
                 else {
+                    Logger.logIDS("IDS connect on $port: src port ${socket.port}", 3)
                     GlobalScope.launch{ NWSCManager.readFromSocket(dataInputStream, dataOutputStream, port) }
                 }
             }

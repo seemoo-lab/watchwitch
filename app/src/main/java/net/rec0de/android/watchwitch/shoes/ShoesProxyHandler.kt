@@ -1,5 +1,9 @@
 package net.rec0de.android.watchwitch.shoes
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.RoutingManager
 import net.rec0de.android.watchwitch.fromBytesBig
@@ -7,16 +11,16 @@ import net.rec0de.android.watchwitch.hex
 import net.rec0de.android.watchwitch.hexBytes
 import java.io.DataInputStream
 import java.io.DataOutputStream
-import java.io.EOFException
 import java.io.IOException
 import java.io.OutputStream
 import java.net.Socket
-import java.net.SocketException
 
-class ShoesProxyHandler(private val fromWatch: DataInputStream, private val toWatch: DataOutputStream) : Thread() {
-    override fun run() {
+object ShoesProxyHandler {
+    suspend fun handleConnection(fromWatch: DataInputStream, toWatch: DataOutputStream) {
         try {
-            val headerLen = fromWatch.readUnsignedShort()
+            val headerLen = withContext(Dispatchers.IO) {
+                fromWatch.readUnsignedShort()
+            }
 
             Logger.logShoes("TLS rcv trying to read $headerLen header bytes", 10)
 
@@ -68,11 +72,13 @@ class ShoesProxyHandler(private val fromWatch: DataInputStream, private val toWa
             val expensiveFlag = (if(RoutingManager.isConnectionExpensive()) 0x80 else 0x00).toUByte()
             val networkByte = wifiFlag or cellFlag or expensiveFlag
 
-            toWatch.write("00060000040001".hexBytes())
-            toWatch.writeByte(networkByte.toInt())
-            toWatch.flush()
+            withContext(Dispatchers.IO) {
+                toWatch.write("00060000040001".hexBytes())
+                toWatch.writeByte(networkByte.toInt())
+                toWatch.flush()
+            }
 
-            ShoesProxyReplyForwarder(fromRemote, toWatch, hostname).start()
+            GlobalScope.launch { forwardForever(fromRemote, toWatch, hostname) }
 
             while(true) {
                 // we expect a TLS record header here, which is 1 byte record type, 2 bytes TLS version, 2 bytes length
@@ -81,46 +87,59 @@ class ShoesProxyHandler(private val fromWatch: DataInputStream, private val toWa
                 val len = UInt.fromBytesBig(recordHeader.sliceArray(3 until 5)).toInt()
                 val packet = ByteArray(5+len)
                 recordHeader.copyInto(packet)
-                fromWatch.readFully(packet, 5, len)
+
+                withContext(Dispatchers.IO) {
+                    fromWatch.readFully(packet, 5, len)
+                    toRemote.write(packet)
+                    toRemote.flush()
+                }
 
                 Logger.logShoes("TLS to remote: ${packet.hex()}", 10)
-                toRemote.write(packet)
-                toRemote.flush()
-
                 NetworkStats.packetSent(hostname, len)
             }
         } catch (e: Exception) {
             try {
-                fromWatch.close()
-                toWatch.close()
+                withContext(Dispatchers.IO) {
+                    fromWatch.close()
+                    toWatch.close()
+                }
             } catch (ex: IOException) {
                 ex.printStackTrace()
             }
         }
     }
-}
 
-class ShoesProxyReplyForwarder(private val fromRemoteStream: DataInputStream, private val toLocalStream: OutputStream, private val hostname: String) : Thread() {
-    override fun run() {
+    private suspend fun forwardForever(fromRemoteStream: DataInputStream, toLocalStream: OutputStream, hostname: String) {
         try {
             while(true) {
                 // we expect a TLS record header here, which is 1 byte record type, 2 bytes TLS version, 2 bytes length
                 val recordHeader = ByteArray(5)
-                fromRemoteStream.readFully(recordHeader)
-                val len = UInt.fromBytesBig(recordHeader.sliceArray(3 until 5)).toInt()
+                val len = withContext(Dispatchers.IO) {
+                    fromRemoteStream.readFully(recordHeader)
+                    UInt.fromBytesBig(recordHeader.sliceArray(3 until 5)).toInt()
+                }
+
                 val packet = ByteArray(5+len)
                 recordHeader.copyInto(packet)
-                fromRemoteStream.readFully(packet, 5, len)
+
+                withContext(Dispatchers.IO) {
+                    fromRemoteStream.readFully(packet, 5, len)
+                }
 
                 Logger.logShoes("TLS from remote: ${packet.hex()}", 10)
-                toLocalStream.write(packet)
-                toLocalStream.flush()
                 NetworkStats.packetReceived(hostname, len)
+
+                withContext(Dispatchers.IO) {
+                    toLocalStream.write(packet)
+                    toLocalStream.flush()
+                }
             }
         } catch (e: Exception) {
             try {
-                fromRemoteStream.close()
-                toLocalStream.close()
+                withContext(Dispatchers.IO) {
+                    fromRemoteStream.close()
+                    toLocalStream.close()
+                }
             } catch (ex: IOException) {
                 ex.printStackTrace()
             }
