@@ -7,6 +7,7 @@ import java.io.DataOutputStream
 open class UTunHandler(val channel: String, var output: DataOutputStream?) {
 
     open fun init() {
+        UTunController.registerChannelCreation(channel)
         Logger.logUTUN("Creating handler for $channel", 1)
     }
 

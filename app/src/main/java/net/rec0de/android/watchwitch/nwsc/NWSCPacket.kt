@@ -63,6 +63,12 @@ abstract class NWSCPacket(val seq: Long) {
     abstract fun toByteArray(): ByteArray
 }
 
+/**
+ * Flag documentation:
+ * 0x8000 is accept
+ * 0x0000 looks to be NWSC-internal reject (due to failed verification, already established service, etc)
+ * 0x4000 looks to be higher-level (client) reject (higher-level client timed out, sent active reject)
+ */
 class NWSCFeedback(seq: Long, val flags: UShort, val pubkey: ByteArray): NWSCPacket(seq) {
     companion object {
         fun fresh(flags: UShort) = NWSCFeedback(NWSCManager.freshSequenceNumber(), flags, NWSCManager.localPublicKey.encoded)

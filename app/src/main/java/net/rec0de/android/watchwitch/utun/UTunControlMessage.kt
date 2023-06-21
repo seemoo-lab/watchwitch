@@ -14,7 +14,10 @@ abstract class UTunControlMessage {
                 0x01 -> Hello.parse(bytes)
                 0x02 -> SetupChannel.parse(bytes)
                 0x03 -> CloseChannel.parse(bytes)
-                0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c -> throw Exception("Unsupported UTunControlMsg type $type / ${msgTypeToString(type)}")
+                0x04 -> CompressionRequest.parse(bytes)
+                0x05 -> CompressionResponse.parse(bytes)
+                0x06 -> SetupEncryptedChannel.parse(bytes)
+                0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c -> throw Exception("Unsupported UTunControlMsg type $type / ${msgTypeToString(type)}")
                 else -> throw Exception("Unknown UTunControlMsg type $type in message ${bytes.hex()}")
             }
         }
@@ -183,7 +186,7 @@ class Hello(
 }
 
 // the sender port is completely meaningless??
-class SetupChannel(val proto: Int, val receiverPort: Int, val senderPort: Int, val senderUUID: UUID, val receiverUUID: UUID?, val account: String, val service: String, val name: String): UTunControlMessage() {
+class SetupChannel(val protocol: Int, val receiverPort: Int, val senderPort: Int, val senderUUID: UUID, val receiverUUID: UUID?, val account: String, val service: String, val name: String): UTunControlMessage() {
     companion object {
         private var parseOffset = 0
 
@@ -234,7 +237,7 @@ class SetupChannel(val proto: Int, val receiverPort: Int, val senderPort: Int, v
 
         val header = ByteBuffer.allocate(16)
         header.put(0x02) // SetupChannel type byte
-        header.put(proto.toByte())
+        header.put(protocol.toByte())
         header.putShort(receiverPort.toShort())
         header.putShort(senderPort.toShort())
         header.putShort(0x24) // sender UUID length
@@ -252,7 +255,7 @@ class SetupChannel(val proto: Int, val receiverPort: Int, val senderPort: Int, v
     }
 
     override fun toString(): String {
-        return "SetupChannel(for $account $service $name ports $senderPort->$receiverPort proto $proto uuids $senderUUID $receiverUUID)"
+        return "SetupChannel(for $account $service $name ports $senderPort->$receiverPort proto $protocol uuids $senderUUID $receiverUUID)"
     }
 }
 
@@ -295,5 +298,174 @@ class CloseChannel(val senderUUID: UUID, val receiverUUID: UUID, val account: St
 
     override fun toString(): String {
         return "CloseChannel(for $account $service $name uuids $senderUUID $receiverUUID)"
+    }
+}
+
+class CompressionRequest(
+    val unk: Int,
+    val remoteCID: Int,
+    val seq: Int,
+    val ack: Int,
+    val senderUUID: UUID,
+    val receiverUUID: UUID,
+    val account: String,
+    val service: String,
+    val name: String
+    ): UTunControlMessage() {
+    companion object {
+        private var parseOffset = 0
+        fun parse(bytes: ByteArray): CompressionRequest {
+            if(bytes[0].toInt() != 0x04)
+                throw Exception("Expected UTunControlMsg type 0x04 for CompressionRequest but got ${bytes[0]}")
+            parseOffset = 1
+
+            val remoteUUIDLen = readInt(bytes, 2)
+            val localUUIDLen = readInt(bytes, 2)
+            val accLen = readInt(bytes, 2)
+            val serviceLen = readInt(bytes, 2)
+            val nameLen = readInt(bytes, 2)
+
+            val unk = readInt(bytes, 2)
+            val remoteCID = readInt(bytes, 2)
+            val seq = readInt(bytes, 4)
+            val ack = readInt(bytes, 4)
+
+            val remoteUUID = UUID.fromString(readString(bytes, remoteUUIDLen))
+            val localUUID = UUID.fromString(readString(bytes, localUUIDLen))
+            val account = readString(bytes, accLen)
+            val service = readString(bytes, serviceLen)
+            val name = readString(bytes, nameLen)
+
+            return CompressionRequest(unk, remoteCID, seq, ack, remoteUUID, localUUID, account, service, name)
+        }
+
+        private fun readString(bytes: ByteArray, size: Int): String {
+            val str = bytes.sliceArray(parseOffset until parseOffset +size).toString(Charsets.UTF_8)
+            parseOffset += size
+            return str
+        }
+
+        private fun readInt(bytes: ByteArray, size: Int): Int {
+            val int = UInt.fromBytesBig(bytes.sliceArray(parseOffset until parseOffset +size)).toInt()
+            parseOffset += size
+            return int
+        }
+    }
+
+    override fun toString(): String {
+        return "CompressionRequest(#$unk remoteCID $remoteCID seq $seq ack $ack for $account $service $name uuids $senderUUID $receiverUUID)"
+    }
+}
+
+class CompressionResponse(
+    val unk: Int,
+    val senderUUID: UUID,
+    val receiverUUID: UUID,
+    val account: String,
+    val service: String,
+    val name: String
+): UTunControlMessage() {
+    companion object {
+        private var parseOffset = 0
+        fun parse(bytes: ByteArray): CompressionResponse {
+            if(bytes[0].toInt() != 0x05)
+                throw Exception("Expected UTunControlMsg type 0x05 for CompressionResponse but got ${bytes[0]}")
+            parseOffset = 1
+
+            val remoteUUIDLen = readInt(bytes, 2)
+            val localUUIDLen = readInt(bytes, 2)
+            val accLen = readInt(bytes, 2)
+            val serviceLen = readInt(bytes, 2)
+            val nameLen = readInt(bytes, 2)
+
+            val unk = readInt(bytes, 2)
+
+            val remoteUUID = UUID.fromString(readString(bytes, remoteUUIDLen))
+            val localUUID = UUID.fromString(readString(bytes, localUUIDLen))
+            val account = readString(bytes, accLen)
+            val service = readString(bytes, serviceLen)
+            val name = readString(bytes, nameLen)
+
+            return CompressionResponse(unk, remoteUUID, localUUID, account, service, name)
+        }
+
+        private fun readString(bytes: ByteArray, size: Int): String {
+            val str = bytes.sliceArray(parseOffset until parseOffset +size).toString(Charsets.UTF_8)
+            parseOffset += size
+            return str
+        }
+
+        private fun readInt(bytes: ByteArray, size: Int): Int {
+            val int = UInt.fromBytesBig(bytes.sliceArray(parseOffset until parseOffset +size)).toInt()
+            parseOffset += size
+            return int
+        }
+    }
+
+    override fun toString(): String {
+        return "CompressionResponse(#$unk for $account $service $name uuids $senderUUID $receiverUUID)"
+    }
+}
+
+class SetupEncryptedChannel(
+    val protocol: Int,
+    val senderPort: Int,
+    val receiverPort: Int,
+    val senderUUID: UUID,
+    val receiverUUID: UUID,
+    val account: String,
+    val service: String,
+    val name: String,
+    val ssrc: Int,
+    val startSeq: Int,
+    val key: ByteArray
+): UTunControlMessage() {
+    companion object {
+        private var parseOffset = 0
+        fun parse(bytes: ByteArray): SetupEncryptedChannel {
+            if(bytes[0].toInt() != 0x05)
+                throw Exception("Expected UTunControlMsg type 0x06 for SetupEncryptedChannel but got ${bytes[0]}")
+            parseOffset = 1
+
+            // 24 byte header
+            // (1 byte type)
+            val proto = readInt(bytes, 1)
+            val senderPort = readInt(bytes, 2)
+            val receiverPort = readInt(bytes, 2)
+            val remoteUUIDLen = readInt(bytes, 2)
+            val localUUIDLen = readInt(bytes, 2)
+            val accLen = readInt(bytes, 2)
+            val serviceLen = readInt(bytes, 2)
+            val nameLen = readInt(bytes, 2)
+            val ssrc = readInt(bytes, 4) // ssrc = Synchronization source identifier?
+            val startSeq = readInt(bytes, 2)
+            val keyLen = readInt(bytes, 2)
+
+            val remoteUUID = UUID.fromString(readString(bytes, remoteUUIDLen))
+            val localUUID = UUID.fromString(readString(bytes, localUUIDLen))
+            val account = readString(bytes, accLen)
+            val service = readString(bytes, serviceLen)
+            val name = readString(bytes, nameLen)
+            val key = bytes.sliceArray(parseOffset until parseOffset + keyLen)
+            parseOffset += keyLen
+
+            return SetupEncryptedChannel(proto, receiverPort, senderPort, remoteUUID, localUUID, account, service, name, ssrc, startSeq, key)
+        }
+
+        private fun readString(bytes: ByteArray, size: Int): String {
+            val str = bytes.sliceArray(parseOffset until parseOffset +size).toString(Charsets.UTF_8)
+            parseOffset += size
+            return str
+        }
+
+        private fun readInt(bytes: ByteArray, size: Int): Int {
+            val int = UInt.fromBytesBig(bytes.sliceArray(parseOffset until parseOffset +size)).toInt()
+            parseOffset += size
+            return int
+        }
+    }
+
+    override fun toString(): String {
+        return "SetupEncryptedChannel(ssrc $ssrc startSeq $startSeq for $account $service $name ports $senderPort->$receiverPort proto $protocol uuids $senderUUID $receiverUUID key ${key.hex()})"
     }
 }

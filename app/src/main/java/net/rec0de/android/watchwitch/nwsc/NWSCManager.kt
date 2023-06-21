@@ -194,13 +194,19 @@ object NWSCManager {
 
     private suspend fun requestPubkey() {
         val port = 61315
-        val socket = Socket(
-            LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_C), // does it matter which address we use here?
-            port
-        )
 
-        val toWatch = DataOutputStream(socket.getOutputStream())
-        val fromWatch = DataInputStream(socket.getInputStream())
+        val streams = withContext(Dispatchers.IO) {
+            val socket = Socket(
+                LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_C), // does it matter which address we use here?
+                port
+            )
+            val toWatch = DataOutputStream(socket.getOutputStream())
+            val fromWatch = DataInputStream(socket.getInputStream())
+            Pair(toWatch, fromWatch)
+        }
+
+        val toWatch = streams.first
+        val fromWatch = streams.second
 
         val req = NWSCPubkeyRequest.fresh(port)
         req.sign(localPrivateKey)

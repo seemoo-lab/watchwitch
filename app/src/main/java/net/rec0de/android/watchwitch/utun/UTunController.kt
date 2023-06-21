@@ -11,6 +11,8 @@ import java.util.UUID
 object UTunController : UTunHandler("ids-control-channel", null) {
 
     private val remoteAnnouncedChannels = mutableSetOf<String>()
+    private val establishedChannels = mutableSetOf<String>()
+    private val requestingChannels = mutableSetOf<String>()
 
     private val serviceNameToLocalUUID = mutableMapOf<String, UUID>()
 
@@ -37,22 +39,29 @@ object UTunController : UTunHandler("ids-control-channel", null) {
 
         val deliveryChannels = listOf("UTunDelivery-Default-Default-C", "UTunDelivery-Default-Default-D", "UTunDelivery-Default-DefaultCloud-C", "UTunDelivery-Default-DefaultCloud-D", "UTunDelivery-Default-Sync-C", "UTunDelivery-Default-Sync-D", "UTunDelivery-Default-Urgent-C", "UTunDelivery-Default-Urgent-D", "UTunDelivery-Default-UrgentCloud-C", "UTunDelivery-Default-UrgentCloud-D")
         var portIdx = 0
-        val targetPort = 61314 // there's no obvious pattern for when 61314 is used vs 61315 - we'll just try 61314 for now
-        deliveryChannels.forEach {
+
+        deliveryChannels.forEachIndexed { i, it ->
+            val fullService = "idstest/localdelivery/$it"
             val uuid = UUID.randomUUID()
-            serviceNameToLocalUUID["idstest/localdelivery/$it"] = uuid
+            serviceNameToLocalUUID[fullService] = uuid
+
+            // code in IDSUTunController::startDataChannelWithDevice:genericConnection:serviceConnectorService:endpoint: suggests 61315 is used for cloud-enabled channels
+            val targetPort = if(it.contains("Cloud")) 61315 else 61314
+
             val setupChan = SetupChannel(6, targetPort, 51314+portIdx, uuid, null, "idstest", "localdelivery", it)
             portIdx += 1
             Logger.logUTUN("snd $setupChan", 1)
             send(setupChan.toBytes())
-        }
+            requestingChannels.add(fullService)
 
-        deliveryChannels.forEachIndexed { i, service ->
             // attempt to open an actual connection
             GlobalScope.launch {
                 delay((200 + 30*i).toLong())
-                val handler = UTunHandler(service, null)
-                NWSCManager.initiateChannelAndForward("idstest/localdelivery/$service", 61314, handler)
+                // we may have received and accepted an incoming request for this channel in the meantime
+                if(!establishedChannels.contains(fullService)) {
+                    val handler = UTunHandler(it, null)
+                    NWSCManager.initiateChannelAndForward(fullService, targetPort, handler)
+                }
             }
         }
     }
@@ -64,6 +73,7 @@ object UTunController : UTunHandler("ids-control-channel", null) {
 
         when (msg) {
             is SetupChannel -> setupChannel(msg)
+            is CloseChannel -> closeChannel(msg)
         }
     }
 
@@ -71,15 +81,29 @@ object UTunController : UTunHandler("ids-control-channel", null) {
         val fullService = "${msg.account}/${msg.service}/${msg.name}"
         remoteAnnouncedChannels.add(fullService)
 
-        /*val ourUUID = serviceNameToLocalUUID.computeIfAbsent("${msg.account}/${msg.service}/${msg.name}") { UUID.randomUUID()}
-        val reply = SetupChannel(msg.proto, msg.receiverPort, msg.senderPort, ourUUID, msg.senderUUID, msg.account, msg.service, msg.name)
+        if(!requestingChannels.contains(fullService)) {
+            Logger.logUTUN("got request for $fullService, which we did not request - replying", 1)
+            val ourUUID = serviceNameToLocalUUID.computeIfAbsent(fullService) { UUID.randomUUID()}
+            val reply = SetupChannel(msg.protocol, msg.receiverPort, msg.senderPort, ourUUID, msg.senderUUID, msg.account, msg.service, msg.name)
+            Logger.logUTUN("UTUN snd $reply", 0)
+            send(reply.toBytes())
+        }
+    }
 
-        Logger.logUTUN("snd $reply", 0)
-        send(reply.toBytes())*/
+    private fun closeChannel(msg: CloseChannel) {
+        val fullService = "${msg.account}/${msg.service}/${msg.name}"
+        remoteAnnouncedChannels.remove(fullService)
+        serviceNameToLocalUUID.remove(fullService)
+        establishedChannels.remove(fullService)
+    }
+
+    fun registerChannelCreation(service: String) {
+        establishedChannels.add(service)
     }
 
     fun shouldAcceptConnection(service: String): Boolean {
-        // we're pretending to be an unlocked iPhone, in which case we reject (most?) requests for lower data protection class channels
-        return remoteAnnouncedChannels.contains(service) && !service.endsWith("-D")
+        // technically there is some mechanism for which side should accept simultaneous connection requests
+        // based on the connection UUIDs, but we'll just accept everything we can for now
+        return remoteAnnouncedChannels.contains(service) && !establishedChannels.contains(service)
     }
 }
