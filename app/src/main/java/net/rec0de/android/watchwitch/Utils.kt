@@ -4,9 +4,6 @@ import org.bouncycastle.crypto.digests.SHA512Digest
 import org.bouncycastle.crypto.modes.ChaCha20Poly1305
 import org.bouncycastle.crypto.params.AEADParameters
 import org.bouncycastle.crypto.params.KeyParameter
-import java.net.Inet4Address
-import java.net.InetAddress
-import java.net.NetworkInterface
 import java.util.UUID
 
 
@@ -73,6 +70,33 @@ object Utils {
         val d = bytes.sliceArray(8 until 10).hex()
         val e = bytes.sliceArray(10 until 16).hex()
         return UUID.fromString("$a-$b-$c-$d-$e")
+    }
+}
+
+open class ParseCompanion {
+    protected var parseOffset = 0
+
+    protected fun readBytes(bytes: ByteArray, length: Int): ByteArray {
+        val sliced = bytes.sliceArray(parseOffset until parseOffset + length)
+        parseOffset += length
+        return sliced
+    }
+
+    protected fun readLengthPrefixedString(bytes: ByteArray, sizePrefixLen: Int): String {
+        val len = readInt(bytes, sizePrefixLen)
+        return readString(bytes, len)
+    }
+
+    protected fun readString(bytes: ByteArray, size: Int): String {
+        val str = bytes.sliceArray(parseOffset until parseOffset +size).toString(Charsets.UTF_8)
+        parseOffset += size
+        return str
+    }
+
+    protected fun readInt(bytes: ByteArray, size: Int): Int {
+        val int = UInt.fromBytesBig(bytes.sliceArray(parseOffset until parseOffset +size)).toInt()
+        parseOffset += size
+        return int
     }
 }
 
