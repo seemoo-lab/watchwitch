@@ -22,6 +22,7 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.EOFException
 import java.net.Socket
+import java.nio.ByteBuffer
 import java.security.SecureRandom
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
@@ -272,7 +273,19 @@ object NWSCManager {
     private fun forwardToUTunController(fromWatch: DataInputStream, toWatch: DataOutputStream) {
         UTunController.usingOutput(toWatch)
         UTunController.init()
-        forwardToHandlerForever(fromWatch, UTunController)
+        try {
+            while(true) {
+                val length = fromWatch.readUnsignedShort() // read length of incoming message
+                if (length > 0) {
+                    val message = ByteArray(length)
+                    fromWatch.readFully(message, 0, message.size)
+                    UTunController.receive(message)
+                }
+            }
+        }
+        catch (e: EOFException) {
+            UTunController.close()
+        }
     }
 
     private fun createHandlerAndForward(fromWatch: DataInputStream, toWatch: DataOutputStream, service: String) {
@@ -324,10 +337,14 @@ object NWSCManager {
     private fun forwardToHandlerForever(fromWatch: DataInputStream, handler: UTunHandler) {
         try {
             while(true) {
-                val length = fromWatch.readUnsignedShort() // read length of incoming message
+                val type = fromWatch.readByte()
+                val length = fromWatch.readInt() // read length of incoming message
                 if (length > 0) {
-                    val message = ByteArray(length)
-                    fromWatch.readFully(message, 0, message.size)
+                    val message = ByteArray(length+5)
+                    val buf = ByteBuffer.wrap(message, 0, 5)
+                    buf.put(type)
+                    buf.putInt(length)
+                    fromWatch.readFully(message, 5, message.size-5)
                     handler.receive(message)
                 }
             }

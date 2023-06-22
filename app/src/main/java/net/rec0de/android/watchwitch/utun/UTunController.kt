@@ -106,4 +106,12 @@ object UTunController : UTunHandler("ids-control-channel", null) {
         // based on the connection UUIDs, but we'll just accept everything we can for now
         return remoteAnnouncedChannels.contains(service) && !establishedChannels.contains(service)
     }
+
+    override fun send(message: ByteArray) {
+        //Logger.logUTUN("snd raw ${message.hex()}", 3)
+        val toWatch = output!!
+        toWatch.writeShort(message.size)
+        toWatch.write(message)
+        toWatch.flush()
+    }
 }

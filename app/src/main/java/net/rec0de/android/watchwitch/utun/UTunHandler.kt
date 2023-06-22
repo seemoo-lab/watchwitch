@@ -13,16 +13,16 @@ open class UTunHandler(val channel: String, var output: DataOutputStream?) {
 
     open fun receive(message: ByteArray) {
         Logger.logUTUN("UTUN rcv for $channel: ${message.hex()}", 1)
+        val parsed = UTunMessage.parse(message)
     }
 
     open fun close() {
         Logger.logUTUN("Handler closed for $channel", 1)
     }
 
-    protected fun send(message: ByteArray) {
+    protected open fun send(message: ByteArray) {
         //Logger.logUTUN("snd raw ${message.hex()}", 3)
         val toWatch = output!!
-        toWatch.writeShort(message.size)
         toWatch.write(message)
         toWatch.flush()
     }
