@@ -82,9 +82,9 @@ open class ParseCompanion {
         return sliced
     }
 
-    protected fun readLengthPrefixedString(bytes: ByteArray, sizePrefixLen: Int): String {
+    protected fun readLengthPrefixedString(bytes: ByteArray, sizePrefixLen: Int): String? {
         val len = readInt(bytes, sizePrefixLen)
-        return readString(bytes, len)
+        return if(len == 0) null else readString(bytes, len)
     }
 
     protected fun readString(bytes: ByteArray, size: Int): String {

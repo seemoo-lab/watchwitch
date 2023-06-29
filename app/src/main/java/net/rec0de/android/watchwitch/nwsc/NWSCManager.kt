@@ -92,7 +92,7 @@ object NWSCManager {
         else if(!gotPubkey) {
             if(!requestedPubkey.getAndSet(true)) // if requestedPubkey is already true, we re-set to true and do not enter the branch. if it is false, we set to true and request pubkey
                 GlobalScope.launch{ requestPubkey() } // using GlobalScope to request pubkey in a thread-like way without waiting for completion
-            Logger.logIDS("NWSC rcv $request before pubkey ready, enqueueing", 1)
+            Logger.logIDS("NWSC rcv $request before pubkey ready, enqueueing", 2)
             waitingForPubkeyQueue.add(Triple(request, fromWatch, toWatch))
         }
         else {
@@ -135,11 +135,11 @@ object NWSCManager {
     }
 
     private fun handlePubkeyRequest(toWatch: DataOutputStream) {
-        Logger.logIDS("NWSC rcv pubkey req", 0)
+        Logger.logIDS("NWSC rcv pubkey req", 3)
 
         // send feedback not accepting connection but including our pubkey
         val payload = NWSCFeedback.fresh(0x00u).toByteArray()
-        Logger.logIDS("NWSC snd pubkey", 1)
+        Logger.logIDS("NWSC snd pubkey", 3)
 
         toWatch.write(payload)
         toWatch.flush()
@@ -169,7 +169,7 @@ object NWSCManager {
         req.sign(localPrivateKey)
         val payload = req.toByteArray()
 
-        Logger.logIDS("NWSC snd idscc request", 1)
+        Logger.logIDS("NWSC snd idscc request", 2)
 
         // send request and receive response buffer
         toWatch.write(payload)
@@ -184,11 +184,11 @@ object NWSCManager {
         // if our channel was accepted
         if(feedback.flags.toUInt() == 0x8000u) {
             registerIdsControlChannel(fromWatch, toWatch)
-            Logger.logIDS("NWSC rcv idscc request accepted", 1)
+            Logger.logIDS("NWSC rcv idscc request accepted", 2)
         }
         else {
             requestedIdsChannel.set(false)
-            Logger.logIDS("NWSC rcv idscc request rejected", 1)
+            Logger.logIDS("NWSC rcv idscc request rejected", 2)
             close(fromWatch, toWatch)
         }
     }
@@ -213,7 +213,7 @@ object NWSCManager {
         req.sign(localPrivateKey)
         val payload = req.toByteArray()
 
-        Logger.logIDS("NWSC snd pubkey req", 1)
+        Logger.logIDS("NWSC snd pubkey req", 2)
 
         // send request and receive response buffer
         val ackLen = withContext(Dispatchers.IO) {
@@ -232,7 +232,7 @@ object NWSCManager {
         remotePubKey = feedback.pubkey
         gotPubkey = true
 
-        Logger.logIDS("NWSC rcv pubkey ${feedback.pubkey.hex()}", 1)
+        Logger.logIDS("NWSC rcv pubkey ${feedback.pubkey.hex()}", 2)
         close(fromWatch, toWatch)
 
         processQueued()
@@ -243,7 +243,7 @@ object NWSCManager {
         val flags = if(basedOnPolicy) 0x4000u else 0x0000u
         val ack = NWSCFeedback.fresh(flags.toUShort())
         val payload = ack.toByteArray()
-        Logger.logIDS("NWSC snd reject with flags ${flags.toString(16)}", 1)
+        Logger.logIDS("NWSC snd reject with flags ${flags.toString(16)}", 3)
 
         toWatch.write(payload)
         toWatch.flush()
@@ -252,7 +252,7 @@ object NWSCManager {
     private fun accept(toWatch: DataOutputStream) {
         val ack = NWSCFeedback.fresh(0x8000u)
         val payload = ack.toByteArray()
-        Logger.logIDS("NWSC snd accept", 1)
+        Logger.logIDS("NWSC snd accept", 3)
 
         toWatch.write(payload)
         toWatch.flush()
@@ -351,6 +351,9 @@ object NWSCManager {
         }
         catch (e: EOFException) {
             handler.close()
+        }
+        catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 

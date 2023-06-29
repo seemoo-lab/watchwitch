@@ -16,6 +16,8 @@ object UTunController : UTunHandler("ids-control-channel", null) {
 
     private val serviceNameToLocalUUID = mutableMapOf<String, UUID>()
 
+    private val streamIdAssociations = mutableMapOf<Int, String>()
+
     fun usingOutput(out: DataOutputStream): UTunController {
         output = out
         return this
@@ -99,6 +101,18 @@ object UTunController : UTunHandler("ids-control-channel", null) {
 
     fun registerChannelCreation(service: String) {
         establishedChannels.add(service)
+    }
+
+    fun associateStreamWithTopic(streamID: Int, topic: String) {
+        if(streamIdAssociations.containsKey(streamID)) {
+            if(streamIdAssociations[streamID] != topic)
+                throw Exception("Stream ID $streamID is associated with topic ${streamIdAssociations[streamID]} but trying to rebind with $topic")
+        }
+        streamIdAssociations[streamID] = topic
+    }
+
+    fun topicForStream(streamID: Int): String? {
+        return streamIdAssociations[streamID]
     }
 
     fun shouldAcceptConnection(service: String): Boolean {

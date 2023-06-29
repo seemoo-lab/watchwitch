@@ -67,11 +67,11 @@ class Hello(
 
             parseOffset = 1
 
-            val controlChannelVersion = readLengthPrefixedString(bytes, 2)
-            val productName = readLengthPrefixedString(bytes, 2)
-            val productVersion = readLengthPrefixedString(bytes, 2)
-            val productBuild = readLengthPrefixedString(bytes, 2)
-            val model = readLengthPrefixedString(bytes, 2)
+            val controlChannelVersion = readLengthPrefixedString(bytes, 2)!!
+            val productName = readLengthPrefixedString(bytes, 2)!!
+            val productVersion = readLengthPrefixedString(bytes, 2)!!
+            val productBuild = readLengthPrefixedString(bytes, 2)!!
+            val model = readLengthPrefixedString(bytes, 2)!!
             val protocolVersion = readInt(bytes, 4)
 
             val msg = Hello(controlChannelVersion, productName, productVersion, productBuild, model, protocolVersion)
@@ -89,6 +89,13 @@ class Hello(
                         parseOffset += length
                     }
                     3 -> {
+                        // capability flags info:
+                        // bit 0x01: new service supported
+                        // bit 0x02: use shared OTR session
+                        // bit 0x04: resume resource transfers
+                        // bit 0x08: dynamic services
+                        // bit 0x10: unknown
+
                         msg.capabilityFlags = ULong.fromBytesBig(bytes.sliceArray(parseOffset until parseOffset+length)).toLong()
                         parseOffset += length
                     }
@@ -166,6 +173,15 @@ class Hello(
         return base.array() + opt.array()
     }
 
+    val newServiceSupported: Boolean
+        get() = (capabilityFlags and 0x01L) != 0L
+    val useSharedOTRSession: Boolean
+        get() = (capabilityFlags and 0x02L) != 0L
+    val resumeResourceTransfers: Boolean
+        get() = (capabilityFlags and 0x04L) != 0L
+    val dynamicServices: Boolean
+        get() = (capabilityFlags and 0x08L) != 0L
+
     override fun toString(): String {
         return "Hello($productName $productVersion $build $model, ccv $ccVersion, iUUID $instanceID dUUID $deviceID)"
     }
@@ -229,7 +245,7 @@ class SetupChannel(val protocol: Int, val receiverPort: Int, val senderPort: Int
     }
 }
 
-class CloseChannel(val senderUUID: UUID, val receiverUUID: UUID, val account: String, val service: String, val name: String): UTunControlMessage() {
+class CloseChannel(val senderUUID: UUID, val receiverUUID: UUID?, val account: String, val service: String, val name: String): UTunControlMessage() {
     companion object : ParseCompanion() {
         fun parse(bytes: ByteArray): CloseChannel {
             if(bytes[0].toInt() != 0x03)
@@ -244,7 +260,8 @@ class CloseChannel(val senderUUID: UUID, val receiverUUID: UUID, val account: St
 
 
             val remoteUUID = UUID.fromString(readString(bytes, remoteUUIDLen))
-            val localUUID = UUID.fromString(readString(bytes, localUUIDLen))
+            val localUUID = if(localUUIDLen > 0) UUID.fromString(readString(bytes, localUUIDLen)) else null
+
             val account = readString(bytes, accLen)
             val service = readString(bytes, serviceLen)
             val name = readString(bytes, nameLen)
@@ -264,7 +281,7 @@ class CompressionRequest(
     val seq: Int,
     val ack: Int,
     val senderUUID: UUID,
-    val receiverUUID: UUID,
+    val receiverUUID: UUID?,
     val account: String,
     val service: String,
     val name: String
@@ -287,7 +304,7 @@ class CompressionRequest(
             val ack = readInt(bytes, 4)
 
             val remoteUUID = UUID.fromString(readString(bytes, remoteUUIDLen))
-            val localUUID = UUID.fromString(readString(bytes, localUUIDLen))
+            val localUUID = if(localUUIDLen > 0) UUID.fromString(readString(bytes, localUUIDLen)) else null
             val account = readString(bytes, accLen)
             val service = readString(bytes, serviceLen)
             val name = readString(bytes, nameLen)
@@ -343,7 +360,7 @@ class SetupEncryptedChannel(
     val senderPort: Int,
     val receiverPort: Int,
     val senderUUID: UUID,
-    val receiverUUID: UUID,
+    val receiverUUID: UUID?,
     val account: String,
     val service: String,
     val name: String,
@@ -353,7 +370,7 @@ class SetupEncryptedChannel(
 ): UTunControlMessage() {
     companion object : ParseCompanion() {
         fun parse(bytes: ByteArray): SetupEncryptedChannel {
-            if(bytes[0].toInt() != 0x05)
+            if(bytes[0].toInt() != 0x06)
                 throw Exception("Expected UTunControlMsg type 0x06 for SetupEncryptedChannel but got ${bytes[0]}")
             parseOffset = 1
 
@@ -372,7 +389,7 @@ class SetupEncryptedChannel(
             val keyLen = readInt(bytes, 2)
 
             val remoteUUID = UUID.fromString(readString(bytes, remoteUUIDLen))
-            val localUUID = UUID.fromString(readString(bytes, localUUIDLen))
+            val localUUID = if(localUUIDLen > 0) UUID.fromString(readString(bytes, localUUIDLen)) else null
             val account = readString(bytes, accLen)
             val service = readString(bytes, serviceLen)
             val name = readString(bytes, nameLen)
