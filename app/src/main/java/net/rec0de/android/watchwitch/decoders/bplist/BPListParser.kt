@@ -1,6 +1,5 @@
-package net.rec0de.android.watchwitch.bplist
+package net.rec0de.android.watchwitch.decoders.bplist
 
-import net.rec0de.android.watchwitch.ParseCompanion
 import net.rec0de.android.watchwitch.fromBytesBig
 import net.rec0de.android.watchwitch.fromIndex
 import net.rec0de.android.watchwitch.hex
@@ -13,6 +12,12 @@ class BPListParser {
     private var objectRefSize = 0
     private var offsetTableOffsetSize = 0
     private var offsetTable = byteArrayOf()
+
+    companion object {
+        fun bufferIsBPList(buf: ByteArray): Boolean {
+            return buf.size > 8 && buf.sliceArray(0 until 8).decodeToString() == "bplist00"
+        }
+    }
 
     /**
      * Parses bytes representing a bplist and returns the first contained object (usually a container type containing all the other objects)
@@ -44,7 +49,13 @@ class BPListParser {
             println(obj)
             currentOffsetTableOffset += 1
         }*/
-        return readObjectFromOffsetTableEntry(bytes, topObjectOffset)
+        val rootObject = readObjectFromOffsetTableEntry(bytes, topObjectOffset)
+
+        return if(KeyedArchiveDecoder.isKeyedArchive(rootObject))
+                KeyedArchiveDecoder.decode(rootObject as BPDict)
+            else
+                rootObject
+
     }
 
     private fun readObjectFromOffsetTableEntry(bytes: ByteArray, index: Int): BPListObject {
@@ -87,7 +98,7 @@ class BPListParser {
                 val tmp = getFillAwareLengthAndOffset(bytes, offset)
                 val byteLen = tmp.first
                 val effectiveOffset = tmp.second
-                BPData(byteLen, bytes.sliceArray(effectiveOffset until effectiveOffset+byteLen))
+                BPData(bytes.sliceArray(effectiveOffset until effectiveOffset + byteLen))
             }
             // ASCII string
             in 0x50 until 0x60 -> {
@@ -97,7 +108,7 @@ class BPListParser {
                 val effectiveOffset = tmp.second
                 // ascii encodes at one char per byte, we can use default UTF8 decoding as ascii is cross compatible with everything
                 val string = bytes.decodeToString(effectiveOffset, effectiveOffset+charLen)
-                BPAsciiString(charLen, string)
+                BPAsciiString(string)
             }
             // Unicode string
             in 0x60 until 0x70 -> {
@@ -108,10 +119,10 @@ class BPListParser {
                 // this is UTF16, encodes at two bytes per char
                 val stringBytes = bytes.sliceArray(effectiveOffset until effectiveOffset+charLen*2)
                 val string = Charsets.UTF_16BE.decode(ByteBuffer.wrap(stringBytes)).toString()
-                BPUnicodeString(charLen, string)
+                BPUnicodeString(string)
             }
             // UID, byte length is lengthBits+1
-            in 0x80 until 0x90 -> BPUid(lengthBits + 1, bytes.sliceArray(offset+1 until offset+2+lengthBits))
+            in 0x80 until 0x90 -> BPUid(bytes.sliceArray(offset + 1 until offset + 2 + lengthBits))
             // Array
             in 0xa0 until 0xb0 -> {
                 val tmp = getFillAwareLengthAndOffset(bytes, offset)

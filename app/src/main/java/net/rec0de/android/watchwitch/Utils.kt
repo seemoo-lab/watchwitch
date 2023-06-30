@@ -109,13 +109,15 @@ fun String.hexBytes(): ByteArray {
         .toByteArray()
 }
 
-fun UInt.Companion.fromBytesSmall(bytes: ByteArray): UInt {
+fun UInt.Companion.fromBytesLittle(bytes: ByteArray): UInt {
     return bytes.mapIndexed { index, byte ->  byte.toUByte().toUInt() shl (index * 8)}.sum()
 }
 fun UInt.Companion.fromBytesBig(bytes: ByteArray): UInt {
     return bytes.reversed().mapIndexed { index, byte ->  byte.toUByte().toUInt() shl (index * 8)}.sum()
 }
-
+fun ULong.Companion.fromBytesLittle(bytes: ByteArray): ULong {
+    return bytes.mapIndexed { index, byte ->  byte.toUByte().toULong() shl (index * 8)}.sum()
+}
 fun ULong.Companion.fromBytesBig(bytes: ByteArray): ULong {
     return bytes.reversed().mapIndexed { index, byte ->  byte.toUByte().toULong() shl (index * 8)}.sum()
 }

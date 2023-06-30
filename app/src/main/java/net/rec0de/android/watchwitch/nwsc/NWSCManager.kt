@@ -93,7 +93,9 @@ object NWSCManager {
             if(!requestedPubkey.getAndSet(true)) // if requestedPubkey is already true, we re-set to true and do not enter the branch. if it is false, we set to true and request pubkey
                 GlobalScope.launch{ requestPubkey() } // using GlobalScope to request pubkey in a thread-like way without waiting for completion
             Logger.logIDS("NWSC rcv $request before pubkey ready, enqueueing", 2)
+            queueLock.lock()
             waitingForPubkeyQueue.add(Triple(request, fromWatch, toWatch))
+            queueLock.unlock()
         }
         else {
             val verified = request.verify(remotePubKey)
@@ -322,7 +324,6 @@ object NWSCManager {
 
         // if our channel was accepted
         if(feedback.flags.toUInt() == 0x8000u) {
-            registerIdsControlChannel(fromWatch, toWatch)
             Logger.logIDS("NWSC rcv channel $req accepted", 1)
             handler.output = toWatch
             handler.init()

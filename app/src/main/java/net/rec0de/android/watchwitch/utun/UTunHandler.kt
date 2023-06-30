@@ -1,7 +1,8 @@
 package net.rec0de.android.watchwitch.utun
 
 import net.rec0de.android.watchwitch.Logger
-import net.rec0de.android.watchwitch.bplist.BPListParser
+import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.hex
 import java.io.DataOutputStream
 import java.time.Instant
@@ -20,10 +21,6 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
         Logger.logUTUN("UTUN rcv raw for $channel: ${message.hex()}", 5)
         val parsed = UTunMessage.parse(message)
         Logger.logUTUN("UTUN rcv for $channel: $parsed", 1)
-
-        // acknowledge receipt if required
-        if(parsed.shouldAck)
-            send(AckMessage(parsed.sequence))
         
         when(parsed) {
             is UTunCommonMessage -> handleCommonMessage(parsed)
@@ -38,6 +35,9 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
             send(ExpiredAckMessage(message.sequence))
             return
         }
+
+        // acknowledge everything for now
+        send(AckMessage(message.sequence))
 
         if(message.hasTopic)
             UTunController.associateStreamWithTopic(message.streamID, message.topic!!)
@@ -54,8 +54,15 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
 
         when(message) {
             is DataMessage -> {
-                if(message.payload.sliceArray(0 until 8).decodeToString() == "bplist00")
+                if(BPListParser.bufferIsBPList(message.payload))
                     println(parser.parse(message.payload))
+            }
+            is ProtobufMessage -> {
+                // for some reason Protobuf messages sometimes carry, guess what, bplists
+                if(BPListParser.bufferIsBPList(message.payload))
+                    println(parser.parse(message.payload))
+                else
+                    println(ProtobufParser().parse(message.payload))
             }
         }
 

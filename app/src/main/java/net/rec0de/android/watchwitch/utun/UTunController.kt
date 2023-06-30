@@ -8,7 +8,10 @@ import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import java.io.DataOutputStream
 import java.util.UUID
 
-object UTunController : UTunHandler("ids-control-channel", null) {
+object UTunController {
+
+    private var output: DataOutputStream? = null
+    private val instanceID = UUID.randomUUID()
 
     private val remoteAnnouncedChannels = mutableSetOf<String>()
     private val establishedChannels = mutableSetOf<String>()
@@ -27,13 +30,15 @@ object UTunController : UTunHandler("ids-control-channel", null) {
      * When the ids-control-channel is initialized, both parties send their hellos immediately followed by a bunch of create channel messages
      * Then both parties attempt to open actual connections for (a subset of??) the requested channels
      */
-    override fun init() {
+    fun init() {
         val hello = Hello("5", "iPhone OS", "14.8", "18H17", "iPhone10,4", 0)
         hello.compatMinProtocolVersion = 15
         hello.compatMaxProtocolVersion = 16
         hello.serviceMinimumCompatibilityVersion = 10
         hello.capabilityFlags = 0x3ff
-        hello.instanceID = UUID.fromString("dc7a651b-0230-4430-95da-bcd0b7e45737")
+        // we re-generate this on every launch which i think causes the watch to treat us more nicely (including topics in message because we don't have mappings yet etc)
+        hello.instanceID = instanceID
+        hello.instanceID = UUID.randomUUID()
         hello.deviceID = UUID.fromString("54767e20-5a60-4e84-9d81-130568f258ce")
 
         Logger.logUTUN("snd $hello", 1)
@@ -68,7 +73,7 @@ object UTunController : UTunHandler("ids-control-channel", null) {
         }
     }
 
-    override fun receive(message: ByteArray) {
+    fun receive(message: ByteArray) {
         val msg = UTunControlMessage.parse(message)
 
         Logger.logUTUN("rcv $msg", 0)
@@ -121,11 +126,15 @@ object UTunController : UTunHandler("ids-control-channel", null) {
         return remoteAnnouncedChannels.contains(service) && !establishedChannels.contains(service)
     }
 
-    override fun send(message: ByteArray) {
+    private fun send(message: ByteArray) {
         //Logger.logUTUN("snd raw ${message.hex()}", 3)
         val toWatch = output!!
         toWatch.writeShort(message.size)
         toWatch.write(message)
         toWatch.flush()
+    }
+
+    fun close() {
+        Logger.logUTUN("Handler closed for ids-control-channel", 1)
     }
 }

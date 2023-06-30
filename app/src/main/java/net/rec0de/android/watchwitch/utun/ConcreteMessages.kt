@@ -452,6 +452,65 @@ class OTRMessage(sequence: Int, val version: Int, val encrypted: Boolean, val sh
     override fun toString() = "OTRMessage(v$version, encrypted? $encrypted, shouldEncr? $shouldEncrypt, protection class $protectionClass, streamID $streamID, priority $priority, payload ${payload.hex()})"
 }
 
+
+class ServiceMapMessage(val streamID: Int, val serviceName: String, val reason: Int): UTunMessage(0) {
+    companion object : UTunParseCompanion() {
+        @Synchronized
+        fun parse(bytes: ByteArray): ServiceMapMessage {
+            if(bytes[0].toInt() != 0x27)
+                throw Exception("Expected UTunMsg type 0x27 for ServiceMapMessage but got 0x${bytes[0].toString(16)}")
+            parseOffset = 1
+
+            var reason: Int? = null
+            var streamID: Int? = null
+            var serviceName: String? = null
+
+            while(parseOffset < bytes.size) {
+                val type = readInt(bytes, 1)
+                val length = readInt(bytes, 2)
+                when(type) {
+                    1 -> reason = readInt(bytes, length)
+                    2 -> streamID = readInt(bytes, length)
+                    3 -> serviceName = readString(bytes, length)
+                }
+            }
+
+            if(streamID == null)
+                throw Exception("ServiceMapMessage did not contain stream ID: ${bytes.hex()}")
+            if(serviceName == null)
+                throw Exception("ServiceMapMessage did not contain service name: ${bytes.hex()}")
+            if(reason == null)
+                throw Exception("ServiceMapMessage did not contain reason: ${bytes.hex()}")
+
+            return ServiceMapMessage(streamID, serviceName, reason)
+        }
+    }
+
+    override fun toBytes(): ByteArray {
+        val serviceNameBytes = serviceName.encodeToByteArray()
+        val length = 4 + 5 + 3 + serviceNameBytes.size // 4 bytes reason, 5 bytes stream id, 3+x bytes name
+        val msg = ByteBuffer.allocate(5 + length) // 5 bytes utun type + len
+        msg.put(0x27)
+        msg.putInt(length)
+
+        msg.put(0x01) // type: reason
+        msg.putShort(1) // length: 1
+        msg.put(reason.toByte())
+
+        msg.put(0x02) // type: streamID
+        msg.putShort(2) // length: 2
+        msg.putShort(streamID.toShort())
+
+        msg.put(0x03) // type: service name
+        msg.putShort(serviceNameBytes.size.toShort()) // length
+        msg.put(serviceNameBytes)
+
+        return msg.array()
+    }
+
+    override fun toString() = "ServiceMapMessage(streamID $streamID maps to service $serviceName, reason $reason)"
+}
+
 open class ExpiredAckMessage(sequence: Int) : AckMessage(sequence) {
     companion object : UTunParseCompanion() {
         @Synchronized
