@@ -1,5 +1,6 @@
 package net.rec0de.android.watchwitch.utun
 
+import net.rec0de.android.watchwitch.decoders.compression.GzipDecoder
 import net.rec0de.android.watchwitch.fromIndex
 import net.rec0de.android.watchwitch.hex
 import java.nio.ByteBuffer
@@ -13,7 +14,9 @@ open class DataMessage(sequence: Int, streamID: Int, flags: Int, responseIdentif
         fun parse(bytes: ByteArray): DataMessage {
             val commonData = parse(bytes, 0x00)
             val c = commonData.first
-            val rest = commonData.second
+            // gzip compressed data can appear here with no correlation to the 'compressed' flag
+            val rest = if(GzipDecoder.bufferIsGzipCompressed(commonData.second)) GzipDecoder.inflate(commonData.second) else commonData.second
+
             return DataMessage(c.sequence, c.streamID, c.flags, c.responseIdentifier, c.messageUUID, c.topic, c.expiryDate, rest)
         }
     }
@@ -64,7 +67,10 @@ class ProtobufMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifi
             val payloadLength = readInt(rest, 4)
             val payload = readBytes(rest, payloadLength)
 
-            return ProtobufMessage(c.sequence, c.streamID, c.flags, c.responseIdentifier, c.messageUUID, c.topic, c.expiryDate, type, isResponse, payload)
+            // gzip compressed data can appear here with no correlation to the 'compressed' flag
+            val uncompressed = if(GzipDecoder.bufferIsGzipCompressed(payload)) GzipDecoder.inflate(payload) else payload
+
+            return ProtobufMessage(c.sequence, c.streamID, c.flags, c.responseIdentifier, c.messageUUID, c.topic, c.expiryDate, type, isResponse, uncompressed)
         }
     }
 
@@ -460,6 +466,8 @@ class ServiceMapMessage(val streamID: Int, val serviceName: String, val reason: 
             if(bytes[0].toInt() != 0x27)
                 throw Exception("Expected UTunMsg type 0x27 for ServiceMapMessage but got 0x${bytes[0].toString(16)}")
             parseOffset = 1
+
+            val len = readInt(bytes, 4)
 
             var reason: Int? = null
             var streamID: Int? = null

@@ -2,6 +2,7 @@ package net.rec0de.android.watchwitch.decoders.bplist
 
 import net.rec0de.android.watchwitch.hex
 import java.math.BigInteger
+import java.util.Date
 
 abstract class BPListObject
 
@@ -20,7 +21,7 @@ object BPFill : BPListObject() {
 data class BPInt(val byteLen: Int, val value: BigInteger): BPListObject() {
     override fun toString() = value.toString()
 }
-data class BPReal(val byteLen: Int, val value: BigInteger): BPListObject()
+data class BPReal(val byteLen: Int, val value: Double): BPListObject()
 data class BPDate(val timestamp: Long) : BPListObject() {
     override fun toString() = "BPDate($timestamp)"
 }
@@ -48,4 +49,8 @@ data class BPDict(val entries: Int, val values: Map<BPListObject, BPListObject>)
 
 data class NSDict(val values: Map<BPListObject, BPListObject>) : BPListObject() {
     override fun toString() = values.toString()
+}
+
+data class NSDate(val value: Date) : BPListObject() {
+    override fun toString() = value.toString()
 }

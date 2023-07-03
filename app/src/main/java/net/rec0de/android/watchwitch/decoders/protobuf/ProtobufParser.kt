@@ -79,7 +79,7 @@ class ProtobufParser {
         // try decoding as string
         try {
             val string = data.value.decodeToString()
-            val unusual = string.filter { !it.toString().matches(Regex("[a-zA-Z0-9\\-\\. ]")) }
+            val unusual = string.filter { !it.toString().matches(Regex("[a-zA-Z0-9\\-\\./,;\\(\\) ]")) }
 
             // is 90% of characters are 'common', we assume this is a correctly decoded string
             if(unusual.length.toDouble() / string.length < 0.1)

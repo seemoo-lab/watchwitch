@@ -39,23 +39,12 @@ class BPListParser {
 
         offsetTable = bytes.sliceArray(offsetTableStart until (offsetTableStart + numObjects * offsetTableOffsetSize))
 
-        //println("bplist contains $numObjects objects, objref size $objectRefSize offset size $offsetTableOffsetSize, starting at $topObjectOffset")
-
-        /*var currentOffsetTableOffset = topObjectOffset
-        while(currentOffsetTableOffset < numObjects) {
-            val offsetBytes = offsetTable.sliceArray(currentOffsetTableOffset*offsetTableOffsetSize until (currentOffsetTableOffset+1)*offsetTableOffsetSize)
-            val objectOffset = UInt.fromBytesBig(offsetBytes).toInt()
-            val obj = readObjectFromOffset(bytes, objectOffset)
-            println(obj)
-            currentOffsetTableOffset += 1
-        }*/
         val rootObject = readObjectFromOffsetTableEntry(bytes, topObjectOffset)
 
         return if(KeyedArchiveDecoder.isKeyedArchive(rootObject))
                 KeyedArchiveDecoder.decode(rootObject as BPDict)
             else
                 rootObject
-
     }
 
     private fun readObjectFromOffsetTableEntry(bytes: ByteArray, index: Int): BPListObject {
@@ -88,7 +77,20 @@ class BPListParser {
             in 0x20 until 0x30 -> {
                 // length bits encode real byte size as 2^n
                 val byteLen = 1 shl lengthBits
-                BPReal(byteLen, BigInteger(bytes.sliceArray(offset+1 until offset+1+byteLen)))
+                val value = when(byteLen) {
+                    4 -> {
+                        val buf = ByteBuffer.allocate(4)
+                        buf.put(bytes.sliceArray(offset+1 until offset+1+4))
+                        buf.getFloat(0).toDouble()
+                    }
+                    8 -> {
+                        val buf = ByteBuffer.allocate(8)
+                        buf.put(bytes.sliceArray(offset+1 until offset+1+8))
+                        buf.getDouble(0)
+                    }
+                    else -> throw Exception("Got unexpected byte length for real: $byteLen in ${bytes.hex()}")
+                }
+                BPReal(byteLen, value)
             }
             // Date, always 8 bytes long
             0x33 -> BPDate(ULong.fromBytesBig(bytes.sliceArray(offset+1 until offset+9)).toLong())
@@ -98,7 +100,14 @@ class BPListParser {
                 val tmp = getFillAwareLengthAndOffset(bytes, offset)
                 val byteLen = tmp.first
                 val effectiveOffset = tmp.second
-                BPData(bytes.sliceArray(effectiveOffset until effectiveOffset + byteLen))
+
+                val data = bytes.sliceArray(effectiveOffset until effectiveOffset+byteLen)
+
+                // decode nested bplists
+                return if(bufferIsBPList(data))
+                    BPListParser().parse(data)
+                else
+                    BPData(data)
             }
             // ASCII string
             in 0x50 until 0x60 -> {
@@ -122,7 +131,7 @@ class BPListParser {
                 BPUnicodeString(string)
             }
             // UID, byte length is lengthBits+1
-            in 0x80 until 0x90 -> BPUid(bytes.sliceArray(offset + 1 until offset + 2 + lengthBits))
+            in 0x80 until 0x90 -> BPUid(bytes.sliceArray(offset+1 until offset+2+lengthBits))
             // Array
             in 0xa0 until 0xb0 -> {
                 val tmp = getFillAwareLengthAndOffset(bytes, offset)

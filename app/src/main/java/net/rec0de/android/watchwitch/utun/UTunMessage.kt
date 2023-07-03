@@ -129,6 +129,7 @@ abstract class UTunMessage(val sequence: Int) {
                 0x16 -> ResourceTransferMessage.parse(bytes)
                 0x17 -> OTREncryptedMessage.parse(bytes)
                 0x18 -> OTRMessage.parse(bytes)
+                0x25 -> ExpiredAckMessage.parse(bytes)
                 0x27 -> ServiceMapMessage.parse(bytes)
                 in 0x17..0x29 -> throw Exception("Unsupported UTunMsg ${typeMap[type]!!} in ${bytes.hex()}")
                 else -> throw Exception("Unknown UTunMsg type 0x${type.toString(16)} in ${bytes.hex()}")

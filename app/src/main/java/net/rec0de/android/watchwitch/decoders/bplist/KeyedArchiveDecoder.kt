@@ -1,6 +1,7 @@
 package net.rec0de.android.watchwitch.decoders.bplist
 
 import net.rec0de.android.watchwitch.fromBytesBig
+import java.util.Date
 
 class KeyedArchiveDecoder {
     companion object {
@@ -18,7 +19,10 @@ class KeyedArchiveDecoder {
 
         fun decode(data: BPDict): BPListObject {
             // get offset of the root object in the $objects list
-            val top = UInt.fromBytesBig(((data.values[topKey]!! as BPDict).values[rootKey]!! as BPUid).value).toInt()
+            val top =
+                UInt.fromBytesBig(((data.values[topKey]!! as BPDict).values[rootKey]!! as BPUid).value)
+                    .toInt()
+
             val objects = data.values[objectsKey]!! as BPArray
 
             val rootObj = objects.values[top]
@@ -51,6 +55,19 @@ class KeyedArchiveDecoder {
                                 val valueList = (thing.values[BPAsciiString("NS.objects")]!! as BPArray).values.map { transformSupportedClasses(it) }
                                 val map = keyList.zip(valueList).toMap()
                                 NSDict(map)
+                            }
+                            "NSMutableString", "NSString" -> {
+                                val string = (thing.values[BPAsciiString("NS.string")]!! as BPAsciiString)
+                                string
+                            }
+                            "NSArray" -> {
+                                val list = (thing.values[BPAsciiString("NS.objects")]!! as BPArray).values.map { transformSupportedClasses(it) }
+                                BPArray(list.size, list)
+                            }
+                            "NSDate" -> {
+                                val timestamp = (thing.values[BPAsciiString("NS.time")]!! as BPReal).value
+                                // NSDates encode time as seconds from Jan 01 2001, we convert to standard unix time here
+                                NSDate(Date((timestamp*1000).toLong() + 978307200000))
                             }
                             else -> BPDict(thing.entries, thing.values.map { Pair(transformSupportedClasses(it.key), transformSupportedClasses(it.value)) }.toMap())
                         }
