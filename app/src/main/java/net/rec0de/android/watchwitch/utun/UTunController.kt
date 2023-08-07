@@ -5,6 +5,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
+import net.rec0de.android.watchwitch.servicehandlers.HealthSync
+import net.rec0de.android.watchwitch.servicehandlers.PreferencesSync
+import net.rec0de.android.watchwitch.servicehandlers.UTunService
 import java.io.DataOutputStream
 import java.util.UUID
 
@@ -19,7 +22,7 @@ object UTunController {
 
     private val serviceNameToLocalUUID = mutableMapOf<String, UUID>()
 
-    private val streamIdAssociations = mutableMapOf<Int, String>()
+    val services: Map<String, UTunService> = listOf(PreferencesSync, HealthSync).associateBy { it.name }
 
     fun usingOutput(out: DataOutputStream): UTunController {
         output = out
@@ -106,18 +109,6 @@ object UTunController {
 
     fun registerChannelCreation(service: String) {
         establishedChannels.add(service)
-    }
-
-    fun associateStreamWithTopic(streamID: Int, topic: String) {
-        if(streamIdAssociations.containsKey(streamID)) {
-            if(streamIdAssociations[streamID] != topic)
-                throw Exception("Stream ID $streamID is associated with topic ${streamIdAssociations[streamID]} but trying to rebind with $topic")
-        }
-        streamIdAssociations[streamID] = topic
-    }
-
-    fun topicForStream(streamID: Int): String? {
-        return streamIdAssociations[streamID]
     }
 
     fun shouldAcceptConnection(service: String): Boolean {

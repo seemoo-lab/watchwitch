@@ -1,9 +1,11 @@
 package net.rec0de.android.watchwitch.decoders.protobuf
 
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
+import net.rec0de.android.watchwitch.doubleFromLongBytes
 import net.rec0de.android.watchwitch.fromBytesLittle
 import net.rec0de.android.watchwitch.hex
 import net.rec0de.android.watchwitch.hexBytes
+import java.util.Date
 
 class ProtobufParser {
 
@@ -127,6 +129,24 @@ interface ProtoValue
 
 data class ProtoBuf(val value: Map<Int, List<ProtoValue>>) : ProtoValue {
     override fun toString() = "Protobuf($value)"
+
+    fun readSingletFieldAsserted(field: Int) : ProtoValue {
+        return value[field]!![0]
+    }
+
+    fun readBool(field: Int) : Boolean {
+        return (readSingletFieldAsserted(field) as ProtoVarInt).value.toInt() > 0
+    }
+
+    fun readShortVarInt(field: Int) = readLongVarInt(field).toInt()
+
+    fun readLongVarInt(field: Int) : Long {
+        return (readSingletFieldAsserted(field) as ProtoVarInt).value
+    }
+
+    fun readMulti(field: Int): List<ProtoValue> {
+        return value[field] ?: emptyList()
+    }
 }
 
 data class ProtoI32(val value: Int) : ProtoValue {
@@ -135,6 +155,15 @@ data class ProtoI32(val value: Int) : ProtoValue {
 
 data class ProtoI64(val value: Long) : ProtoValue {
     override fun toString() = "I64($value)"
+
+    /**
+     * Assume this I64 value represents a double containing an NSDate timestamp (seconds since Jan 01 2001)
+     * and turn it into a Date object
+     */
+    fun asDate(): Date {
+        val timestamp = value.doubleFromLongBytes()
+        return Date((timestamp*1000).toLong() + 978307200000)
+    }
 }
 
 data class ProtoVarInt(val value: Long) : ProtoValue {

@@ -4,6 +4,7 @@ import org.bouncycastle.crypto.digests.SHA512Digest
 import org.bouncycastle.crypto.modes.ChaCha20Poly1305
 import org.bouncycastle.crypto.params.AEADParameters
 import org.bouncycastle.crypto.params.KeyParameter
+import java.nio.ByteBuffer
 import java.util.UUID
 
 
@@ -120,4 +121,10 @@ fun ULong.Companion.fromBytesLittle(bytes: ByteArray): ULong {
 }
 fun ULong.Companion.fromBytesBig(bytes: ByteArray): ULong {
     return bytes.reversed().mapIndexed { index, byte ->  byte.toUByte().toULong() shl (index * 8)}.sum()
+}
+
+fun Long.doubleFromLongBytes(): Double {
+    val b = ByteBuffer.allocate(8)
+    b.putLong(this)
+    return b.getDouble(0)
 }

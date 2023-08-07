@@ -12,6 +12,8 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
     private var fragmentBuffer: ByteArray = byteArrayOf()
     private val parser = BPListParser()
 
+    private val streamIdAssociations = mutableMapOf<Int, String>()
+
     open fun init() {
         UTunController.registerChannelCreation(channel)
         Logger.logUTUN("Creating handler for $channel", 1)
@@ -40,10 +42,17 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
         send(AckMessage(message.sequence))
 
         if(message.hasTopic)
-            UTunController.associateStreamWithTopic(message.streamID, message.topic!!)
+            associateStreamWithTopic(message.streamID, message.topic!!)
         else {
-            message.topic = UTunController.topicForStream(message.streamID)
+            message.topic = streamIdAssociations[message.streamID]
             Logger.logUTUN("topic from stream map: ${message.topic}", 1)
+        }
+
+        // try handing off to supported service
+        if(UTunController.services.containsKey(message.topic) && UTunController.services[message.topic]!!.acceptsMessageType(message)) {
+            val service = UTunController.services[message.topic]!!
+            service.receiveMessage(message)
+            return
         }
 
         // as in IDSDaemon::_processIncomingLocalMessage, connectivity monitor messages are just ack'ed and discarded
@@ -61,13 +70,25 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
                 // for some reason Protobuf messages sometimes carry, guess what, bplists
                 if(BPListParser.bufferIsBPList(message.payload))
                     println(parser.parse(message.payload))
-                else
-                    println(ProtobufParser().parse(message.payload))
+                else {
+                    try {
+                        println(ProtobufParser().parse(message.payload))
+                    }
+                    catch(_: Exception) {}
+                }
             }
         }
 
         if(message.wantsAppAck)
             send(AppAckMessage(message.sequence, message.streamID, message.messageUUID.toString(), message.topic)) // todo: sequence echo correct?
+    }
+
+    private fun associateStreamWithTopic(streamID: Int, topic: String) {
+        if(streamIdAssociations.containsKey(streamID)) {
+            if(streamIdAssociations[streamID] != topic)
+                throw Exception("Stream ID $streamID is associated with topic ${streamIdAssociations[streamID]} but trying to rebind with $topic")
+        }
+        streamIdAssociations[streamID] = topic
     }
 
     private fun handleFragment(msg: FragmentedMessage) {
