@@ -7,6 +7,7 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.utun.ProtobufMessage
+import net.rec0de.android.watchwitch.utun.UTunHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
 import java.util.Date
 
@@ -15,7 +16,7 @@ object PreferencesSync : UTunService {
 
     override fun acceptsMessageType(msg: UTunMessage) = msg is ProtobufMessage
 
-    override fun receiveMessage(msg: UTunMessage) {
+    override fun receiveMessage(msg: UTunMessage, handler: UTunHandler) {
         if(msg !is ProtobufMessage)
             throw Exception("PreferencesSync expects ProtobufMessage but got $msg")
 

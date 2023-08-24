@@ -5,6 +5,7 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import net.rec0de.android.watchwitch.decoders.aoverc.MPKeys
 
 
 class KeyReceiver(private val main: MainActivity) : Thread() {
@@ -55,6 +56,18 @@ class KeyReceiver(private val main: MainActivity) : Thread() {
                     LongTermStorage.setAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_C, map["rac"]!!)
                 if(map.containsKey("rad"))
                     LongTermStorage.setAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_D, map["rad"]!!)
+
+                // store IDS keys and UUID
+                if(map.containsKey("idsLocalUUID"))
+                    LongTermStorage.setUTUNDeviceID(map["idsLocalUUID"]!!)
+                if(map.containsKey("idsLocalClassARsa") && map.containsKey("idsLocalClassAEcdsa") && map.containsKey("idsRemoteClassA")) {
+                    val privateEcdsaBytes = Base64.decode(map["idsLocalClassAEcdsa"]!!, Base64.DEFAULT)
+                    val privateRsaBytes = Base64.decode(map["idsLocalClassARsa"]!!, Base64.DEFAULT)
+                    val publicDerBytes = Base64.decode(map["idsRemoteClassA"]!!, Base64.DEFAULT)
+
+                    val keys = MPKeys.fromSentKeys(publicDerBytes, privateEcdsaBytes, privateRsaBytes)
+                    LongTermStorage.storeMPKeysForClass("A", keys)
+                }
 
                 RoutingManager.registerAddresses()
                 Logger.log("got keys! $map", 0)

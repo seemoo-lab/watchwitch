@@ -4,6 +4,7 @@ import net.rec0de.android.watchwitch.decoders.bplist.BPInt
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.decoders.bplist.NSDict
 import net.rec0de.android.watchwitch.utun.DataMessage
+import net.rec0de.android.watchwitch.utun.UTunHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
 
 object CoreDuet : UTunService {
@@ -11,7 +12,7 @@ object CoreDuet : UTunService {
 
     override fun acceptsMessageType(msg: UTunMessage) = msg is DataMessage
 
-    override fun receiveMessage(msg: UTunMessage) {
+    override fun receiveMessage(msg: UTunMessage, handler: UTunHandler) {
         if(msg !is DataMessage)
             throw Exception("CoreDuet expects DataMessage but got $msg")
 

@@ -4,8 +4,9 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.rec0de.android.watchwitch.Logger
+import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
-import net.rec0de.android.watchwitch.servicehandlers.HealthSync
+import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
 import net.rec0de.android.watchwitch.servicehandlers.PreferencesSync
 import net.rec0de.android.watchwitch.servicehandlers.UTunService
 import java.io.DataOutputStream
@@ -41,8 +42,7 @@ object UTunController {
         hello.capabilityFlags = 0x3ff
         // we re-generate this on every launch which i think causes the watch to treat us more nicely (including topics in message because we don't have mappings yet etc)
         hello.instanceID = instanceID
-        hello.instanceID = UUID.randomUUID()
-        hello.deviceID = UUID.fromString("54767e20-5a60-4e84-9d81-130568f258ce")
+        hello.deviceID = LongTermStorage.getUTUNDeviceID() ?: UUID.randomUUID()
 
         Logger.logUTUN("snd $hello", 1)
         send(hello.toBytes())

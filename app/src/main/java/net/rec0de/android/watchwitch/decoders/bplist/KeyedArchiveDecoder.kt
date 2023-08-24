@@ -30,22 +30,22 @@ class KeyedArchiveDecoder {
             return transformSupportedClasses(resolved)
         }
 
-        private fun optionallyResolveObjectReference(thing: BPListObject, objects: BPArray): BPListObject {
+        private fun optionallyResolveObjectReference(thing: CodableBPListObject, objects: BPArray): CodableBPListObject {
             return when(thing) {
                 is BPUid -> optionallyResolveObjectReference(objects.values[UInt.fromBytesBig(thing.value).toInt()], objects)
                 is BPArray -> BPArray(thing.entries, thing.values.map { optionallyResolveObjectReference(it, objects) })
                 is BPSet -> BPSet(thing.entries, thing.values.map { optionallyResolveObjectReference(it, objects) })
-                is BPDict -> BPDict(thing.entries, thing.values.map {
+                is BPDict -> BPDict(thing.values.map {
                     Pair(optionallyResolveObjectReference(it.key, objects), optionallyResolveObjectReference(it.value, objects))
                 }.toMap())
                 else -> thing
             }
         }
 
-        private fun transformSupportedClasses(thing: BPListObject): BPListObject {
+        private fun transformSupportedClasses(thing: CodableBPListObject): BPListObject {
             return when(thing) {
-                is BPArray -> BPArray(thing.entries, thing.values.map { transformSupportedClasses(it) })
-                is BPSet -> BPSet(thing.entries, thing.values.map { transformSupportedClasses(it) })
+                is BPArray -> BPArray(thing.entries, thing.values.map { transformSupportedClasses(it) as CodableBPListObject }) // not sure if this can blow up, but i gotta get it to compile for now
+                is BPSet -> BPSet(thing.entries, thing.values.map { transformSupportedClasses(it) as CodableBPListObject })
                 is BPDict -> {
                     if(thing.values.containsKey(classKey)) {
                         val className = ((thing.values[classKey] as BPDict).values[classNameKey] as BPAsciiString).value
@@ -62,18 +62,18 @@ class KeyedArchiveDecoder {
                             }
                             "NSArray" -> {
                                 val list = (thing.values[BPAsciiString("NS.objects")]!! as BPArray).values.map { transformSupportedClasses(it) }
-                                BPArray(list.size, list)
+                                NSArray(list)
                             }
                             "NSDate" -> {
                                 val timestamp = (thing.values[BPAsciiString("NS.time")]!! as BPReal).value
                                 // NSDates encode time as seconds from Jan 01 2001, we convert to standard unix time here
                                 NSDate(Date((timestamp*1000).toLong() + 978307200000))
                             }
-                            else -> BPDict(thing.entries, thing.values.map { Pair(transformSupportedClasses(it.key), transformSupportedClasses(it.value)) }.toMap())
+                            else -> BPDict(thing.values.map { Pair(transformSupportedClasses(it.key) as CodableBPListObject, transformSupportedClasses(it.value) as CodableBPListObject) }.toMap())
                         }
                     }
                     else {
-                        BPDict(thing.entries, thing.values.map { Pair(transformSupportedClasses(it.key), transformSupportedClasses(it.value)) }.toMap())
+                        BPDict(thing.values.map { Pair(transformSupportedClasses(it.key) as CodableBPListObject, transformSupportedClasses(it.value) as CodableBPListObject) }.toMap())
                     }
                 }
                 else -> thing

@@ -8,7 +8,28 @@ import android.widget.Button
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import net.rec0de.android.watchwitch.decoders.aoverc.Decryptor
+import net.rec0de.android.watchwitch.decoders.aoverc.MPKeys
+import net.rec0de.android.watchwitch.decoders.bplist.BPDict
+import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
+import net.rec0de.android.watchwitch.servicehandlers.health.EntityIdentifier
+import net.rec0de.android.watchwitch.servicehandlers.health.NanoSyncAnchor
+import net.rec0de.android.watchwitch.servicehandlers.health.NanoSyncMessage
+import net.rec0de.android.watchwitch.servicehandlers.health.NanoSyncStatus
 import net.rec0de.android.watchwitch.shoes.NetworkStats
+import org.bouncycastle.jce.ECNamedCurveTable
+import org.bouncycastle.jce.interfaces.ECPrivateKey
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.jce.spec.ECNamedCurveSpec
+import org.bouncycastle.jce.spec.ECPublicKeySpec
+import org.bouncycastle.math.ec.ECPoint
+import java.math.BigInteger
+import java.security.KeyFactory
+import java.security.PublicKey
+import java.security.spec.RSAPrivateKeySpec
+import java.security.spec.RSAPublicKeySpec
+import java.util.UUID
+
 
 class MainActivity : AppCompatActivity() {
     private lateinit var statusLabel: TextView

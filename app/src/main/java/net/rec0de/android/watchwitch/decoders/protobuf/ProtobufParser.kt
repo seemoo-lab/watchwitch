@@ -4,7 +4,8 @@ import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.doubleFromLongBytes
 import net.rec0de.android.watchwitch.fromBytesLittle
 import net.rec0de.android.watchwitch.hex
-import net.rec0de.android.watchwitch.hexBytes
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.Date
 
 class ProtobufParser {
@@ -125,60 +126,164 @@ enum class ProtobufField {
     VARINT, I64, LEN, I32
 }
 
-interface ProtoValue
+interface ProtoValue {
+    val wireType: Int
+
+    fun renderWithFieldId(fieldId: Int): ByteArray {
+        val tag = (fieldId.toLong() shl 3) or (wireType and 0x03).toLong()
+        return renderAsVarInt(tag) + render()
+    }
+
+    fun render(): ByteArray
+
+    fun renderAsVarInt(v: Long): ByteArray {
+        var bytes = byteArrayOf()
+        var remaining = v
+
+        while(remaining > 0x7F) {
+            bytes += ((remaining and 0x7F) or 0x80).toByte() // Take lowest 7 bit and encode with continuation flag
+            remaining = remaining shr 7
+        }
+
+        bytes += (remaining and 0x7F).toByte()
+        return bytes
+    }
+}
 
 data class ProtoBuf(val value: Map<Int, List<ProtoValue>>) : ProtoValue {
+    override val wireType = 2 // LEN
     override fun toString() = "Protobuf($value)"
 
-    fun readSingletFieldAsserted(field: Int) : ProtoValue {
+    fun readOptionalSinglet(field: Int) : ProtoValue? {
+        val f = value[field]
+        return if(f == null) null else f[0]
+    }
+
+    fun readAssertedSinglet(field: Int) : ProtoValue {
         return value[field]!![0]
     }
 
     fun readBool(field: Int) : Boolean {
-        return (readSingletFieldAsserted(field) as ProtoVarInt).value.toInt() > 0
+        return (readAssertedSinglet(field) as ProtoVarInt).value.toInt() > 0
+    }
+
+    fun readOptBool(field: Int) : Boolean? {
+        val intValue = readOptShortVarInt(field)
+        return if(intValue == null) null else intValue > 0
+    }
+
+    fun readOptString(field: Int) : String? {
+        val v = readOptionalSinglet(field)
+        // i think empty strings can be parsed ambiguously as empty protobufs
+        if(v != null && v is ProtoBuf && v.value.isEmpty())
+            return ""
+        return (v as ProtoString?)?.value
+    }
+
+    fun readOptDate(field: Int) : Date? {
+        return (readOptionalSinglet(field) as ProtoI64?)?.asDate()
+    }
+
+    fun readOptDouble(field: Int) : Double? {
+        return (readOptionalSinglet(field) as ProtoI64?)?.asDouble()
     }
 
     fun readShortVarInt(field: Int) = readLongVarInt(field).toInt()
 
-    fun readLongVarInt(field: Int) : Long {
-        return (readSingletFieldAsserted(field) as ProtoVarInt).value
-    }
+    fun readOptShortVarInt(field: Int) = (readOptionalSinglet(field) as ProtoVarInt?)?.value?.toInt()
+
+    fun readLongVarInt(field: Int) = (readAssertedSinglet(field) as ProtoVarInt).value
+
+    fun readOptLongVarInt(field: Int) = (readOptionalSinglet(field) as ProtoVarInt?)?.value
+
 
     fun readMulti(field: Int): List<ProtoValue> {
         return value[field] ?: emptyList()
     }
+
+    fun renderStandalone(): ByteArray {
+        val fieldRecords = value.map { field ->
+            val fieldId = field.key
+            val renderedRecords = field.value.map { it.renderWithFieldId(fieldId) }
+            renderedRecords.fold(byteArrayOf()){ acc, new -> acc + new }
+        }
+
+        return fieldRecords.fold(byteArrayOf()){ acc, new -> acc + new }
+    }
+
+    override fun render(): ByteArray {
+        val bytes = renderStandalone()
+        return renderAsVarInt(bytes.size.toLong()) + bytes // protobuf as a substructure is length delimited
+    }
 }
 
 data class ProtoI32(val value: Int) : ProtoValue {
+    override val wireType = 5
     override fun toString() = "I32($value)"
+
+    override fun render(): ByteArray {
+        val buf = ByteBuffer.allocate(4)
+        buf.order(ByteOrder.LITTLE_ENDIAN)
+        buf.putInt(value)
+        return buf.array()
+    }
 }
 
 data class ProtoI64(val value: Long) : ProtoValue {
+    override val wireType = 1
     override fun toString() = "I64($value)"
+
+    override fun render(): ByteArray {
+        val buf = ByteBuffer.allocate(8)
+        buf.order(ByteOrder.LITTLE_ENDIAN)
+        buf.putLong(value)
+        return buf.array()
+    }
 
     /**
      * Assume this I64 value represents a double containing an NSDate timestamp (seconds since Jan 01 2001)
      * and turn it into a Date object
      */
     fun asDate(): Date {
-        val timestamp = value.doubleFromLongBytes()
+        val timestamp = asDouble()
         return Date((timestamp*1000).toLong() + 978307200000)
     }
+
+    fun asDouble(): Double = value.doubleFromLongBytes()
 }
 
 data class ProtoVarInt(val value: Long) : ProtoValue {
+    override val wireType = 0
     override fun toString() = "VarInt($value)"
+
+    override fun render() = renderAsVarInt(value)
 }
 
 class ProtoLen(val value: ByteArray) : ProtoValue {
+    override val wireType = 2 // LEN
     override fun toString() = "LEN(${value.hex()})"
+
+    override fun render(): ByteArray {
+        return renderAsVarInt(value.size.toLong()) + value
+    }
 }
 
 data class ProtoString(val value: String) : ProtoValue {
+    override val wireType = 2 // LEN
     override fun toString() = "String($value)"
+
+    override fun render(): ByteArray {
+        val bytes = value.encodeToByteArray()
+        return renderAsVarInt(bytes.size.toLong()) + bytes
+    }
 }
 
 class ProtoBPList(val value: ByteArray) : ProtoValue {
+    override val wireType = 2 // LEN
     val parsed = BPListParser().parse(value)
     override fun toString() = "bplist($parsed)"
+
+    override fun render(): ByteArray {
+        return renderAsVarInt(value.size.toLong()) + value
+    }
 }

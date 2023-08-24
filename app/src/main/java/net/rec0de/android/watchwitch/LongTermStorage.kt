@@ -5,6 +5,7 @@ import android.content.Context
 import net.rec0de.android.watchwitch.decoders.aoverc.MPKeys
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
+import java.util.UUID
 
 @SuppressLint("StaticFieldLeak")
 object LongTermStorage {
@@ -28,10 +29,34 @@ object LongTermStorage {
 
     private val addresstypes = listOf(LOCAL_ADDRESS_CLASS_C, LOCAL_ADDRESS_CLASS_D, REMOTE_ADDRESS_CLASS_C, REMOTE_ADDRESS_CLASS_D)
 
-    fun getMPKeysForService(service: String): MPKeys? {
-        val ecdsa = getKey("$MP_KEY_PREFIX$service.ecdsa.public")
-        val rsa = getKey("$MP_KEY_PREFIX$service.rsa.private")
-        return if(ecdsa != null && rsa != null) MPKeys(ecdsa, rsa) else null
+    fun getMPKeysForClass(protectionClass: String): MPKeys? {
+        val ecdsaRemotePub = getKey("$MP_KEY_PREFIX$protectionClass.ecdsa.remote.public")
+        val rsaLocalPriv = getKey("$MP_KEY_PREFIX$protectionClass.rsa.local.private")
+        val ecdsaLocalPriv = getKey("$MP_KEY_PREFIX$protectionClass.ecdsa.local.private")
+        val rsaRemotePub = getKey("$MP_KEY_PREFIX$protectionClass.rsa.remote.public")
+        return if(ecdsaRemotePub != null && rsaLocalPriv != null && ecdsaLocalPriv != null && rsaRemotePub != null)
+                MPKeys(ecdsaRemotePub, rsaLocalPriv, ecdsaLocalPriv, rsaRemotePub)
+            else
+                null
+    }
+
+    fun storeMPKeysForClass(dataProtectionClass: String, keys: MPKeys) {
+        setKey("$MP_KEY_PREFIX$dataProtectionClass.ecdsa.remote.public", keys.ecdsaRemotePublic)
+        setKey("$MP_KEY_PREFIX$dataProtectionClass.rsa.remote.public", keys.rsaRemotePublic)
+        setKey("$MP_KEY_PREFIX$dataProtectionClass.ecdsa.local.private", keys.ecdsaLocalPrivate)
+        setKey("$MP_KEY_PREFIX$dataProtectionClass.rsa.local.private", keys.rsaLocalPrivate)
+    }
+
+    fun getUTUNDeviceID(): UUID? {
+        val str = context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).getString("misc.utun.localuuid", null)
+        return if(str == null) null else UUID.fromString(str)
+    }
+
+    fun setUTUNDeviceID(uuid: String) {
+        with (context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).edit()) {
+            putString("misc.utun.localuuid", uuid)
+            apply()
+        }
     }
 
     fun getEd25519RemotePublicKey(type: String): Ed25519PublicKeyParameters {

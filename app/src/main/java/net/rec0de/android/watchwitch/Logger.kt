@@ -14,7 +14,7 @@ object Logger {
     private const val IDS_LOG_LVL = 2
 
     private const val UTUN_SCREEN_LVL = 1
-    private const val UTUN_LOG_LVL = 2
+    private const val UTUN_LOG_LVL = 1
 
     private const val SHOES_SCREEN_LVL = 1
     private const val SHOES_LOG_LVL = -1

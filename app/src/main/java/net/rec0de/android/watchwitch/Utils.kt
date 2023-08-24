@@ -72,6 +72,13 @@ object Utils {
         val e = bytes.sliceArray(10 until 16).hex()
         return UUID.fromString("$a-$b-$c-$d-$e")
     }
+
+    fun uuidToBytes(uuid: UUID): ByteArray {
+        val buf = ByteBuffer.allocate(16)
+        buf.putLong(uuid.mostSignificantBits)
+        buf.putLong(uuid.leastSignificantBits)
+        return buf.array()
+    }
 }
 
 open class ParseCompanion {
@@ -121,6 +128,10 @@ fun ULong.Companion.fromBytesLittle(bytes: ByteArray): ULong {
 }
 fun ULong.Companion.fromBytesBig(bytes: ByteArray): ULong {
     return bytes.reversed().mapIndexed { index, byte ->  byte.toUByte().toULong() shl (index * 8)}.sum()
+}
+
+fun Int.toBytesBig(): ByteArray {
+    return byteArrayOf((this shr 24).toByte(), (this shr 16).toByte(), (this shr 8).toByte(), (this shr 0).toByte())
 }
 
 fun Long.doubleFromLongBytes(): Double {

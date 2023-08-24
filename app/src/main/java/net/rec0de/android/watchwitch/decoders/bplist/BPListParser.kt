@@ -8,7 +8,7 @@ import java.nio.ByteBuffer
 
 // based on https://medium.com/@karaiskc/understanding-apples-binary-property-list-format-281e6da00dbd
 class BPListParser {
-    private val objectMap = mutableMapOf<Int, BPListObject>()
+    private val objectMap = mutableMapOf<Int, CodableBPListObject>()
     private var objectRefSize = 0
     private var offsetTableOffsetSize = 0
     private var offsetTable = byteArrayOf()
@@ -47,12 +47,12 @@ class BPListParser {
                 rootObject
     }
 
-    private fun readObjectFromOffsetTableEntry(bytes: ByteArray, index: Int): BPListObject {
+    private fun readObjectFromOffsetTableEntry(bytes: ByteArray, index: Int): CodableBPListObject {
         val offset = UInt.fromBytesBig(offsetTable.sliceArray(index*offsetTableOffsetSize until (index+1)*offsetTableOffsetSize)).toInt()
         return readObjectFromOffset(bytes, offset)
     }
 
-    private fun readObjectFromOffset(bytes: ByteArray, offset: Int): BPListObject {
+    private fun readObjectFromOffset(bytes: ByteArray, offset: Int): CodableBPListObject {
         // check cache
         if(objectMap.containsKey(offset))
             return objectMap[offset]!!
@@ -71,7 +71,7 @@ class BPListParser {
             in 0x10 until 0x20 -> {
                 // length bits encode int byte size as 2^n
                 val byteLen = 1 shl lengthBits
-                BPInt(byteLen, BigInteger(bytes.sliceArray(offset+1 until offset+1+byteLen)))
+                BPInt(BigInteger(bytes.sliceArray(offset+1 until offset+1+byteLen)))
             }
             // Real
             in 0x20 until 0x30 -> {
@@ -90,7 +90,7 @@ class BPListParser {
                     }
                     else -> throw Exception("Got unexpected byte length for real: $byteLen in ${bytes.hex()}")
                 }
-                BPReal(byteLen, value)
+                BPReal(value)
             }
             // Date, always 8 bytes long
             0x33 -> BPDate(ULong.fromBytesBig(bytes.sliceArray(offset+1 until offset+9)).toLong())
@@ -105,7 +105,7 @@ class BPListParser {
 
                 // decode nested bplists
                 return if(bufferIsBPList(data))
-                    BPListParser().parse(data)
+                    BPListParser().parse(data) as CodableBPListObject
                 else
                     BPData(data)
             }
@@ -176,7 +176,7 @@ class BPListParser {
 
                 }
 
-                BPDict(entries, keys.zip(values).toMap())
+                BPDict(keys.zip(values).toMap())
             }
             else -> throw Exception("Unknown object type byte 0b${objectByte.toString(2)}")
         }

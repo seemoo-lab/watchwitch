@@ -22,7 +22,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
     open fun receive(message: ByteArray) {
         Logger.logUTUN("UTUN rcv raw for $channel: ${message.hex()}", 5)
         val parsed = UTunMessage.parse(message)
-        Logger.logUTUN("UTUN rcv for $channel: $parsed", 1)
+        Logger.logUTUN("UTUN rcv for $channel: $parsed", 3)
         
         when(parsed) {
             is UTunCommonMessage -> handleCommonMessage(parsed)
@@ -51,15 +51,16 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
         // try handing off to supported service
         if(UTunController.services.containsKey(message.topic) && UTunController.services[message.topic]!!.acceptsMessageType(message)) {
             val service = UTunController.services[message.topic]!!
-            service.receiveMessage(message)
+            service.receiveMessage(message, this)
             return
         }
 
         // as in IDSDaemon::_processIncomingLocalMessage, connectivity monitor messages are just ack'ed and discarded
         if(message.topic == "com.apple.private.alloy.connectivity.monitor") {
-            send(AckMessage(message.sequence))
             return
         }
+
+        Logger.logUTUN("Unhandled UTUN rcv for $channel: $message", 1)
 
         when(message) {
             is DataMessage -> {
@@ -103,7 +104,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
         Logger.logUTUN("Handler closed for $channel", 1)
     }
 
-    private fun send(message: UTunMessage) {
+    fun send(message: UTunMessage) {
         Logger.logUTUN("UTUN snd for $channel: $message", 1)
         send(message.toBytes())
     }

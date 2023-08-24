@@ -149,7 +149,7 @@ abstract class UTunMessage(val sequence: Int) {
     }
 }
 
-open class UTunCommonMessage(sequence: Int, val streamID: Int, var flags: Int, val responseIdentifier: String?, val messageUUID: UUID, var topic: String?, val expiryDate: Long?) : UTunMessage(sequence) {
+open class UTunCommonMessage(sequence: Int, val streamID: Int, var flags: Int, val responseIdentifier: UUID?, val messageUUID: UUID, var topic: String?, val expiryDate: Long?) : UTunMessage(sequence) {
     companion object : UTunParseCompanion() {
         @Synchronized
         fun parse(bytes: ByteArray, expectedType: Int): Pair<UTunCommonMessage, ByteArray> {
@@ -157,7 +157,8 @@ open class UTunCommonMessage(sequence: Int, val streamID: Int, var flags: Int, v
             val sequence = checkHeader(bytes, expectedType)
             val streamID = readInt(bytes, 2)
             val flags = readInt(bytes, 1)
-            val responseIdentifier = readLengthPrefixedString(bytes, 4)
+            val responseIdentifierString = readLengthPrefixedString(bytes, 4)
+            val responseIdentifier = if(responseIdentifierString == null) null else UUID.fromString(responseIdentifierString)
             val messageUUID = UUID.fromString(readLengthPrefixedString(bytes, 4)!!)
 
             // compute some flags
@@ -182,7 +183,7 @@ open class UTunCommonMessage(sequence: Int, val streamID: Int, var flags: Int, v
     }
 
     protected fun wrapPayloadWithCommonFields(payload: ByteArray, type: Int): ByteArray {
-        val respIdLen = responseIdentifier?.length ?: 0
+        val respIdLen = responseIdentifier?.toString()?.length ?: 0
         val topicLen = if(hasTopic) topic!!.length + 4 else 0
         val expiryLen = if(hasExpiryDate) 4 else 0
         val length = 4 + 3 + 4 + respIdLen + 4 + messageUUID.toString().length + topicLen + payload.size + expiryLen
@@ -198,8 +199,9 @@ open class UTunCommonMessage(sequence: Int, val streamID: Int, var flags: Int, v
         header.put(flags.toByte())
 
         if(responseIdentifier != null) {
-            header.putInt(responseIdentifier.length)
-            header.put(responseIdentifier.encodeToByteArray())
+            val riString = responseIdentifier.toString()
+            header.putInt(riString.length)
+            header.put(riString.encodeToByteArray())
         }
         else
             header.putInt(0)
@@ -235,13 +237,13 @@ open class UTunCommonMessage(sequence: Int, val streamID: Int, var flags: Int, v
         get() = if(hasExpiryDate) Date((expiryDate!! + 978307200) * 1000 ) else null
 }
 
-abstract class AbstractSessionMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray) : DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+abstract class AbstractSessionMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray) : DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val shouldAck = true // Session messages are always acknowledged
 }
-abstract class AbstractSMSMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray) : DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+abstract class AbstractSMSMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray) : DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val shouldAck = true // SMS messages are always acknowledged
 }
-abstract class AbstractIMessageMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray) : DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+abstract class AbstractIMessageMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray) : DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val shouldAck = true // iMessage messages are always acknowledged
 }
 

@@ -6,7 +6,7 @@ import net.rec0de.android.watchwitch.hex
 import java.nio.ByteBuffer
 import java.util.UUID
 
-open class DataMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, val payload: ByteArray): UTunCommonMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate) {
+open class DataMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, val payload: ByteArray): UTunCommonMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate) {
     open val name = "DataMessage"
 
     companion object : UTunParseCompanion() {
@@ -53,7 +53,7 @@ class KeepAliveMessage(sequence: Int) : UTunMessage(sequence) {
     override fun toString() = "KeepAliveMessage"
 }
 
-class ProtobufMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, val type: Int, val isResponse: Int, val payload: ByteArray): UTunCommonMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate) {
+class ProtobufMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, val type: Int, val isResponse: Int, val payload: ByteArray): UTunCommonMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate) {
     companion object : UTunParseCompanion() {
         @Synchronized
         fun parse(bytes: ByteArray): ProtobufMessage {
@@ -115,7 +115,7 @@ class EncryptedMessage(sequence: Int, val payload: ByteArray): UTunMessage(seque
     override fun toString() = "EncryptedMessage(payload ${payload.hex()})"
 }
 
-class DictionaryMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class DictionaryMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "DictionaryMessage"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -164,7 +164,7 @@ class AppAckMessage(sequence: Int, val streamID: Int, val responseIdentifier: St
     override fun toString() = "AppAckMessage(stream $streamID, responseID $responseIdentifier, topic $topic)"
 }
 
-class SessionInvitationMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SessionInvitationMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SessionInvitationMessage"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -177,7 +177,7 @@ class SessionInvitationMessage(sequence: Int, streamID: Int, flags: Int, respons
     }
 }
 
-class SessionAcceptMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SessionAcceptMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SessionAcceptMessage"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -190,7 +190,7 @@ class SessionAcceptMessage(sequence: Int, streamID: Int, flags: Int, responseIde
     }
 }
 
-class SessionDeclineMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SessionDeclineMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SessionDeclineMessage"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -203,7 +203,7 @@ class SessionDeclineMessage(sequence: Int, streamID: Int, flags: Int, responseId
     }
 }
 
-class SessionCancelMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SessionCancelMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SessionCancelMessage"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -216,7 +216,7 @@ class SessionCancelMessage(sequence: Int, streamID: Int, flags: Int, responseIde
     }
 }
 
-class SessionMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SessionMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SessionMessage"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -229,7 +229,7 @@ class SessionMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifie
     }
 }
 
-class SessionEndMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SessionEndMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSessionMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SessionEndMessage"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -242,7 +242,7 @@ class SessionEndMessage(sequence: Int, streamID: Int, flags: Int, responseIdenti
     }
 }
 
-class SMSTextMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SMSTextMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SMSTextMessage"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -255,7 +255,7 @@ class SMSTextMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifie
     }
 }
 
-class SMSTextDownloadMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SMSTextDownloadMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SMSTextDownloadMessage"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -268,7 +268,7 @@ class SMSTextDownloadMessage(sequence: Int, streamID: Int, flags: Int, responseI
     }
 }
 
-class SMSOutgoing(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SMSOutgoing(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SMSOutgoing"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -281,7 +281,7 @@ class SMSOutgoing(sequence: Int, streamID: Int, flags: Int, responseIdentifier: 
     }
 }
 
-class SMSDownloadOutgoing(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SMSDownloadOutgoing(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SMSDownloadOutgoing"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -294,7 +294,7 @@ class SMSDownloadOutgoing(sequence: Int, streamID: Int, flags: Int, responseIden
     }
 }
 
-class SMSDeliveryReceipt(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SMSDeliveryReceipt(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SMSDeliveryReceipt"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -307,7 +307,7 @@ class SMSDeliveryReceipt(sequence: Int, streamID: Int, flags: Int, responseIdent
     }
 }
 
-class SMSReadReceipt(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SMSReadReceipt(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SMSReadReceipt"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -320,7 +320,7 @@ class SMSReadReceipt(sequence: Int, streamID: Int, flags: Int, responseIdentifie
     }
 }
 
-class SMSFailure(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class SMSFailure(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): AbstractSMSMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "SMSFailure"
     companion object : UTunParseCompanion() {
         @Synchronized
@@ -361,7 +361,7 @@ class FragmentedMessage(sequence: Int, val fragmentIndex: Int, val fragmentCount
     override fun toString() = "FragmentedMessage(${fragmentIndex+1}/$fragmentCount)"
 }
 
-class ResourceTransferMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
+class ResourceTransferMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: UUID?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val name = "ResourceTransferMessage"
     companion object : UTunParseCompanion() {
         @Synchronized
