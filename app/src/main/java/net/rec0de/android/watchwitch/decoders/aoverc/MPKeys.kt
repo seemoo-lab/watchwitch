@@ -110,7 +110,8 @@ data class MPKeys(
         val kf = KeyFactory.getInstance("ECDSA", BouncyCastleProvider())
         val params = ECNamedCurveSpec("secp256r1", spec.curve, spec.g, spec.n)
 
-        val bigInt = BigInteger(1, ecdsaLocalPrivate)
+        // the private key we get is actually the public key (65B) followed by the private key (32B)
+        val bigInt = BigInteger(1, ecdsaLocalPrivate.fromIndex(65))
         val privKeySpec = ECPrivateKeySpec(bigInt, params)
         return kf.generatePrivate(privKeySpec) as ECPrivateKey
     }

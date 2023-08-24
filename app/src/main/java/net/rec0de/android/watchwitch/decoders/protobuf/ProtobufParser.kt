@@ -91,7 +91,11 @@ class ProtobufParser {
 
         // try decoding as nested protobuf
         try {
-            return ProtobufParser().parse(data.value)
+            val nested = ProtobufParser().parse(data.value)
+            // we sometimes get spurious UUIDs that are valid protobufs and get misclassified
+            // checking that field ids are in sane ranges should help avoid that
+            if(nested.value.keys.all { it < 30 })
+                return nested
         } catch (_: Exception) { }
 
         return data

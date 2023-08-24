@@ -92,11 +92,11 @@ class Decryptor(keys: MPKeys) {
 
         val ciphertext = c.update(plaintext) + c.doFinal()
         val sed = BPData(ciphertext)
-        val ekd = encapsulateKey(symKey)
+        val ekd = BPData(encapsulateKey(symKey))
 
         val dict = mapOf(
             (BPAsciiString("sed") as CodableBPListObject) to (sed as CodableBPListObject),
-            (BPAsciiString("ekd") as CodableBPListObject) to (sed as CodableBPListObject)  // todo ekd
+            (BPAsciiString("ekd") as CodableBPListObject) to (ekd as CodableBPListObject)
         )
         return BPDict(dict)
     }

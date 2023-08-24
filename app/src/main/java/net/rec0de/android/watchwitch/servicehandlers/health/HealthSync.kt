@@ -22,7 +22,7 @@ object HealthSync : UTunService {
     private val keys = LongTermStorage.getMPKeysForClass("A")
     private val decryptor = if(keys != null) Decryptor(keys) else null
 
-    private val syncStatus = mutableMapOf<SyncStatusKey, Long>()
+    private val syncStatus = mutableMapOf<SyncStatusKey, Int>()
     private var utunSequence = 0
 
     override fun acceptsMessageType(msg: UTunMessage) = msg is DataMessage
@@ -42,27 +42,42 @@ object HealthSync : UTunService {
             Logger.logUTUN("HealthSync: got encrypted message but no keys to decrypt", 1)
         else {
             val plaintext = decryptor.decrypt(parsed as BPDict) ?: throw Exception("HealthSync decryption failed for $parsed")
-            val syncMsg = parseSyncMsg(plaintext)
+            val syncMsg = parseSyncMsg(plaintext, msg.responseIdentifier != null)
+
+            if(syncMsg.changeSet != null) {
+                handleChangeSet(syncMsg.changeSet)
+            }
 
             // build a reply with out updated sync state
-            val reply = NanoSyncMessage(12, syncMsg.persistentPairingUUID, syncMsg.healthPairingUUID, null, null, null)
+            val syncAnchors = syncStatus.map { it.key.toSyncAnchorWithValue(it.value.toLong()) }
+            val nanoSyncStatus = NanoSyncStatus(syncAnchors, syncMsg.changeSet?.statusCode ?: 1) // status: echo incoming sync set
+            val reply = NanoSyncMessage(12, syncMsg.persistentPairingUUID, syncMsg.healthPairingUUID, nanoSyncStatus, null, null)
             val protoBytes = "0200".hexBytes() + reply.renderProtobuf() // responses are only prefixed with msgid, not priority
 
-
+            Logger.logUTUN("our sync status now: $syncAnchors", 1)
+            sendEncrypted(protoBytes, msg.streamID, msg.messageUUID, handler)
         }
     }
 
     // based on HDIDSMessageCenter::service:account:incomingData:fromID:context: in HealthDaemon binary
-    private fun parseSyncMsg(msg: ByteArray): NanoSyncMessage {
+    private fun parseSyncMsg(msg: ByteArray, isReply: Boolean): NanoSyncMessage {
         // first two bytes are message type (referred to message ID in apple sources)
         val type = UInt.fromBytesLittle(msg.sliceArray(0 until 2)).toInt()
-        // third byte is priority (0: default, 1: urgent, 2: sync)
-        val priority = msg[3].toInt()
+        var offset = 2
 
-        Logger.logUTUN("rcv HealthSync msg type $type priority $priority", 2)
+        if(!isReply){
+            // third byte is priority (0: default, 1: urgent, 2: sync)
+            val priority = msg[3].toInt()
+            offset = 3
+            Logger.logUTUN("rcv HealthSync msg type $type priority $priority", 2)
+        }
+        else {
+            Logger.logUTUN("rcv HealthSync msg type $type (reply)", 2)
+        }
+
 
         val syncMsg = when(type) {
-            2 -> parseNanoSyncMessage(msg.fromIndex(3))
+            2 -> parseNanoSyncMessage(msg.fromIndex(offset))
             else -> throw Exception("Unsupported HealthSync message type $type")
         }
 
@@ -72,12 +87,30 @@ object HealthSync : UTunService {
 
     private fun parseNanoSyncMessage(bytes: ByteArray): NanoSyncMessage {
         val pb = ProtobufParser().parse(bytes)
-        return NanoSyncMessage.fromSafePB(pb)
+        try {
+            return NanoSyncMessage.fromSafePB(pb)
+        }
+        catch(e: Exception) {
+            // if we fail parsing something, print the failing protobuf for debugging and then still fail
+            println(pb)
+            throw e
+        }
+    }
+
+    private fun handleChangeSet(changeSet: NanoSyncChangeSet) {
+        Logger.logUTUN("Handling change set, status: ${changeSet.statusString}", 1)
+        changeSet.changes.forEach { change ->
+            // given that we usually start listening for health data in the middle of an existing pairing,
+            // we just accept whatever we are sent and set out sync state to that anchor, ignoring previous
+            // missing data
+            val syncKey = SyncStatusKey(change.entityIdentifier.identifier, change.entityIdentifier.schema, change.objectType)
+            syncStatus[syncKey] = change.endAnchor
+        }
     }
 
     private fun sendEncrypted(bytes: ByteArray, streamId: Int, inResponseTo: UUID?, handler: UTunHandler) {
         val encrypted = decryptor!!.encrypt(bytes).renderAsTopLevelObject()
-        val dataMsg = DataMessage(utunSequence, streamId, 0, inResponseTo, UUID.randomUUID(), null, null, bytes)
+        val dataMsg = DataMessage(utunSequence, streamId, 0, inResponseTo, UUID.randomUUID(), null, null, encrypted)
         utunSequence += 1
         handler.send(dataMsg)
     }

@@ -20,7 +20,7 @@ abstract class CodableBPListObject : BPListObject() {
         val header = "bplist00".encodeToByteArray()
 
         val objects = collectObjects()
-        val refSize = ceil(log2(objects.size.toDouble())).toInt()
+        val refSize = ceil(log2(objects.size.toDouble()) / 8).toInt()
         val objMap = objects.mapIndexed { index, obj -> Pair(obj, index) }.toMap()
 
         val renderedObjects = objects.map { it.renderWithObjectMapping(objMap, refSize) }
@@ -34,7 +34,7 @@ abstract class CodableBPListObject : BPListObject() {
         }
 
         // last offset will be the largest, determine offset table offset size to fit it
-        val offsetSize = ceil(log2(offsets.last().toDouble())).toInt()
+        val offsetSize = ceil(log2(offsets.last().toDouble()) / 8).toInt()
 
         // render offsets to bytes and cut to appropriate size
         val offsetTable = offsets.map { it.toBytesBig().fromIndex(4-offsetSize) }.foldRight(byteArrayOf()) {

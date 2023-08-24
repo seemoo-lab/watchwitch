@@ -95,7 +95,6 @@ class ObjectCollection(
 ) : NanoSyncEntity {
     companion object : PBParsable<ObjectCollection>() {
         override fun fromSafePB(pb: ProtoBuf): ObjectCollection {
-            println(pb)
             val sourceBundle = pb.readOptString(1)
             val source = Source.fromPB(pb.readOptionalSinglet(2) as ProtoBuf?)
             val categorySample = CategorySample.fromPB(pb.readOptionalSinglet(3) as ProtoBuf?)
@@ -138,6 +137,10 @@ class CategoryDomainDictionary(
 
             return CategoryDomainDictionary(domain, category, entries)
         }
+    }
+
+    override fun toString(): String {
+        return "CategoryDomainDict($domain, cat $category, entries $keyValuePairs)"
     }
 }
 
