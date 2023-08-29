@@ -135,19 +135,59 @@ class QuantitySample(
 }
 
 class CategorySample(
-    val value: Int?,
-    val sample: Sample?
+    val value: Int,
+    val sample: Sample
 ) {
     companion object : PBParsable<CategorySample>() {
         override fun fromSafePB(pb: ProtoBuf): CategorySample {
-            val value = pb.readOptShortVarInt(2)
-            val sample = Sample.fromPB(pb.readOptionalSinglet(1) as ProtoBuf?)
+            val value = pb.readShortVarInt(2)
+            val sample = Sample.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
             return CategorySample(value, sample)
+        }
+
+        // from HealthKit ___HKCategoryTypeIdentifierLookupTable_block_invoke
+        fun categoryTypeToString(type: Int): String {
+            return when(type) {
+                0x3f -> "SleepAnalysis"
+                0x44 -> "WatchActivation"
+                0x46 -> "AppleStandHour"
+                0x5b -> "CervicalMucusQuality"
+                0x5c -> "OvulationTestResult"
+                0x5f -> "MenstrualFlow"
+                0x60 -> "IntermenstrualBleeding"
+                0x61 -> "SexualActivity"
+                0x62 -> "CoachingEvent"
+                0x63 -> "MindfulSession"
+                0x70 -> "WheelchairUseChange"
+                0x74 -> "WristEvent"
+                0x8c -> "HighHeartRateEvent"
+                0x8d -> "HeartStudyEvent"
+                0x93 -> "LowHeartRateEvent"
+                0x9c -> "IrregularHeartRhythmEvent"
+                0x9d -> "MenstrualSymptomAbdominalCramps"
+                0x9e -> "MenstrualSymptomBreastTenderness"
+                0x9f -> "MenstrualSymptomBloating"
+                0xa0 -> "MenstrualSymptomHeadache"
+                0xa1 -> "MenstrualSymptomAcne"
+                0xa2 -> "MenstrualSymptomLowerBackPain"
+                0xa3 -> "MenstrualSymptomOvulationPain"
+                0xa4 -> "MenstrualSymptomMoodChanges"
+                0xa5 -> "MenstrualSymptomConstipation"
+                0xa6 -> "MenstrualSymptomDiarrhea"
+                0xa7 -> "MenstrualSymptomTiredness"
+                0xa8 -> "MenstrualSymptomNausea"
+                0xa9 -> "MenstrualSymptomSleepChanges"
+                0xaa -> "MenstrualSymptomAppetiteChanges"
+                0xab -> "MenstrualSymptomHotFlashes"
+                0xb2 -> "AudioExposureEvent"
+                0xbd -> "ToothbrushingEvent"
+                else -> throw Exception("Unknown category sample type: $type")
+            }
         }
     }
 
     override fun toString(): String {
-        return "CategorySample(value $value, $sample)"
+        return "CategorySample(${categoryTypeToString(sample!!.dataType!!)} $value, $sample)"
     }
 }
 

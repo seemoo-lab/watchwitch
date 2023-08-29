@@ -102,9 +102,13 @@ object UTunController {
 
     private fun closeChannel(msg: CloseChannel) {
         val fullService = "${msg.account}/${msg.service}/${msg.name}"
-        remoteAnnouncedChannels.remove(fullService)
-        serviceNameToLocalUUID.remove(fullService)
-        establishedChannels.remove(fullService)
+        registerChannelClose(fullService)
+    }
+
+    fun registerChannelClose(serviceName: String) {
+        remoteAnnouncedChannels.remove(serviceName)
+        serviceNameToLocalUUID.remove(serviceName)
+        establishedChannels.remove(serviceName)
     }
 
     fun registerChannelCreation(service: String) {

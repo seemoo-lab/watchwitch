@@ -5,6 +5,7 @@ import org.bouncycastle.crypto.modes.ChaCha20Poly1305
 import org.bouncycastle.crypto.params.AEADParameters
 import org.bouncycastle.crypto.params.KeyParameter
 import java.nio.ByteBuffer
+import java.util.Date
 import java.util.UUID
 
 
@@ -138,4 +139,10 @@ fun Long.doubleFromLongBytes(): Double {
     val b = ByteBuffer.allocate(8)
     b.putLong(this)
     return b.getDouble(0)
+}
+
+fun Date.toAppleTimestamp(): Double {
+    // NSDate timestamps encode time as seconds since Jan 01 2001 with millisecond precision as doubles
+    val canonicalTimestamp = this.time
+    return (canonicalTimestamp - 978307200000).toDouble() / 1000
 }

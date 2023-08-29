@@ -101,6 +101,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
     }
 
     open fun close() {
+        UTunController.registerChannelClose(channel)
         Logger.logUTUN("Handler closed for $channel", 1)
     }
 

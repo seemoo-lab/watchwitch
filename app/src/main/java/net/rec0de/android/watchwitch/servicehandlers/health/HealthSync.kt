@@ -11,6 +11,7 @@ import net.rec0de.android.watchwitch.fromIndex
 import net.rec0de.android.watchwitch.hex
 import net.rec0de.android.watchwitch.hexBytes
 import net.rec0de.android.watchwitch.servicehandlers.UTunService
+import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import net.rec0de.android.watchwitch.utun.DataMessage
 import net.rec0de.android.watchwitch.utun.UTunHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
@@ -105,6 +106,26 @@ object HealthSync : UTunService {
             // missing data
             val syncKey = SyncStatusKey(change.entityIdentifier.identifier, change.entityIdentifier.schema, change.objectType)
             syncStatus[syncKey] = change.endAnchor
+
+            when(change.objectTypeString) {
+                "CategorySamples" -> handleCategorySamples(change.objectData as ObjectCollection)
+                //"QuantitySamples" -> handleQuantitySamples(change.objectData as ObjectCollection)
+                //"ActivityCaches" -> handleActivityCaches(change.objectData as ObjectCollection)
+                //"DeletedSamples" -> handleDeletedSamples(change.objectData as ObjectCollection)
+                //"BinarySample" -> handleBinarySamples(change.objectData as ObjectCollection)
+                else -> Logger.log("Unhandled health sync change type: ${change.objectTypeString}", 0)
+            }
+        }
+    }
+
+    private fun handleCategorySamples(samples: ObjectCollection) {
+        val catSamples = samples.categorySamples
+        val provenance = samples.provenance
+
+        val provenanceId = DatabaseWrangler.getOrInsertProvenance(provenance)
+
+        catSamples.forEach {
+            DatabaseWrangler.insertCategorySample(it.value, provenanceId, it.sample)
         }
     }
 

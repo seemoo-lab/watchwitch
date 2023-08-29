@@ -52,14 +52,14 @@ data class MPKeys(
             val firstType = readInt(der, 1)
             val firstLen = readDerLengthField(der)
             val firstPayload = readBytes(der, firstLen)
-            println("First payload type 0x${firstType.toString(16)}: ${firstPayload.hex()}")
+            //println("First payload type 0x${firstType.toString(16)}: ${firstPayload.hex()}")
 
             // second element
             val secondType = readInt(der, 1)
             val secondLen = readDerLengthField(der)
             val secondPayload = readBytes(der, secondLen)
 
-            println("Second payload type 0x${secondType.toString(16)}: ${secondPayload.hex()}")
+            //println("Second payload type 0x${secondType.toString(16)}: ${secondPayload.hex()}")
 
             return Pair(firstPayload, secondPayload)
         }

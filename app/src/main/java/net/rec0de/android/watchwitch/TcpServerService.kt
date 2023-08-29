@@ -13,6 +13,8 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
+import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
+import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncSecureHelper
 import net.rec0de.android.watchwitch.shoes.ShoesProxyHandler
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -47,6 +49,7 @@ class TcpServerService : Service() {
     override fun onCreate() {
         startMeForeground()
         Thread(runnable).start()
+        DatabaseWrangler.initDbHelper(HealthSyncSecureHelper(baseContext))
     }
 
     override fun onDestroy() {
@@ -67,7 +70,7 @@ class TcpServerService : Service() {
         manager.createNotificationChannel(chan)
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
         val notification = notificationBuilder.setOngoing(false)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle("WatchWitch is running in the background")
             .setPriority(NotificationManager.IMPORTANCE_MIN)
             .setCategory(Notification.CATEGORY_SERVICE)

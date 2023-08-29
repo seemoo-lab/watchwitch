@@ -26,7 +26,7 @@ interface NanoSyncEntity {
             0xb to "Authorizations",                // root class
             0xc to "Devices",                       // root class
             0xd to "Correlations",                  // Sample > Data
-            0xe to "DataTypeSourceOrder",           // root class
+            0xe to "ObjectTypeSourceOrder",         // root class
             0xf to "MedicalID",                     // root class
             0x10 to "NanoUserDefaults",             // KeyValue >
             0x11 to "ProtectedNanoUserDefaults",    // NanoUserDefaults > KeyValue >
@@ -87,40 +87,37 @@ interface NanoSyncEntity {
 class ObjectCollection(
     val sourceBundleIdentifier: String?,
     val source: Source?,
-    val categorySample: CategorySample?,
-    val quantitySample: QuantitySample?,
-    val workout: Workout?,
-    val deletedSample: DeletedSample?,
-    val provenance: Provenance?
+    val categorySamples: List<CategorySample>,
+    val quantitySamples: List<QuantitySample>,
+    val workouts: List<Workout>,
+    val deletedSamples: List<DeletedSample>,
+    val provenance: Provenance
 ) : NanoSyncEntity {
     companion object : PBParsable<ObjectCollection>() {
         override fun fromSafePB(pb: ProtoBuf): ObjectCollection {
+            println(pb)
             val sourceBundle = pb.readOptString(1)
             val source = Source.fromPB(pb.readOptionalSinglet(2) as ProtoBuf?)
-            val categorySample = CategorySample.fromPB(pb.readOptionalSinglet(3) as ProtoBuf?)
-            val quantitySample = QuantitySample.fromPB(pb.readOptionalSinglet(4) as ProtoBuf?)
-            val workout = Workout.fromPB(pb.readOptionalSinglet(5) as ProtoBuf?)
 
-            val deletedSample = DeletedSample.fromPB(pb.readOptionalSinglet(9) as ProtoBuf?)
-            val provenance = Provenance.fromPB(pb.readOptionalSinglet(20) as ProtoBuf?)
+            val categorySample = pb.readMulti(3).map{ CategorySample.fromSafePB(it as ProtoBuf) }
+            val quantitySample = pb.readMulti(4).map{ QuantitySample.fromSafePB(it as ProtoBuf) }
+            val workout = pb.readMulti(5).map{ Workout.fromSafePB(it as ProtoBuf) }
+
+            val deletedSample = pb.readMulti(9).map{ DeletedSample.fromSafePB(it as ProtoBuf) }
+            val provenance = Provenance.fromSafePB(pb.readOptionalSinglet(20) as ProtoBuf)
 
             return ObjectCollection(sourceBundle, source, categorySample, quantitySample, workout, deletedSample, provenance)
         }
     }
 
     override fun toString(): String {
-        val containedObjects = mutableListOf<String>()
+        val containedObjects = mutableListOf<Any>()
+        containedObjects.addAll(categorySamples)
+        containedObjects.addAll(quantitySamples)
+        containedObjects.addAll(workouts)
+        containedObjects.addAll(deletedSamples)
 
-        if(categorySample != null)
-            containedObjects.add(categorySample.toString())
-        if(quantitySample != null)
-            containedObjects.add(quantitySample.toString())
-        if(workout != null)
-            containedObjects.add(workout.toString())
-        if(deletedSample != null)
-            containedObjects.add(deletedSample.toString())
-
-        return "ObjectCollection(sourceBundle $sourceBundleIdentifier, source $source, provenance $provenance, $containedObjects)"
+        return "ObjectCollection(sourceBundle $sourceBundleIdentifier, source $source, provenance $provenance, ${containedObjects.joinToString(", ")})"
     }
 }
 
@@ -158,21 +155,21 @@ class MedicalIDData(val medicalIDBytes: ByteArray?) : NanoSyncEntity {
 class ObjectTypeSourceOrder(
     val objectType: Int?,
     val orderUsed: Int?,
-    val sourceUUIDs: List<UUID>,
+    val sourceUUIDs: ByteArray?,
     val modificationDates: List<Date>
 ) : NanoSyncEntity {
     companion object : PBParsable<ObjectTypeSourceOrder>() {
         override fun fromSafePB(pb: ProtoBuf): ObjectTypeSourceOrder {
             val objectType = pb.readOptShortVarInt(1)
             val orderUsed = pb.readOptShortVarInt(2)
-            val sourceUUIDs = pb.readMulti(3).map { Utils.uuidFromBytes((it as ProtoLen).value) }
+            val sourceUUIDs = (pb.readOptionalSinglet(3) as ProtoLen?)?.value
             val modificationDates = pb.readMulti(4).map { (it as ProtoI64).asDate() }
 
             return ObjectTypeSourceOrder(objectType, orderUsed, sourceUUIDs, modificationDates)
         }
     }
 
-    override fun toString() = "ObjectTypeSourceOrder(objType $objectType, orderUsed $orderUsed, sourceUUIDs: $sourceUUIDs, modificationDates: $modificationDates)"
+    override fun toString() = "ObjectTypeSourceOrder(objType $objectType, orderUsed $orderUsed, sourceUUIDs: ${sourceUUIDs?.hex()}, modificationDates: $modificationDates)"
 }
 
 class Device(
