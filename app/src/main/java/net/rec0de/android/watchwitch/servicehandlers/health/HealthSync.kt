@@ -3,6 +3,7 @@ package net.rec0de.android.watchwitch.servicehandlers.health
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.decoders.aoverc.Decryptor
+import net.rec0de.android.watchwitch.decoders.bplist.BPAsciiString
 import net.rec0de.android.watchwitch.decoders.bplist.BPDict
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
@@ -12,9 +13,12 @@ import net.rec0de.android.watchwitch.hex
 import net.rec0de.android.watchwitch.hexBytes
 import net.rec0de.android.watchwitch.servicehandlers.UTunService
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
+import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncSecureContract
+import net.rec0de.android.watchwitch.toAppleTimestamp
 import net.rec0de.android.watchwitch.utun.DataMessage
 import net.rec0de.android.watchwitch.utun.UTunHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
+import java.util.Date
 import java.util.UUID
 
 object HealthSync : UTunService {
@@ -23,8 +27,15 @@ object HealthSync : UTunService {
     private val keys = LongTermStorage.getMPKeysForClass("A")
     private val decryptor = if(keys != null) Decryptor(keys) else null
 
-    private val syncStatus = mutableMapOf<SyncStatusKey, Int>()
+    private val syncStatus = DatabaseWrangler.loadSyncAnchors().toMutableMap()
     private var utunSequence = 0
+
+    private val sessionUUID = UUID.randomUUID()
+    private val sessionStart = Date()
+
+    private var initialized = false
+    private lateinit var persistentUUID: UUID
+    private lateinit var healthPairingUUID: UUID
 
     override fun acceptsMessageType(msg: UTunMessage) = msg is DataMessage
 
@@ -45,6 +56,12 @@ object HealthSync : UTunService {
             val plaintext = decryptor.decrypt(parsed as BPDict) ?: throw Exception("HealthSync decryption failed for $parsed")
             val syncMsg = parseSyncMsg(plaintext, msg.responseIdentifier != null)
 
+            if(!initialized) {
+                persistentUUID = syncMsg.persistentPairingUUID
+                healthPairingUUID = syncMsg.healthPairingUUID
+                initialized = true
+            }
+
             if(syncMsg.changeSet != null) {
                 handleChangeSet(syncMsg.changeSet)
             }
@@ -55,7 +72,6 @@ object HealthSync : UTunService {
             val reply = NanoSyncMessage(12, syncMsg.persistentPairingUUID, syncMsg.healthPairingUUID, nanoSyncStatus, null, null)
             val protoBytes = "0200".hexBytes() + reply.renderProtobuf() // responses are only prefixed with msgid, not priority
 
-            Logger.logUTUN("our sync status now: $syncAnchors", 1)
             sendEncrypted(protoBytes, msg.streamID, msg.messageUUID, handler)
         }
     }
@@ -93,7 +109,7 @@ object HealthSync : UTunService {
         }
         catch(e: Exception) {
             // if we fail parsing something, print the failing protobuf for debugging and then still fail
-            println(pb)
+            println("Failed while parsing: $pb")
             throw e
         }
     }
@@ -101,31 +117,48 @@ object HealthSync : UTunService {
     private fun handleChangeSet(changeSet: NanoSyncChangeSet) {
         Logger.logUTUN("Handling change set, status: ${changeSet.statusString}", 1)
         changeSet.changes.forEach { change ->
+            var handled = true
+            when(change.objectTypeString) {
+                "CategorySamples", "QuantitySamples", "Workouts", "DeletedSamples", "BinarySample", "ActivityCaches" -> handleObjectCollectionGeneric(change.objectData as ObjectCollection)
+                "ProtectedNanoUserDefaults" -> handleUserDefaults(change.objectData as CategoryDomainDictionary, true)
+                "NanoUserDefaults" -> handleUserDefaults(change.objectData as CategoryDomainDictionary, false)
+                else -> {
+                    handled = false
+                    Logger.log("Unhandled health sync change type: ${change.objectTypeString}", 0)
+                }
+            }
+
             // given that we usually start listening for health data in the middle of an existing pairing,
             // we just accept whatever we are sent and set out sync state to that anchor, ignoring previous
             // missing data
-            val syncKey = SyncStatusKey(change.entityIdentifier.identifier, change.entityIdentifier.schema, change.objectType)
-            syncStatus[syncKey] = change.endAnchor
-
-            when(change.objectTypeString) {
-                "CategorySamples" -> handleCategorySamples(change.objectData as ObjectCollection)
-                //"QuantitySamples" -> handleQuantitySamples(change.objectData as ObjectCollection)
-                //"ActivityCaches" -> handleActivityCaches(change.objectData as ObjectCollection)
-                //"DeletedSamples" -> handleDeletedSamples(change.objectData as ObjectCollection)
-                //"BinarySample" -> handleBinarySamples(change.objectData as ObjectCollection)
-                else -> Logger.log("Unhandled health sync change type: ${change.objectTypeString}", 0)
+            if(handled) { // do not advance sync anchors for unhandled data to make watch send them again for debugging
+                val syncKey = SyncStatusKey(change.entityIdentifier.identifier, change.entityIdentifier.schema ?: "main", change.objectType ?: 0)
+                syncStatus[syncKey] = change.endAnchor
+                DatabaseWrangler.setSyncAnchor(syncKey.schema, syncKey.objType, syncKey.identifier, change.endAnchor)
             }
         }
     }
 
-    private fun handleCategorySamples(samples: ObjectCollection) {
-        val catSamples = samples.categorySamples
+    private fun handleObjectCollectionGeneric(samples: ObjectCollection) {
         val provenance = samples.provenance
+        val provenanceId = DatabaseWrangler.getOrInsertProvenance(provenance, samples.source)
 
-        val provenanceId = DatabaseWrangler.getOrInsertProvenance(provenance)
+        when{
+            samples.categorySamples.isNotEmpty() -> samples.categorySamples.forEach { DatabaseWrangler.insertCategorySample(it.value, provenanceId, it.sample)  }
+            samples.quantitySamples.isNotEmpty() -> samples.quantitySamples.forEach { DatabaseWrangler.insertQuantitySample(it, provenanceId) }
+            samples.activityCaches.isNotEmpty() -> samples.activityCaches.forEach { DatabaseWrangler.insertActivityCache(it, provenanceId) }
+            samples.workouts.isNotEmpty() -> samples.workouts.forEach { DatabaseWrangler.insertWorkout(it, provenanceId) }
+            samples.binarySamples.isNotEmpty() -> samples.binarySamples.forEach { DatabaseWrangler.insertBinarySample(it, provenanceId) }
+            samples.deletedSamples.isNotEmpty() -> samples.deletedSamples.forEach { DatabaseWrangler.markSampleDeleted(it.sample.healthObject.uuid) }
+        }
+    }
 
-        catSamples.forEach {
-            DatabaseWrangler.insertCategorySample(it.value, provenanceId, it.sample)
+    private fun handleUserDefaults(settings: CategoryDomainDictionary, secure: Boolean) {
+        settings.keyValuePairs.forEach {
+            if(secure)
+                DatabaseWrangler.setKeyValueSecure(settings.domain, settings.category!!, it)
+            else
+                DatabaseWrangler.setKeyValue(settings.domain, settings.category!!, it)
         }
     }
 
@@ -134,5 +167,30 @@ object HealthSync : UTunService {
         val dataMsg = DataMessage(utunSequence, streamId, 0, inResponseTo, UUID.randomUUID(), null, null, encrypted)
         utunSequence += 1
         handler.send(dataMsg)
+    }
+
+    private fun enableECG(): NanoSyncMessage {
+        val startAnchor = syncStatus[SyncStatusKey(17, "main", 17)] ?: 0
+        val endAnchor = startAnchor + 4 // why 4? no idea.
+        val timestamp = Date()
+        val cc = "DE"
+        val countryCodeBpDict = BPDict(mapOf(BPAsciiString("4") to BPAsciiString(cc)))
+
+        val protectedUserDefaultEntries = listOf(
+            TimestampedKeyValuePair("HKElectrocardiogramOnboardingHistory", timestamp, null, null, null, countryCodeBpDict.renderAsTopLevelObject()),
+            TimestampedKeyValuePair("HKElectrocardiogramOnboardingCompleted", timestamp, 4, null, null, null),
+            TimestampedKeyValuePair("HKElectrocardiogramOnboardingCountryCode", timestamp, null, null, cc, null),
+            TimestampedKeyValuePair("HKElectrocardiogramFirstOnboardingCompleted", timestamp, null, timestamp.toAppleTimestamp(), null, null)
+        )
+        val objectData = CategoryDomainDictionary("com.apple.private.health.heart-rhythm", 105, protectedUserDefaultEntries)
+        val change = NanoSyncChange(17, startAnchor, endAnchor, objectData, null, null,0, true, EntityIdentifier(17, null))
+
+        val changeSet = NanoSyncChangeSet(sessionUUID, sessionStart, 1, listOf(change), null)
+        return NanoSyncMessage(12, persistentUUID, healthPairingUUID, null, changeSet, null)
+    }
+
+    fun resetSyncStatus() {
+        syncStatus.clear()
+        DatabaseWrangler.resetSyncStatus()
     }
 }

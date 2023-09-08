@@ -45,6 +45,8 @@ object NWSCManager {
 
     private val waitingForPubkeyQueue = mutableListOf<Triple<NWSCRequest, DataInputStream, DataOutputStream>>()
     private val queueLock = Mutex()
+    private val ccInitLock = Mutex(locked = true)
+    private var ccInitialized = false
 
     init {
         val gen = Ed25519KeyPairGenerator()
@@ -53,6 +55,14 @@ object NWSCManager {
 
         localPrivateKey = keyPair.private as Ed25519PrivateKeyParameters
         localPublicKey = keyPair.public as Ed25519PublicKeyParameters
+    }
+
+    @Synchronized
+    fun markControlChannelInitialized() {
+        if(!ccInitialized) {
+            ccInitialized = true
+            ccInitLock.unlock()
+        }
     }
 
     suspend fun readFromSocket(fromWatch: DataInputStream, toWatch: DataOutputStream, port: Int) {
@@ -110,6 +120,7 @@ object NWSCManager {
         Logger.logIDS("NWSC rcv $request", 1)
         if(request.service == "ids-control-channel") {
             accept(toWatch)
+            Logger.logIDS("register IDS control", 0)
             registerIdsControlChannel(fromWatch, toWatch)
         }
         else if(!gotIdsChannel) {
@@ -120,19 +131,21 @@ object NWSCManager {
                 GlobalScope.launch { requestIdsChannel() }
         }
         else {
-            // wait a bit in hopes that ids control initialization is done by then
-            // (otherwise we get channel requests for channels that have not been announced yet and things get hairy)
-            delay(200)
+            // ensure that initialization of the control channel is complete
+            ccInitLock.lock()
+            ccInitLock.unlock()
+
             if(UTunController.shouldAcceptConnection(request.service)) {
                 Logger.logIDS("Accepting $request", 1)
                 accept(toWatch)
-                GlobalScope.launch { createHandlerAndForward(fromWatch, toWatch, request.service) }
+                GlobalScope.launch { createHandlerAndForward(fromWatch, toWatch, request.service, false) }
             }
             else {
                 Logger.logIDS("Rejecting $request, unexpected channel or unwanted DPC", 1)
                 reject(toWatch, false)
                 close(fromWatch, toWatch)
             }
+
         }
     }
 
@@ -185,6 +198,7 @@ object NWSCManager {
 
         // if our channel was accepted
         if(feedback.flags.toUInt() == 0x8000u) {
+            Logger.logIDS("register IDS control", 0)
             registerIdsControlChannel(fromWatch, toWatch)
             Logger.logIDS("NWSC rcv idscc request accepted", 2)
         }
@@ -290,9 +304,9 @@ object NWSCManager {
         }
     }
 
-    private fun createHandlerAndForward(fromWatch: DataInputStream, toWatch: DataOutputStream, service: String) {
+    private fun createHandlerAndForward(fromWatch: DataInputStream, toWatch: DataOutputStream, service: String, weInitiated: Boolean) {
         val handler = UTunHandler(service, toWatch)
-        handler.init()
+        handler.init(weInitiated)
         forwardToHandlerForever(fromWatch, handler)
     }
 
@@ -326,7 +340,7 @@ object NWSCManager {
         if(feedback.flags.toUInt() == 0x8000u) {
             Logger.logIDS("NWSC rcv channel $req accepted", 1)
             handler.output = toWatch
-            handler.init()
+            handler.init(true)
             forwardToHandlerForever(fromWatch, handler)
         }
         else {

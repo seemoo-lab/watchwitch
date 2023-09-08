@@ -80,6 +80,11 @@ object Utils {
         buf.putLong(uuid.leastSignificantBits)
         return buf.array()
     }
+
+    fun dateFromAppleTimestamp(timestamp: Double): Date {
+        // NSDate timestamps encode time as seconds since Jan 01 2001 with millisecond precision as doubles
+        return Date((timestamp*1000).toLong() + 978307200000)
+    }
 }
 
 open class ParseCompanion {

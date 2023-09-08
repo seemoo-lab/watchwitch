@@ -6,6 +6,7 @@ import kotlinx.coroutines.launch
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
+import net.rec0de.android.watchwitch.servicehandlers.FindMyLocalDevice
 import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
 import net.rec0de.android.watchwitch.servicehandlers.PreferencesSync
 import net.rec0de.android.watchwitch.servicehandlers.UTunService
@@ -23,7 +24,7 @@ object UTunController {
 
     private val serviceNameToLocalUUID = mutableMapOf<String, UUID>()
 
-    val services: Map<String, UTunService> = listOf(PreferencesSync, HealthSync).associateBy { it.name }
+    val services: Map<String, UTunService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice).associateBy { it.name }
 
     fun usingOutput(out: DataOutputStream): UTunController {
         output = out
@@ -69,7 +70,7 @@ object UTunController {
                 delay((200 + 30*i).toLong())
                 // we may have received and accepted an incoming request for this channel in the meantime
                 if(!establishedChannels.contains(fullService)) {
-                    val handler = UTunHandler(it, null)
+                    val handler = UTunHandler(fullService, null)
                     NWSCManager.initiateChannelAndForward(fullService, targetPort, handler)
                 }
             }
@@ -78,6 +79,8 @@ object UTunController {
 
     fun receive(message: ByteArray) {
         val msg = UTunControlMessage.parse(message)
+
+        NWSCManager.markControlChannelInitialized()
 
         Logger.logUTUN("rcv $msg", 0)
 

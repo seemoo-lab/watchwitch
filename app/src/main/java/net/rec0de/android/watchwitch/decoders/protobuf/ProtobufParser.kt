@@ -82,10 +82,13 @@ class ProtobufParser {
         // try decoding as string
         try {
             val string = data.value.decodeToString()
-            val unusual = string.filter { !it.toString().matches(Regex("[a-zA-Z0-9\\-\\./,;\\(\\) ]")) }
+            val unusual = string.filter { !it.toString().matches(Regex("[a-zA-Z0-9\\-\\./,;\\(\\)_ ]")) }
+
+            val utf8Errors = string.codePoints().anyMatch{ it == 0xFFFD }
+            val weirdASCII = unusual.chars().anyMatch { it < 32 }
 
             // is 90% of characters are 'common', we assume this is a correctly decoded string
-            if(unusual.length.toDouble() / string.length < 0.1)
+            if(unusual.length.toDouble() / string.length < 0.1 && !utf8Errors && !weirdASCII)
                 return ProtoString(string)
         } catch(_: Exception) {}
 
@@ -94,7 +97,7 @@ class ProtobufParser {
             val nested = ProtobufParser().parse(data.value)
             // we sometimes get spurious UUIDs that are valid protobufs and get misclassified
             // checking that field ids are in sane ranges should help avoid that
-            if(nested.value.keys.all { it < 30 })
+            if(nested.value.keys.all { it in 1..99 })
                 return nested
         } catch (_: Exception) { }
 

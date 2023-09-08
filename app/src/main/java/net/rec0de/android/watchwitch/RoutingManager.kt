@@ -16,6 +16,8 @@ object RoutingManager {
 
     private val activeSpiForRemote = mutableMapOf<String,Pair<ByteArray, ByteArray>>()
 
+    private var error = false
+
     fun startup(conMan: ConnectivityManager) {
         Logger.logCmd("Clearing ip xfrm states & policies", 0)
         exec(listOf("ip xfrm state flush", "ip xfrm policy flush"))
@@ -29,11 +31,22 @@ object RoutingManager {
             ni.inetAddresses.toList().filter { !it.isLoopbackAddress && !it.isLinkLocalAddress && it.isSiteLocalAddress && it is Inet4Address }
         }
 
+        if(ips.isEmpty()){
+            Logger.setError("no network interface available")
+            error = true
+            return Inet4Address.getByAddress("00000000".hexBytes()) as Inet4Address
+        }
+
         primaryInterface = NetworkInterface.getByInetAddress(ips.first())
         return ips.first() as Inet4Address
     }
 
     fun allocateIPv6AddressIfNotPresent(addr: Inet6Address) {
+        if(error) {
+            Logger.log("Skipping IPv6 allocation due to network error", 0)
+            return
+        }
+
         val interfaces = NetworkInterface.getNetworkInterfaces()
 
         val ips = interfaces.toList().flatMap { ni ->
@@ -60,6 +73,11 @@ object RoutingManager {
     // using ip xfrm to create a manually keyed IPsec tunnel in the kernel
     // see https://www.sobyte.net/post/2022-10/ipsec-ip-xfrm/
     fun createTunnelClassC(remoteV4: String, initSpi: ByteArray, respSpi: ByteArray, initKey: ByteArray, respKey: ByteArray) {
+        if(error) {
+            Logger.log("Skipping tunnel setup due to network error", 0)
+            return
+        }
+
         val hexKr = "0x${respKey.hex()}"
         val hexKi = "0x${initKey.hex()}"
         val hexSpiR = "0x${respSpi.hex()}"
@@ -120,6 +138,11 @@ object RoutingManager {
     }
 
     fun createTunnelClassD(remoteV4: String, initSpi: ByteArray, respSpi: ByteArray, initKey: ByteArray, respKey: ByteArray) {
+        if(error) {
+            Logger.log("Skipping tunnel setup due to network error", 0)
+            return
+        }
+
         val hexKr = "0x${respKey.hex()}"
         val hexKi = "0x${initKey.hex()}"
         val hexSpiR = "0x${respSpi.hex()}"
@@ -168,6 +191,11 @@ object RoutingManager {
     }
 
     fun addRoutes() {
+        if(error) {
+            Logger.log("Skipping routing setup due to network error", 0)
+            return
+        }
+
         val localC = LongTermStorage.getAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_C)
         val remoteC = LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_C)
         val localD = LongTermStorage.getAddress(LongTermStorage.LOCAL_ADDRESS_CLASS_D)

@@ -11,23 +11,40 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
 
     private var fragmentBuffer: ByteArray = byteArrayOf()
     private val parser = BPListParser()
+    private var handshakeSent = false
+
+    private val shortName = channel.split("/").last().replace("UTunDelivery-", "")
 
     private val streamIdAssociations = mutableMapOf<Int, String>()
 
-    open fun init() {
+    open fun init(weInitiated: Boolean) {
         UTunController.registerChannelCreation(channel)
-        Logger.logUTUN("Creating handler for $channel", 1)
+        Logger.logUTUN("[$shortName] Creating handler for $channel", 1)
+
+        // the accepting side initiates the handshake
+        if(!weInitiated) {
+            Logger.logUTUN("[$shortName] Initiating handshake", 1)
+            try {
+                send(Handshake(4))
+                handshakeSent = true
+            }
+            catch (e: Exception) {
+                Logger.logUTUN("[$shortName] exception: $e", 0)
+            }
+
+        }
     }
 
     open fun receive(message: ByteArray) {
-        Logger.logUTUN("UTUN rcv raw for $channel: ${message.hex()}", 5)
+        Logger.logUTUN("[$shortName] UTUN rcv raw for $channel: ${message.hex()}", 5)
         val parsed = UTunMessage.parse(message)
-        Logger.logUTUN("UTUN rcv for $channel: $parsed", 3)
+        Logger.logUTUN("[$shortName] UTUN rcv for $channel: $parsed", 3)
         
         when(parsed) {
             is UTunCommonMessage -> handleCommonMessage(parsed)
-            is Handshake -> send(Handshake(4))
+            is Handshake -> if(!handshakeSent) send(Handshake(4))
             is FragmentedMessage -> handleFragment(parsed)
+            else -> Logger.logUTUN("[$shortName] Unhandled UTun: $parsed", 0)
         }
     }
 
@@ -45,7 +62,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
             associateStreamWithTopic(message.streamID, message.topic!!)
         else {
             message.topic = streamIdAssociations[message.streamID]
-            Logger.logUTUN("topic from stream map: ${message.topic}", 1)
+            Logger.logUTUN("[$shortName] topic from stream map: ${message.topic}", 1)
         }
 
         // try handing off to supported service
@@ -60,7 +77,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
             return
         }
 
-        Logger.logUTUN("Unhandled UTUN rcv for $channel: $message", 1)
+        Logger.logUTUN("[$shortName] Unhandled UTUN rcv for $channel: $message", 1)
 
         when(message) {
             is DataMessage -> {
@@ -87,7 +104,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
     private fun associateStreamWithTopic(streamID: Int, topic: String) {
         if(streamIdAssociations.containsKey(streamID)) {
             if(streamIdAssociations[streamID] != topic)
-                throw Exception("Stream ID $streamID is associated with topic ${streamIdAssociations[streamID]} but trying to rebind with $topic")
+                throw Exception("[[$shortName]] Stream ID $streamID is associated with topic ${streamIdAssociations[streamID]} but trying to rebind with $topic")
         }
         streamIdAssociations[streamID] = topic
     }
@@ -102,16 +119,16 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
 
     open fun close() {
         UTunController.registerChannelClose(channel)
-        Logger.logUTUN("Handler closed for $channel", 1)
+        Logger.logUTUN("[$shortName] Handler closed for $channel", 1)
     }
 
     fun send(message: UTunMessage) {
-        Logger.logUTUN("UTUN snd for $channel: $message", 1)
+        Logger.logUTUN("[$shortName] UTUN snd for $channel: $message", 1)
         send(message.toBytes())
     }
 
     protected open fun send(message: ByteArray) {
-        Logger.logUTUN("UTUN snd raw ${message.hex()}", 3)
+        Logger.logUTUN("[$shortName] UTUN snd raw ${message.hex()}", 3)
         val toWatch = output!!
         toWatch.write(message)
         toWatch.flush()

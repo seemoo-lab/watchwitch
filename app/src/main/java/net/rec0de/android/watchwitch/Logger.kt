@@ -5,7 +5,7 @@ import android.annotation.SuppressLint
 object Logger {
 
     private const val GEN_SCREEN_LVL = 0
-    private const val GEN_LOG_LVL = 0
+    private const val GEN_LOG_LVL = 3
 
     private const val IKE_SCREEN_LVL = 0
     private const val IKE_LOG_LVL = 0
@@ -13,26 +13,39 @@ object Logger {
     private const val IDS_SCREEN_LVL = 0
     private const val IDS_LOG_LVL = 2
 
-    private const val UTUN_SCREEN_LVL = 1
-    private const val UTUN_LOG_LVL = 1
+    private const val UTUN_SCREEN_LVL = 0
+    private const val UTUN_LOG_LVL = 2
 
-    private const val SHOES_SCREEN_LVL = 1
+    private const val SHOES_SCREEN_LVL = 0
     private const val SHOES_LOG_LVL = -1
 
     private const val CMD_SCREEN_LVL = -1
     private const val CMD_LOG_LVL = 1
 
+    private const val SQL_SCREEN_LVL = 5
+    private const val SQL_LOG_LVL = 5
+
     @SuppressLint("StaticFieldLeak")
     private var activity: MainActivity? = null
+    private var cachedError: String? = null
 
     fun setMainActivity(activity: MainActivity) {
         this.activity = activity
+        if(cachedError != null)
+            activity.runOnUiThread { activity.setError(cachedError!!) }
     }
 
     private fun logToScreen(msg: String) {
         if(activity == null)
             return
         activity!!.runOnUiThread { activity!!.logData(msg) }
+    }
+
+    fun setError(msg: String) {
+        cachedError = msg
+        if(activity == null)
+            return
+        activity!!.runOnUiThread { activity!!.setError(msg) }
     }
 
     fun log(msg: String, level: Int) {
@@ -67,6 +80,13 @@ object Logger {
         if(level <= IKE_SCREEN_LVL)
             logToScreen(msg)
         if(level <= IKE_LOG_LVL)
+            println(msg)
+    }
+
+    fun logSQL(msg: String, level: Int) {
+        if(level <= SQL_SCREEN_LVL)
+            logToScreen(msg)
+        if(level <= SQL_LOG_LVL)
             println(msg)
     }
 

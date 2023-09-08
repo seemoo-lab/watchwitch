@@ -70,7 +70,10 @@ class KeyReceiver(private val main: MainActivity) : Thread() {
                 }
 
                 RoutingManager.registerAddresses()
-                Logger.log("got keys! $map", 0)
+                Logger.log("got keys!", 0)
+                Logger.log("remote public (C/D):", 1)
+                Logger.log(Base64.decode(map["cr"]!!, Base64.DEFAULT).hex(), 1)
+                Logger.log(Base64.decode(map["dr"]!!, Base64.DEFAULT).hex(), 1)
             }
         } catch (e: Throwable) {
             e.printStackTrace()

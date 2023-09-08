@@ -12,6 +12,10 @@ class HealthSyncSecureHelper (context: Context) : SQLiteOpenHelper(context, DATA
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_CATEGORY_SAMPLES)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_BINARY_SAMPLES)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLES)
+        db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLE_STATISTICS)
+        db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLE_SERIES)
+        db.execSQL(HealthSyncSecureContract.SQL_CREATE_WORKOUTS)
+        db.execSQL(HealthSyncSecureContract.SQL_CREATE_WORKOUT_EVENTS)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_ACTIVITY_CACHES)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_OBJECTS)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_DATA_PROVENANCES)
@@ -41,7 +45,14 @@ class HealthSyncSecureHelper (context: Context) : SQLiteOpenHelper(context, DATA
         })
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        throw Exception("Database schema upgrade not supported")
+        if(oldVersion < 2) {
+            db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLE_STATISTICS)
+            db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLE_SERIES)
+        }
+        if(oldVersion < 3) {
+            db.execSQL(HealthSyncSecureContract.SQL_CREATE_WORKOUTS)
+            db.execSQL(HealthSyncSecureContract.SQL_CREATE_WORKOUT_EVENTS)
+        }
     }
 
     override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -50,7 +61,7 @@ class HealthSyncSecureHelper (context: Context) : SQLiteOpenHelper(context, DATA
 
     companion object {
         // If you change the database schema, you must increment the database version.
-        const val DATABASE_VERSION = 1
+        const val DATABASE_VERSION = 3
         const val DATABASE_NAME = "healthdb_secure.db"
     }
 }

@@ -5,6 +5,7 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncSecureContract
 import java.util.Date
 import java.util.UUID
 
@@ -13,9 +14,9 @@ interface NanoSyncEntity {
     companion object {
         // from HDCodableNanoSyncChange::objectTypeAsString:
         private val objectTypes = mapOf(
-            0x1 to "CategorySamples",               // Sample > Data
-            0x2 to "QuantitySamples",               // Sample > Data
-            0x3 to "Workouts",                      // Sample > Data
+            0x1 to "CategorySamples",               // Sample > Data (supported)
+            0x2 to "QuantitySamples",               // Sample > Data (supported, no series support)
+            0x3 to "Workouts",                      // Sample > Data (supported?)
             0x4 to "ActivityCaches",                // Sample > Data
             0x5 to "LegacyAchievements",            // dead
             0x6 to "UserCharacteristics",           // KeyValue >
@@ -28,13 +29,13 @@ interface NanoSyncEntity {
             0xd to "Correlations",                  // Sample > Data
             0xe to "ObjectTypeSourceOrder",         // root class
             0xf to "MedicalID",                     // root class
-            0x10 to "NanoUserDefaults",             // KeyValue >
-            0x11 to "ProtectedNanoUserDefaults",    // NanoUserDefaults > KeyValue >
+            0x10 to "NanoUserDefaults",             // KeyValue > (supported?)
+            0x11 to "ProtectedNanoUserDefaults",    // NanoUserDefaults > KeyValue > (supported)
             0x12 to "LocationSeriesSamples",        // Sample > Data
-            0x13 to "DeletedSamples",               // Sample > Data
+            0x13 to "DeletedSamples",               // Sample > Data (supported)
             0x14 to "LegacyAchievementKeyValue",    // dead
             0x15 to "ActivityAchievementsKeyValue", // dead?
-            0x16 to "BinarySamples",                // Sample > Data
+            0x16 to "BinarySamples",                // Sample > Data (supported?)
             0x17 to "CDADocumentSamples",
             0x18 to "FHIRResources",
             0x1a to "ClinicalGateways",
@@ -89,24 +90,28 @@ class ObjectCollection(
     val source: Source?,
     val categorySamples: List<CategorySample>,
     val quantitySamples: List<QuantitySample>,
+    val activityCaches: List<ActivityCache>,
     val workouts: List<Workout>,
+    val binarySamples: List<BinarySample>,
     val deletedSamples: List<DeletedSample>,
     val provenance: Provenance
 ) : NanoSyncEntity {
     companion object : PBParsable<ObjectCollection>() {
         override fun fromSafePB(pb: ProtoBuf): ObjectCollection {
-            println(pb)
             val sourceBundle = pb.readOptString(1)
             val source = Source.fromPB(pb.readOptionalSinglet(2) as ProtoBuf?)
 
             val categorySample = pb.readMulti(3).map{ CategorySample.fromSafePB(it as ProtoBuf) }
             val quantitySample = pb.readMulti(4).map{ QuantitySample.fromSafePB(it as ProtoBuf) }
             val workout = pb.readMulti(5).map{ Workout.fromSafePB(it as ProtoBuf) }
-
+            // 6: Correlation
+            val activityCache = pb.readMulti(7).map { ActivityCache.fromSafePB(it as ProtoBuf) }
+            val binarySample = pb.readMulti(8).map { BinarySample.fromSafePB(it as ProtoBuf) }
             val deletedSample = pb.readMulti(9).map{ DeletedSample.fromSafePB(it as ProtoBuf) }
+            // 10: LocationSeries
             val provenance = Provenance.fromSafePB(pb.readOptionalSinglet(20) as ProtoBuf)
 
-            return ObjectCollection(sourceBundle, source, categorySample, quantitySample, workout, deletedSample, provenance)
+            return ObjectCollection(sourceBundle, source, categorySample, quantitySample, activityCache, workout, binarySample, deletedSample, provenance)
         }
     }
 
@@ -114,8 +119,10 @@ class ObjectCollection(
         val containedObjects = mutableListOf<Any>()
         containedObjects.addAll(categorySamples)
         containedObjects.addAll(quantitySamples)
+        containedObjects.addAll(activityCaches)
         containedObjects.addAll(workouts)
         containedObjects.addAll(deletedSamples)
+        containedObjects.addAll(binarySamples)
 
         return "ObjectCollection(sourceBundle $sourceBundleIdentifier, source $source, provenance $provenance, ${containedObjects.joinToString(", ")})"
     }

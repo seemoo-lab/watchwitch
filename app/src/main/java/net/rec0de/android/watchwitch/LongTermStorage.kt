@@ -86,7 +86,7 @@ object LongTermStorage {
         }
     }
 
-    fun getKey(type: String): ByteArray? {
+    private fun getKey(type: String): ByteArray? {
         return context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).getString(type, null)?.hexBytes()
     }
 

@@ -4,7 +4,7 @@
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
@@ -17,6 +17,11 @@
         android:theme="@style/Theme.WatchWitch"
         tools:targetApi="31">
         <activity
+            android:name=".HealthLogActivity"
+            android:exported="false"
+            android:label="@string/title_activity_health_log"
+            android:theme="@style/Theme.WatchWitch" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
@@ -25,6 +30,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <service
             android:name=".TcpServerService"
             android:enabled="true"

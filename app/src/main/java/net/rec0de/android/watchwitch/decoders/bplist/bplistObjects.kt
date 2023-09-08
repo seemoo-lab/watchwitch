@@ -2,6 +2,7 @@ package net.rec0de.android.watchwitch.decoders.bplist
 
 import net.rec0de.android.watchwitch.fromIndex
 import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.toAppleTimestamp
 import net.rec0de.android.watchwitch.toBytesBig
 import java.math.BigInteger
 import java.nio.ByteBuffer

@@ -8,7 +8,11 @@ object HealthSyncSecureContract {
     const val BINARY_SAMPLES = "binary_samples"
     const val CATEGORY_SAMPLES = "category_samples"
     const val QUANTITY_SAMPLES = "quantity_samples"
+    const val QUANTITY_SAMPLE_STATISTICS = "quantity_sample_statistics"
+    const val QUANTITY_SAMPLE_SERIES = "quantity_sample_series"
     const val ACTIVITY_CACHES = "activity_caches"
+    const val WORKOUTS = "workouts"
+    const val WORKOUT_EVENTS = "workout_events"
     const val OBJECTS = "objects"
     const val METADATA_KEYS = "metadata_keys"
     const val METADATA_VALUES = "metadata_values"
@@ -20,7 +24,11 @@ object HealthSyncSecureContract {
     const val SQL_CREATE_BINARY_SAMPLES = "CREATE TABLE binary_samples (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, payload BLOB);"
     const val SQL_CREATE_CATEGORY_SAMPLES = "CREATE TABLE category_samples (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, value INTEGER);"
     const val SQL_CREATE_QUANTITY_SAMPLES = "CREATE TABLE quantity_samples (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, quantity REAL, original_quantity REAL, original_unit INTEGER REFERENCES unit_strings (ROWID) ON DELETE NO ACTION);"
+    const val SQL_CREATE_QUANTITY_SAMPLE_STATISTICS = "CREATE TABLE quantity_sample_statistics (owner_id INTEGER PRIMARY KEY REFERENCES quantity_samples (data_id) ON DELETE CASCADE, min REAL, max REAL, most_recent REAL, most_recent_date REAL, most_recent_duration REAL);"
+    const val SQL_CREATE_QUANTITY_SAMPLE_SERIES = "CREATE TABLE quantity_sample_series (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, count INTEGER NOT NULL DEFAULT 0, insertion_era INTEGER, hfd_key INTEGER UNIQUE NOT NULL);"
     const val SQL_CREATE_ACTIVITY_CACHES = "CREATE TABLE activity_caches (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, cache_index INTEGER, sequence INTEGER NOT NULL, activity_mode INTEGER, wheelchair_use INTEGER, energy_burned REAL, energy_burned_goal REAL, energy_burned_goal_date REAL, move_minutes REAL, move_minutes_goal REAL, move_minutes_goal_date REAL, brisk_minutes REAL, brisk_minutes_goal REAL, brisk_minutes_goal_date REAL, active_hours REAL, active_hours_goal REAL, active_hours_goal_date REAL, steps REAL, pushes REAL, walk_distance REAL, deep_breathing_duration REAL, flights INTEGER, energy_burned_stats BLOB, move_minutes_stats BLOB, brisk_minutes_stats BLOB);"
+    const val SQL_CREATE_WORKOUTS = "CREATE TABLE workouts (data_id INTEGER PRIMARY KEY, duration REAL, total_energy_burned REAL, total_basal_energy_burned REAL, total_distance REAL, activity_type INTEGER, goal_type INTEGER, goal REAL, total_w_steps REAL, total_flights_climbed REAL, condenser_version INTEGER, condenser_date REAL);"
+    const val SQL_CREATE_WORKOUT_EVENTS = "CREATE TABLE workout_events (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL REFERENCES workouts (data_id) ON DELETE CASCADE, date REAL NOT NULL, type INTEGER NOT NULL, duration REAL NOT NULL, metadata BLOB, session_uuid BLOB, error BLOB);"
     const val SQL_CREATE_OBJECTS = "CREATE TABLE objects (data_id INTEGER PRIMARY KEY AUTOINCREMENT, uuid BLOB UNIQUE, provenance INTEGER NOT NULL, type INTEGER, creation_date REAL);"
     const val SQL_CREATE_METADATA_KEYS = "CREATE TABLE metadata_keys (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT UNIQUE);"
     const val SQL_CREATE_METADATA_VALUES = "CREATE TABLE metadata_values (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, key_id INTEGER, object_id INTEGER, value_type INTEGER NOT NULL DEFAULT 0, string_value TEXT, numerical_value REAL, date_value REAL, data_value BLOB);"
@@ -58,12 +66,54 @@ object HealthSyncSecureContract {
         const val ORIGINAL_UNIT = "original_unit"
     }
 
+    object QuantitySampleStatistics : BaseColumns {
+        const val DATA_ID = "data_id"
+        const val MIN = "min"
+        const val MAX = "max"
+        const val MOST_RECENT = "most_recent"
+        const val MOST_RECENT_DATE = "most_recent_date"
+        const val MOST_RECENT_DURATION = "most_recent_duration"
+    }
+
+    object QuantitySampleSeries : BaseColumns {
+        const val DATA_ID = "data_id"
+        const val COUNT = "count"
+        const val INSERTION_ERA = "insertion_era"
+        const val HFD_KEY = "hfd_key"
+    }
+
+    object Workouts : BaseColumns {
+        const val DATA_ID = "data_id"
+        const val DURATION = "duration"
+        const val TOTAL_ENERGY_BURNED = "total_energy_burned"
+        const val TOTAL_BASAL_ENERGY_BURNED = "total_basal_energy_burned"
+        const val TOTAL_DISTANCE = "total_distance"
+        const val ACTIVITY_TYPE = "activity_type"
+        const val GOAL_TYPE = "goal_type"
+        const val GOAL = "goal"
+        const val TOTAL_W_STEPS = "total_w_steps"
+        const val TOTAL_FLIGHTS_CLIMBED = "total_flights_climbed"
+        const val CONDENSER_VERSION = "condenser_version"
+        const val CONDENSER_DATE = "condenser_date"
+    }
+
+    object WorkoutEvents : BaseColumns {
+        const val ROWID = "ROWID"
+        const val OWNER_ID = "owner_id"
+        const val DATE = "date"
+        const val TYPE = "type"
+        const val DURATION = "duration"
+        const val METADATA = "metadata"
+        const val SESSION_UUID = "session_uuid"
+        const val ERROR = "error"
+    }
+
     object ActivityCaches : BaseColumns {
         const val DATA_ID = "data_id"
-        const val CACHE_INDEX = "uuid"
-        const val SEQUENCE = "uuid"
-        const val ACTIVITY_MODE = "uuid"
-        const val WHEELCHAIR_USE = "uuid"
+        const val CACHE_INDEX = "cache_index"
+        const val SEQUENCE = "sequence"
+        const val ACTIVITY_MODE = "activity_mode"
+        const val WHEELCHAIR_USE = "wheelchair_use"
         const val ENERGY_BURNED = "energy_burned"
         const val ENERGY_BURNED_GOAL = "energy_burned_goal"
         const val ENERGY_BURNED_GOAL_DATE = "energy_burned_goal_date"

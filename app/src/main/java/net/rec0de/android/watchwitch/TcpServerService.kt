@@ -14,6 +14,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
+import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncHelper
 import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncSecureHelper
 import net.rec0de.android.watchwitch.shoes.ShoesProxyHandler
 import java.io.DataInputStream
@@ -49,7 +50,7 @@ class TcpServerService : Service() {
     override fun onCreate() {
         startMeForeground()
         Thread(runnable).start()
-        DatabaseWrangler.initDbHelper(HealthSyncSecureHelper(baseContext))
+        DatabaseWrangler.initDbHelper(HealthSyncSecureHelper(baseContext), HealthSyncHelper(baseContext))
     }
 
     override fun onDestroy() {
