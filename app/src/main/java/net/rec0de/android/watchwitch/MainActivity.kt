@@ -5,9 +5,9 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.widget.Button
-import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.switchmaterial.SwitchMaterial
 import net.rec0de.android.watchwitch.shoes.NetworkStats
 
 
@@ -26,14 +26,14 @@ class MainActivity : AppCompatActivity() {
 
         Logger.setMainActivity(this)
 
-        val serverToggle: Switch = findViewById(R.id.swToggleServer)
+        val serverToggle: SwitchMaterial = findViewById(R.id.swToggleServer)
         serverToggle.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                statusLabel.text = "starting..."
+                statusLabel.text = getString(R.string.status_starting)
                 udpHandler = UDPHandler(this, 5000)
                 udpHandler!!.start()
             } else {
-                statusLabel.text = "stopping..."
+                statusLabel.text = getString(R.string.status_stopping)
                 udpHandler?.kill()
             }
         }
@@ -64,14 +64,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun statusListening(port: Int) {
-        statusLabel.text = "listening on $localIP:$port"
+        statusLabel.text = getString(R.string.status_listening, localIP, port)
     }
 
     fun statusIdle() {
-        statusLabel.text = "not running"
+        statusLabel.text = getString(R.string.status_not_running)
     }
 
     fun setError(msg: String) {
-        statusLabel.text = "Error: $msg"
+        statusLabel.text = getString(R.string.status_error, msg)
     }
 }
