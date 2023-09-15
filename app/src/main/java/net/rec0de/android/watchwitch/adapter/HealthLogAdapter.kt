@@ -1,24 +1,20 @@
 package net.rec0de.android.watchwitch.adapter
 
-import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import net.rec0de.android.watchwitch.R
-import net.rec0de.android.watchwitch.servicehandlers.health.CategorySample
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import java.text.DateFormat
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-class ItemAdapter(
-    private val context: Context,
+class HealthLogAdapter(
     private val dataset: List<DatabaseWrangler.DisplaySample>
-) : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
+) : RecyclerView.Adapter<HealthLogAdapter.ItemViewHolder>() {
 
     class ItemViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val title: TextView = view.findViewById(R.id.labelTitle)
@@ -28,7 +24,7 @@ class ItemAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
         // create a new view
         val adapterLayout = LayoutInflater.from(parent.context)
-            .inflate(R.layout.list_item, parent, false)
+            .inflate(R.layout.healthlog_item, parent, false)
 
         return ItemViewHolder(adapterLayout)
     }

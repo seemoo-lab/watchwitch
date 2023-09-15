@@ -79,7 +79,7 @@ object DatabaseWrangler {
                 put(HealthSyncSecureContract.WorkoutEvents.METADATA, evt.metadataDictionary.toString()) // idk how this is supposed to be handled?
             }
             secure.writableDatabase.insert(HealthSyncSecureContract.WORKOUT_EVENTS, null, evtValues)
-            Logger.logSQL("Inserting workout event: $evt", 0)
+            Logger.logSQL("Inserting workout event: $evt", 1)
         }
 
         secure.writableDatabase.insert(HealthSyncSecureContract.WORKOUTS, null, values)
@@ -164,7 +164,7 @@ object DatabaseWrangler {
             put(HealthSyncSecureContract.Samples.DATA_TYPE, sample.dataType)
         }
         secure.writableDatabase.insert(HealthSyncSecureContract.SAMPLES, null, values)
-        Logger.logSQL("Inserting sample: $sample", 0)
+        Logger.logSQL("Inserting sample: $sample", 1)
     }
 
     private fun insertObject(obj: HealthObject, provenanceId: Int): Int {
@@ -177,7 +177,7 @@ object DatabaseWrangler {
 
         val objId = secure.writableDatabase.insert(HealthSyncSecureContract.OBJECTS, null, values).toInt()
 
-        Logger.logSQL("Inserting health object: $obj", 0)
+        Logger.logSQL("Inserting health object: $obj", 2)
 
         if(obj.metadataDictionary != null) {
             obj.metadataDictionary.entries.forEach {
@@ -205,7 +205,7 @@ object DatabaseWrangler {
                     put(HealthSyncSecureContract.MetadataValues.VALUE_TYPE, valueType)
                 }
                 secure.writableDatabase.insert(HealthSyncSecureContract.METADATA_VALUES, null, v)
-                Logger.logSQL("Inserting health object metadata: $it", 1)
+                Logger.logSQL("Inserting health object metadata: $it", 2)
             }
         }
 
@@ -285,7 +285,7 @@ object DatabaseWrangler {
             put(dp.SOURCE_ID, sourceId)
         }
         secure.writableDatabase.insert(HealthSyncSecureContract.DATA_PROVENANCES, null, values)
-        Logger.logSQL("Inserting provenance: $provenance", 0)
+        Logger.logSQL("Inserting provenance: $provenance", 2)
     }
 
     private fun insertSourceIfNotPresent(source: Source): Int {
@@ -330,7 +330,7 @@ object DatabaseWrangler {
             put(HealthSyncContract.Sources.PROVENANCE, 0) // i'm not sure how these provenance references work
         }
 
-        Logger.logSQL("Inserting source: $source", 0)
+        Logger.logSQL("Inserting source: $source", 2)
 
         return regular.writableDatabase.insert(HealthSyncContract.SOURCES, null, values).toInt()
     }

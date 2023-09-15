@@ -37,6 +37,8 @@ object NetworkStats {
             "$host: ${stats.packets} pkts, ${stats.bytesSent}b snd ${stats.bytesReceived}b rcv, ${stats.bundleIDs.joinToString("/")}"
         }.joinToString("\n")
     }
+
+    fun stats(): Map<String, StatsEntry> = stats
 }
 
 data class StatsEntry(var packets: Int = 0, var bytesSent: Int = 0, var bytesReceived: Int = 0, var connects: Int = 0, val bundleIDs: MutableSet<String> = mutableSetOf())

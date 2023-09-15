@@ -44,6 +44,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
             is UTunCommonMessage -> handleCommonMessage(parsed)
             is Handshake -> if(!handshakeSent) send(Handshake(4))
             is FragmentedMessage -> handleFragment(parsed)
+            is AckMessage -> {}
             else -> Logger.logUTUN("[$shortName] Unhandled UTun: $parsed", 0)
         }
     }

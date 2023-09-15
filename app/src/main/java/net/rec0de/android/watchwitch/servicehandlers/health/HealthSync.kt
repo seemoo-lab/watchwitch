@@ -119,7 +119,7 @@ object HealthSync : UTunService {
         changeSet.changes.forEach { change ->
             var handled = true
             when(change.objectTypeString) {
-                "CategorySamples", "QuantitySamples", "Workouts", "DeletedSamples", "BinarySample", "ActivityCaches" -> handleObjectCollectionGeneric(change.objectData as ObjectCollection)
+                "CategorySamples", "QuantitySamples", "Workouts", "DeletedSamples", "BinarySamples", "ActivityCaches" -> handleObjectCollectionGeneric(change.objectData as ObjectCollection)
                 "ProtectedNanoUserDefaults" -> handleUserDefaults(change.objectData as CategoryDomainDictionary, true)
                 "NanoUserDefaults" -> handleUserDefaults(change.objectData as CategoryDomainDictionary, false)
                 else -> {

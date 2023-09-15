@@ -9,6 +9,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.switchmaterial.SwitchMaterial
 import net.rec0de.android.watchwitch.shoes.NetworkStats
+import net.rec0de.android.watchwitch.shoes.ShoesService
 
 
 class MainActivity : AppCompatActivity() {
@@ -16,6 +17,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var packetLog: TextView
     private val localIP = Utils.getLocalIP()
     private var udpHandler: UDPHandler? = null
+
+    private val keyReceiver = KeyReceiver()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +32,7 @@ class MainActivity : AppCompatActivity() {
         val serverToggle: SwitchMaterial = findViewById(R.id.swToggleServer)
         serverToggle.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
+                udpHandler?.kill() // kill existing instances if weird UI state
                 statusLabel.text = getString(R.string.status_starting)
                 udpHandler = UDPHandler(this, 5000)
                 udpHandler!!.start()
@@ -40,8 +44,9 @@ class MainActivity : AppCompatActivity() {
 
         val networkLogButton: Button = findViewById(R.id.btnLogNetwork)
         networkLogButton.setOnClickListener {
-            val log = NetworkStats.print()
-            Logger.log(log, 0)
+            val netLog = Intent(this@MainActivity, NetworkLogActivity::class.java)
+            println(NetworkStats.print())
+            this@MainActivity.startActivity(netLog)
         }
 
         val healthLogButton: Button = findViewById(R.id.btnHealthLog)
@@ -52,11 +57,20 @@ class MainActivity : AppCompatActivity() {
 
         LongTermStorage.context = applicationContext
 
-        KeyReceiver(this).start()
+        keyReceiver.start()
         AddressAllocator().start()
         RoutingManager.startup(this.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager)
 
         startForegroundService(Intent(applicationContext, TcpServerService::class.java))
+        startForegroundService(Intent(applicationContext, ShoesService::class.java))
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopService(Intent(applicationContext, ShoesService::class.java))
+        stopService(Intent(applicationContext, TcpServerService::class.java))
+        keyReceiver.socket?.close()
+        udpHandler?.kill()
     }
 
     fun logData(data: String) {

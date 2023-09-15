@@ -11,8 +11,8 @@
     <string name="witchEmoji">🧙‍♀️</string>
     <string name="listen_for_connections">listen for connections</string>
     <string name="health_log">Health Log</string>
-    <string name="log_network_stats">Log Network Stats</string>
-    <string name="packet_log">Packet Log</string>
+    <string name="log_network_stats">Network Stats</string>
+    <string name="packet_log">Debug Log</string>
 
     <string name="status_not_running">not running</string>
     <string name="status_stopping">stopping…</string>
@@ -20,5 +20,15 @@
     <string name="status_listening">listening on %1$s:%2$d</string>
     <string name="status_error">error: %1$s</string>
 
+    <string name="netstats_packets">packets</string>
+    <string name="netstats_received">received</string>
+    <string name="netstats_sent">sent</string>
+
     <string name="reset_sync_status">reset sync status</string>
+
+
+    <string name="service_shoes_desc">SHOES internet sharing for Apple Watch</string>
+    <string name="service_alloy_desc">Alloy message handling for Apple Watch</string>
+    <string name="service_shoes_label">WatchWitch SHOES Server</string>
+    <string name="service_alloy_label">WatchWitch Alloy Server</string>
 </resources>

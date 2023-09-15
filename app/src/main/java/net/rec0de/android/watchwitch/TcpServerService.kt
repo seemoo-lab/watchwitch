@@ -20,6 +20,7 @@ import net.rec0de.android.watchwitch.shoes.ShoesProxyHandler
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
+import java.net.BindException
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
@@ -27,20 +28,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 // adapted from https://perihanmirkelam.medium.com/socket-programming-on-android-tcp-server-example-e4552a957c08
 class TcpServerService : Service() {
-    private val working = AtomicBoolean(true)
+    private val idsA = TcpServer(61314)
+    private val idsB = TcpServer(61315)
 
     private val runnable = Runnable {
-        val terminus = TcpServer(62742)
-        val idsA = TcpServer(61314)
-        val idsB = TcpServer(61315)
-        val lockdown = TcpServer(62078)
-
-        terminus.start()
+        //val terminus = TcpServer(62742)
+        //terminus.start()
         idsA.start()
         idsB.start()
-        lockdown.start()
 
-        lockdown.join()
+        idsA.join()
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -54,7 +51,8 @@ class TcpServerService : Service() {
     }
 
     override fun onDestroy() {
-        working.set(false)
+        idsA.kill()
+        idsB.kill()
     }
 
     private fun startMeForeground() {
@@ -81,12 +79,20 @@ class TcpServerService : Service() {
 }
 
 class TcpServer(private val port: Int) : Thread() {
+
+    private lateinit var serverSocket: ServerSocket
+    private var shouldRun = true
+
+    fun kill() {
+        serverSocket.close()
+    }
+
     @OptIn(DelicateCoroutinesApi::class)
     override fun run() {
         var socket: Socket? = null
         try {
-            val serverSocket = ServerSocket(port)
-            while (true) {
+            serverSocket = ServerSocket(port)
+            while (shouldRun) {
                 socket = serverSocket.accept()
                 val dataInputStream = DataInputStream(socket.getInputStream())
                 val dataOutputStream = DataOutputStream(socket.getOutputStream())
@@ -101,12 +107,18 @@ class TcpServer(private val port: Int) : Thread() {
             }
         } catch (e: IOException) {
             e.printStackTrace()
+            if(e is BindException) {
+                Logger.setError("couldn't bind Alloy port $port")
+            }
             try {
+                serverSocket.close()
                 socket?.close()
             } catch (ex: IOException) {
                 ex.printStackTrace()
             }
         }
+
+        Logger.logIDS("Alloy server exited", 0)
     }
 }
 

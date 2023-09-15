@@ -8,20 +8,24 @@ import kotlinx.serialization.json.Json
 import net.rec0de.android.watchwitch.decoders.aoverc.MPKeys
 
 
-class KeyReceiver(private val main: MainActivity) : Thread() {
+class KeyReceiver : Thread() {
     private val serverPort = 0x7777
     private val maxDatagramSize = 10000
-    private var bKeepRunning = true
+
+    var socket: DatagramSocket? = null
 
     override fun run() {
         val lmessage = ByteArray(maxDatagramSize)
         val packet = DatagramPacket(lmessage, lmessage.size)
-        var socket: DatagramSocket? = null
         try {
             socket = DatagramSocket(serverPort)
             Logger.log("listening for keys on :$serverPort", 1)
-            while (bKeepRunning) {
-                socket.receive(packet)
+            while (true) {
+                socket!!.receive(packet)
+
+                if (currentThread().isInterrupted)
+                    break
+
                 val trimmed = packet.data.sliceArray(0 until packet.length)
 
                 val key = "witchinthewatch-'#s[MZu!Xv*UZjbt".encodeToByteArray()
@@ -75,16 +79,13 @@ class KeyReceiver(private val main: MainActivity) : Thread() {
                 Logger.log(Base64.decode(map["cr"]!!, Base64.DEFAULT).hex(), 1)
                 Logger.log(Base64.decode(map["dr"]!!, Base64.DEFAULT).hex(), 1)
             }
-        } catch (e: Throwable) {
+        }
+        catch (e: Throwable) {
             e.printStackTrace()
         }
         finally {
             socket?.close()
-            main.runOnUiThread { main.statusIdle() }
+            Logger.log("KeyReceiver exited", 0)
         }
-    }
-
-    fun kill() {
-        bKeepRunning = false
     }
 }

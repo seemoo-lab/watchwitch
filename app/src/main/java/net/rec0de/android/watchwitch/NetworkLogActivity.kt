@@ -5,26 +5,18 @@ import android.os.Bundle
 import android.widget.Button
 import androidx.recyclerview.widget.RecyclerView
 import net.rec0de.android.watchwitch.adapter.HealthLogAdapter
+import net.rec0de.android.watchwitch.adapter.NetworkStatsAdapter
 import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
+import net.rec0de.android.watchwitch.shoes.NetworkStats
 
-class HealthLogActivity : AppCompatActivity() {
+class NetworkLogActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_health_log)
-
-        val categoryData = DatabaseWrangler.getCategorySamples()
-        val quantityData = DatabaseWrangler.getQuantitySamples()
-
-        val data = (categoryData + quantityData).sortedBy { it.startDate }
+        setContentView(R.layout.activity_network_log)
 
         val recyclerView = findViewById<RecyclerView>(R.id.hostList)
-        recyclerView.adapter = HealthLogAdapter(data)
+        recyclerView.adapter = NetworkStatsAdapter(NetworkStats.stats().toList())
         recyclerView.setHasFixedSize(true)
-
-        val resetButton = findViewById<Button>(R.id.btnResetSyncStatus)
-        resetButton.setOnClickListener {
-            HealthSync.resetSyncStatus()
-        }
     }
 }

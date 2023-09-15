@@ -3,6 +3,7 @@ package net.rec0de.android.watchwitch
 import net.rec0de.android.watchwitch.ike.DeletePayload
 import net.rec0de.android.watchwitch.ike.IKEMessage
 import net.rec0de.android.watchwitch.ike.IKEv2Session
+import java.net.BindException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 
@@ -39,21 +40,21 @@ object IKEDispatcher {
 
 class UDPHandler(private val main: MainActivity, private val serverPort: Int) : Thread() {
     private val maxDatagramSize = 10000
-    private var bKeepRunning = true
-
+    var socket: DatagramSocket? = null
     override fun run() {
         val lmessage = ByteArray(maxDatagramSize)
         val packet = DatagramPacket(lmessage, lmessage.size)
-        var socket: DatagramSocket? = null
         try {
             socket = DatagramSocket(serverPort)
             main.runOnUiThread { main.statusListening(serverPort) }
-            while (bKeepRunning) {
-                socket.receive(packet)
-
-                IKEDispatcher.dispatch(packet, socket, main)
+            while (true) {
+                socket!!.receive(packet)
+                IKEDispatcher.dispatch(packet, socket!!, main)
             }
         } catch (e: Throwable) {
+            if(e is BindException) {
+                Logger.setError("socket already in use")
+            }
             e.printStackTrace()
         }
         finally {
@@ -63,6 +64,6 @@ class UDPHandler(private val main: MainActivity, private val serverPort: Int) : 
     }
 
     fun kill() {
-        bKeepRunning = false
+        socket?.close()
     }
 }

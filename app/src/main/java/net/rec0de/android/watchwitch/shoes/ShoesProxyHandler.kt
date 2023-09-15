@@ -25,7 +25,9 @@ object ShoesProxyHandler {
             Logger.logShoes("TLS rcv trying to read $headerLen header bytes", 10)
 
             val header = ByteArray(headerLen)
-            fromWatch.readFully(header, 0, header.size)
+            withContext(Dispatchers.IO) {
+                fromWatch.readFully(header, 0, header.size)
+            }
 
             // first byte is always 0x01, may be command byte from SOCKS spec (0x01 = establish TCP/IP connection)
             val headerMagic = header[0]
@@ -55,10 +57,6 @@ object ShoesProxyHandler {
 
             NetworkStats.connect(hostname, bundleID)
 
-            val clientSocket = Socket(hostname, targetPort.toInt())
-            val toRemote = clientSocket.getOutputStream()
-            val fromRemote = DataInputStream(clientSocket.getInputStream())
-
             // send acknowledge, exact purpose unknown
             // best guess: 0006 is high-level length (handled at unknown location)
             // 0000 is unknown (possibly type 0 length 0 TLV?)
@@ -72,18 +70,32 @@ object ShoesProxyHandler {
             val expensiveFlag = (if(RoutingManager.isConnectionExpensive()) 0x80 else 0x00).toUByte()
             val networkByte = wifiFlag or cellFlag or expensiveFlag
 
+            Logger.logShoes("responding with network flags $networkByte", 2)
+
             withContext(Dispatchers.IO) {
                 toWatch.write("00060000040001".hexBytes())
                 toWatch.writeByte(networkByte.toInt())
                 toWatch.flush()
             }
 
+            val clientSocket = withContext(Dispatchers.IO) {
+                Socket(hostname, targetPort.toInt())
+            }
+            val toRemote = withContext(Dispatchers.IO) {
+                clientSocket.getOutputStream()
+            }
+            val fromRemote = DataInputStream(withContext(Dispatchers.IO) {
+                clientSocket.getInputStream()
+            })
+
             GlobalScope.launch { forwardForever(fromRemote, toWatch, hostname) }
 
             while(true) {
                 // we expect a TLS record header here, which is 1 byte record type, 2 bytes TLS version, 2 bytes length
                 val recordHeader = ByteArray(5)
-                fromWatch.readFully(recordHeader)
+                withContext(Dispatchers.IO) {
+                    fromWatch.readFully(recordHeader)
+                }
                 val len = UInt.fromBytesBig(recordHeader.sliceArray(3 until 5)).toInt()
                 val packet = ByteArray(5+len)
                 recordHeader.copyInto(packet)
