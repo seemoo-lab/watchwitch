@@ -7,7 +7,12 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.os.Bundle
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.Message
+import android.os.Messenger
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -21,9 +26,50 @@ import java.net.BindException
 import java.net.ServerSocket
 import java.net.Socket
 
+const val SHOES_MSG_CONNECTIVITY = 1
+const val SHOES_MSG_STATS = 2
+const val SHOES_MSG_STATS_RESPONSE = 3
+
 class ShoesService : Service() {
 
     private lateinit var serverSocket: ServerSocket
+    private lateinit var mMessenger: Messenger
+
+    // Running this in a separate process helps with keeping network performance snappy on the watch
+    // but comes at the cost of some annoying IPC
+    internal class IncomingHandler(
+        context: Context,
+        private val applicationContext: Context = context.applicationContext
+    ) : Handler(Looper.myLooper()!!) {
+        override fun handleMessage(msg: Message) {
+            when (msg.what) {
+                // update our connection flags based on info from the main thread
+                SHOES_MSG_CONNECTIVITY -> {
+                    val bundle = msg.data
+                    val flags = bundle.getInt("netFlags")
+                    Logger.logShoes("SHOES received connectivity flags $flags", 1)
+                    ShoesProxyHandler.connectionCellular = (flags and 0x01) != 0
+                    ShoesProxyHandler.connectionWiFi = (flags and 0x02) != 0
+                    ShoesProxyHandler.connectionExpensive = (flags and 0x04) != 0
+                }
+                SHOES_MSG_STATS -> {
+                    // Send message to the client. The message contains server info
+                    val message = Message.obtain(this@IncomingHandler, SHOES_MSG_STATS_RESPONSE)
+                    val bundle = Bundle()
+                    bundle.putString("statsJson", NetworkStats.json())
+                    message.data = bundle
+                    msg.replyTo.send(message)
+                }
+                else -> super.handleMessage(msg)
+            }
+        }
+    }
+
+    override fun onBind(intent: Intent): IBinder? {
+        mMessenger = Messenger(IncomingHandler(this))
+        return mMessenger.binder
+    }
+
 
     private val runnable = Runnable {
         var socket: Socket? = null
@@ -47,10 +93,6 @@ class ShoesService : Service() {
                 ex.printStackTrace()
             }
         }
-    }
-
-    override fun onBind(intent: Intent): IBinder? {
-        return null
     }
 
     override fun onCreate() {

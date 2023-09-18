@@ -1,5 +1,10 @@
 package net.rec0de.android.watchwitch.shoes
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import net.rec0de.android.watchwitch.Logger
+
 object NetworkStats {
     private val stats = mutableMapOf<String, StatsEntry>()
 
@@ -29,16 +34,10 @@ object NetworkStats {
         entry.bytesSent += bytes
     }
 
-    fun print(): String {
-        return stats.map { entry ->
-            val host = entry.key
-            val stats = entry.value
-
-            "$host: ${stats.packets} pkts, ${stats.bytesSent}b snd ${stats.bytesReceived}b rcv, ${stats.bundleIDs.joinToString("/")}"
-        }.joinToString("\n")
+    fun json(): String {
+        return Json.encodeToString(stats)
     }
-
-    fun stats(): Map<String, StatsEntry> = stats
 }
 
+@Serializable
 data class StatsEntry(var packets: Int = 0, var bytesSent: Int = 0, var bytesReceived: Int = 0, var connects: Int = 0, val bundleIDs: MutableSet<String> = mutableSetOf())

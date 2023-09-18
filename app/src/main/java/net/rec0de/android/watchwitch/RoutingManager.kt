@@ -1,7 +1,15 @@
 package net.rec0de.android.watchwitch
 
+import android.content.ComponentName
+import android.content.ServiceConnection
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Bundle
+import android.os.IBinder
+import android.os.Message
+import android.os.Messenger
+import android.os.RemoteException
+import net.rec0de.android.watchwitch.shoes.SHOES_MSG_CONNECTIVITY
 import java.io.DataOutputStream
 import java.io.IOException
 import java.net.Inet4Address
@@ -211,6 +219,27 @@ object RoutingManager {
             exec("ip -6 route add table local $remoteC/112 dev ${primaryInterface.name} src $localC")
         if(remoteD != null && localD != null)
             exec("ip -6 route add table local $remoteD/112 dev ${primaryInterface.name} src $localD")
+    }
+
+    fun updateNetworkFlags(mService: Messenger) {
+        var flags = 0
+        if(isConnectionCellular())
+            flags += 1
+        if(isConnectionWifi())
+            flags += 2
+        if(isConnectionExpensive())
+            flags += 4
+
+        val bundle = Bundle()
+        bundle.putInt("netFlags", flags)
+        val msg = Message.obtain(null, SHOES_MSG_CONNECTIVITY)
+        msg.data = bundle
+
+        try {
+            mService.send(msg)
+        } catch (e: RemoteException) {
+            e.printStackTrace()
+        }
     }
 
     private fun exec(cmd: List<String>) {

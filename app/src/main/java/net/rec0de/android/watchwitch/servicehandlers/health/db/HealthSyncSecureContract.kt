@@ -67,7 +67,7 @@ object HealthSyncSecureContract {
     }
 
     object QuantitySampleStatistics : BaseColumns {
-        const val DATA_ID = "data_id"
+        const val OWNER_ID = "owner_id"
         const val MIN = "min"
         const val MAX = "max"
         const val MOST_RECENT = "most_recent"

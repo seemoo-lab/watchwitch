@@ -233,13 +233,13 @@ class SourceAuthorization(
 
 class ObjectAssociation(
     val associationUUID: UUID,
-    val objectUUIDs: List<UUID>
+    val objectUUIDs: ByteArray
 ) : NanoSyncEntity {
     companion object : PBParsable<ObjectAssociation>() {
         override fun fromSafePB(pb: ProtoBuf): ObjectAssociation {
             val associationUUID = Utils.uuidFromBytes((pb.readAssertedSinglet(1) as ProtoLen).value)
-            val objectUUIDs = pb.readMulti(2).map { Utils.uuidFromBytes((it as ProtoLen).value) }
-            return ObjectAssociation(associationUUID, objectUUIDs)
+            val objectUUIDs = pb.readAssertedSinglet(2) as ProtoLen
+            return ObjectAssociation(associationUUID, objectUUIDs.value)
         }
     }
 

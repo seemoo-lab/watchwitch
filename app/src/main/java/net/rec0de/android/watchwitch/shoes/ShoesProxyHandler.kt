@@ -1,5 +1,6 @@
 package net.rec0de.android.watchwitch.shoes
 
+import android.app.Application
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -16,13 +17,21 @@ import java.io.OutputStream
 import java.net.Socket
 
 object ShoesProxyHandler {
+
+    var connectionExpensive = false
+    var connectionWiFi = true
+    var connectionCellular = false
+
     suspend fun handleConnection(fromWatch: DataInputStream, toWatch: DataOutputStream) {
+        var fromRemote: DataInputStream? = null
+        var toRemote: OutputStream? = null
+
         try {
             val headerLen = withContext(Dispatchers.IO) {
                 fromWatch.readUnsignedShort()
             }
 
-            Logger.logShoes("TLS rcv trying to read $headerLen header bytes", 10)
+            //Logger.logShoes("TLS rcv trying to read $headerLen header bytes", 10)
 
             val header = ByteArray(headerLen)
             withContext(Dispatchers.IO) {
@@ -65,9 +74,9 @@ object ShoesProxyHandler {
 
             // see ___nw_shoes_read_reply_tlvs_block_invoke in libnetwork.dylib
 
-            val wifiFlag = (if(RoutingManager.isConnectionWifi()) 0x20 else 0x00).toUByte()
-            val cellFlag = (if(RoutingManager.isConnectionCellular()) 0x40 else 0x00).toUByte()
-            val expensiveFlag = (if(RoutingManager.isConnectionExpensive()) 0x80 else 0x00).toUByte()
+            val wifiFlag = (if(connectionWiFi) 0x20 else 0x00).toUByte()
+            val cellFlag = (if(connectionCellular) 0x40 else 0x00).toUByte()
+            val expensiveFlag = (if(connectionExpensive) 0x80 else 0x00).toUByte()
             val networkByte = wifiFlag or cellFlag or expensiveFlag
 
             Logger.logShoes("responding with network flags $networkByte", 2)
@@ -81,10 +90,10 @@ object ShoesProxyHandler {
             val clientSocket = withContext(Dispatchers.IO) {
                 Socket(hostname, targetPort.toInt())
             }
-            val toRemote = withContext(Dispatchers.IO) {
+            toRemote = withContext(Dispatchers.IO) {
                 clientSocket.getOutputStream()
             }
-            val fromRemote = DataInputStream(withContext(Dispatchers.IO) {
+            fromRemote = DataInputStream(withContext(Dispatchers.IO) {
                 clientSocket.getInputStream()
             })
 
@@ -106,7 +115,7 @@ object ShoesProxyHandler {
                     toRemote.flush()
                 }
 
-                Logger.logShoes("TLS to remote: ${packet.hex()}", 10)
+                //Logger.logShoes("TLS to remote: ${packet.hex()}", 10)
                 NetworkStats.packetSent(hostname, len)
             }
         } catch (e: Exception) {
@@ -114,6 +123,8 @@ object ShoesProxyHandler {
                 withContext(Dispatchers.IO) {
                     fromWatch.close()
                     toWatch.close()
+                    fromRemote?.close()
+                    toRemote?.close()
                 }
             } catch (ex: IOException) {
                 ex.printStackTrace()
@@ -138,7 +149,7 @@ object ShoesProxyHandler {
                     fromRemoteStream.readFully(packet, 5, len)
                 }
 
-                Logger.logShoes("TLS from remote: ${packet.hex()}", 10)
+                //Logger.logShoes("TLS from remote: ${packet.hex()}", 10)
                 NetworkStats.packetReceived(hostname, len)
 
                 withContext(Dispatchers.IO) {

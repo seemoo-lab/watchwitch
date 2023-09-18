@@ -33,6 +33,9 @@ object DatabaseWrangler {
 
     fun insertCategorySample(value: Int, provenanceId: Int, sample: Sample) {
         val id = insertObject(sample.healthObject, provenanceId)
+        if(id == -1)
+            return
+
         insertSample(id, sample)
         val values = ContentValues().apply {
             put(HealthSyncSecureContract.CategorySamples.DATA_ID, id)
@@ -44,6 +47,9 @@ object DatabaseWrangler {
 
     fun insertBinarySample(sample: BinarySample, provenanceId: Int) {
         val id = insertObject(sample.sample.healthObject, provenanceId)
+        if(id == -1)
+            return
+
         insertSample(id, sample.sample)
         val values = ContentValues().apply {
             put(HealthSyncSecureContract.BinarySamples.DATA_ID, id)
@@ -55,6 +61,9 @@ object DatabaseWrangler {
 
     fun insertWorkout(sample: Workout, provenanceId: Int) {
         val id = insertObject(sample.sample.healthObject, provenanceId)
+        if(id == -1)
+            return
+
         insertSample(id, sample.sample)
         val values = ContentValues().apply {
             put(HealthSyncSecureContract.Workouts.DATA_ID, id)
@@ -88,6 +97,9 @@ object DatabaseWrangler {
 
     fun insertActivityCache(ac: ActivityCache, provenanceId: Int) {
         val id = insertObject(ac.sample.healthObject, provenanceId)
+        if(id == -1)
+            return
+
         insertSample(id, ac.sample)
         val values = ContentValues().apply {
             put(HealthSyncSecureContract.ActivityCaches.DATA_ID, id)
@@ -122,6 +134,9 @@ object DatabaseWrangler {
 
     fun insertQuantitySample(sample: QuantitySample, provenanceId: Int) {
         val id = insertObject(sample.sample.healthObject, provenanceId)
+        if(id == -1)
+            return
+
         insertSample(id, sample.sample)
 
         val unitStringId = if(sample.originalUnitString == null) null else getOrInsertUnitString(sample.originalUnitString)
@@ -138,7 +153,7 @@ object DatabaseWrangler {
 
         if(sample.max != null || sample.min != null || sample.mostRecent != null) {
             val stats = ContentValues().apply {
-                put(HealthSyncSecureContract.QuantitySampleStatistics.DATA_ID, id)
+                put(HealthSyncSecureContract.QuantitySampleStatistics.OWNER_ID, id)
                 put(HealthSyncSecureContract.QuantitySampleStatistics.MIN, sample.min)
                 put(HealthSyncSecureContract.QuantitySampleStatistics.MAX, sample.max)
                 put(HealthSyncSecureContract.QuantitySampleStatistics.MOST_RECENT, sample.mostRecent)
