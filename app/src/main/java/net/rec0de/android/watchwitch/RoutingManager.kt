@@ -1,11 +1,11 @@
 package net.rec0de.android.watchwitch
 
-import android.content.ComponentName
-import android.content.ServiceConnection
 import android.net.ConnectivityManager
+import android.net.ConnectivityManager.NetworkCallback
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Bundle
-import android.os.IBinder
 import android.os.Message
 import android.os.Messenger
 import android.os.RemoteException
@@ -19,6 +19,8 @@ import java.net.NetworkInterface
 
 object RoutingManager {
 
+    var shoesServiceMessenger: Messenger? = null
+
     private lateinit var primaryInterface: NetworkInterface
     private lateinit var connectivityManager: ConnectivityManager
 
@@ -30,6 +32,24 @@ object RoutingManager {
         Logger.logCmd("Clearing ip xfrm states & policies", 0)
         exec(listOf("ip xfrm state flush", "ip xfrm policy flush"))
         connectivityManager = conMan
+
+        val builder = NetworkRequest.Builder()
+        builder.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        builder.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+        builder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+        builder.addTransportType(NetworkCapabilities.TRANSPORT_VPN)
+
+        val callback: NetworkCallback = object : NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                Logger.log("Network change detected (gain)", 0)
+                updateNetworkFlags()
+            }
+            override fun onLost(network: Network) {
+                Logger.log("Network change detected (loss)", 0)
+                updateNetworkFlags()
+            }
+        }
+        connectivityManager.registerNetworkCallback(builder.build(), callback)
     }
 
     fun getLocalIPv4Address(): Inet4Address {
@@ -221,7 +241,7 @@ object RoutingManager {
             exec("ip -6 route add table local $remoteD/112 dev ${primaryInterface.name} src $localD")
     }
 
-    fun updateNetworkFlags(mService: Messenger) {
+    fun updateNetworkFlags() {
         var flags = 0
         if(isConnectionCellular())
             flags += 1
@@ -236,7 +256,7 @@ object RoutingManager {
         msg.data = bundle
 
         try {
-            mService.send(msg)
+            shoesServiceMessenger?.send(msg)
         } catch (e: RemoteException) {
             e.printStackTrace()
         }
@@ -265,8 +285,8 @@ object RoutingManager {
     private fun exec(cmd: String) = exec(listOf(cmd))
 
     fun isConnectionExpensive(): Boolean = connectivityManager.isActiveNetworkMetered
-    fun isConnectionWifi(): Boolean = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)!!.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-    fun isConnectionCellular(): Boolean = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)!!.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+    fun isConnectionWifi(): Boolean = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ?: false
+    fun isConnectionCellular(): Boolean = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ?: false
 }
 
 class AddressAllocator : Thread() {

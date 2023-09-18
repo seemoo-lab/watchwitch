@@ -30,24 +30,18 @@ class MainActivity : AppCompatActivity() {
     private val keyReceiver = KeyReceiver()
 
     // setup for IPC with the SHOES process, see https://developer.android.com/guide/components/bound-services
-    private var mService: Messenger? = null
     private var bound: Boolean = false
     private val mConnection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            mService = Messenger(service)
+            RoutingManager.shoesServiceMessenger = Messenger(service)
             bound = true
         }
         override fun onServiceDisconnected(className: ComponentName) {
-            mService = null
+            RoutingManager.shoesServiceMessenger = null
             bound = false
         }
     }
 
-
-    fun updateNetworkFlags() {
-        if (!bound ) return
-        RoutingManager.updateNetworkFlags(mService!!)
-    }
 
     override fun onStart() {
         super.onStart()
@@ -91,7 +85,6 @@ class MainActivity : AppCompatActivity() {
 
         val networkLogButton: Button = findViewById(R.id.btnLogNetwork)
         networkLogButton.setOnClickListener {
-            updateNetworkFlags()
             val netLog = Intent(this@MainActivity, NetworkLogActivity::class.java)
             this@MainActivity.startActivity(netLog)
         }
