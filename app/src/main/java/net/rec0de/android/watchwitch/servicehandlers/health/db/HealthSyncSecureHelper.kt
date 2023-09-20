@@ -13,7 +13,6 @@ class HealthSyncSecureHelper (context: Context) : SQLiteOpenHelper(context, DATA
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_BINARY_SAMPLES)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLES)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLE_STATISTICS)
-        db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLE_SERIES)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_WORKOUTS)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_WORKOUT_EVENTS)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_ACTIVITY_CACHES)
@@ -25,6 +24,10 @@ class HealthSyncSecureHelper (context: Context) : SQLiteOpenHelper(context, DATA
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_METADATA_VALUES)
 
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_KEY_VALUE_SECURE)
+        db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SERIES)
+        db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SERIES_DATA)
+        db.execSQL(HealthSyncSecureContract.SQL_CREATE_LOCATION_SERIES)
+        db.execSQL(HealthSyncSecureContract.SQL_CREATE_LOCATION_SERIES_DATA)
 
         // create indices
         db.execSQL(HealthSyncSecureContract.SQL_INDEX_OBJECTS_DELETED)
@@ -47,11 +50,16 @@ class HealthSyncSecureHelper (context: Context) : SQLiteOpenHelper(context, DATA
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if(oldVersion < 2) {
             db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLE_STATISTICS)
-            db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLE_SERIES)
         }
         if(oldVersion < 3) {
             db.execSQL(HealthSyncSecureContract.SQL_CREATE_WORKOUTS)
             db.execSQL(HealthSyncSecureContract.SQL_CREATE_WORKOUT_EVENTS)
+        }
+        if(oldVersion < 4) {
+            db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SERIES)
+            db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SERIES_DATA)
+            db.execSQL(HealthSyncSecureContract.SQL_CREATE_LOCATION_SERIES)
+            db.execSQL(HealthSyncSecureContract.SQL_CREATE_LOCATION_SERIES_DATA)
         }
     }
 
@@ -61,7 +69,7 @@ class HealthSyncSecureHelper (context: Context) : SQLiteOpenHelper(context, DATA
 
     companion object {
         // If you change the database schema, you must increment the database version.
-        const val DATABASE_VERSION = 3
+        const val DATABASE_VERSION = 4
         const val DATABASE_NAME = "healthdb_secure.db"
     }
 }

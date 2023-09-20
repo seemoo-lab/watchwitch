@@ -14,6 +14,10 @@
     <string name="log_network_stats">Network Stats</string>
     <string name="packet_log">Debug Log</string>
 
+    <string name="healthlog_locationseries">GPS Track</string>
+    <string name="healthlog_gps_points">%1$d points, tap to view</string>
+    <string name="healthlog_min_max">min: %1$s max: %2$s</string>
+
     <string name="status_not_running">not running</string>
     <string name="status_stopping">stopping…</string>
     <string name="status_starting">starting…</string>
@@ -26,7 +30,6 @@
     <string name="netstats_sent">sent</string>
 
     <string name="reset_sync_status">reset sync status</string>
-
 
     <string name="service_shoes_desc">SHOES internet sharing for Apple Watch</string>
     <string name="service_alloy_desc">Alloy message handling for Apple Watch</string>

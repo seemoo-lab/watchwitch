@@ -21,7 +21,7 @@ object FindMyLocalDevice : UTunService {
         if(msg !is ProtobufMessage)
             throw Exception("FindMyLocalDevice expects ProtobufMessage but got $msg")
 
-        val fields = ProtobufParser().parse(msg.payload).value
+        val fields = ProtobufParser().parse(msg.payload).objs
 
         val timestamp = (fields[1]?.first() as ProtoI64?)?.asDate()
         println("rcv findmylocaldevice: $timestamp")

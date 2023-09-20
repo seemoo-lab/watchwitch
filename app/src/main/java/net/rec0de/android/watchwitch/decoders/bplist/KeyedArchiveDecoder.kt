@@ -42,8 +42,20 @@ object KeyedArchiveDecoder {
 
     private fun transformSupportedClasses(thing: CodableBPListObject): BPListObject {
         return when(thing) {
-            is BPArray -> BPArray(thing.entries, thing.values.map { transformSupportedClasses(it) as CodableBPListObject }) // not sure if this can blow up, but i gotta get it to compile for now
-            is BPSet -> BPSet(thing.entries, thing.values.map { transformSupportedClasses(it) as CodableBPListObject })
+            is BPArray -> {
+                val transformedValues = thing.values.map { transformSupportedClasses(it) }
+                if(transformedValues.all { it is CodableBPListObject })
+                    BPArray(thing.entries, transformedValues.map { it as CodableBPListObject })
+                else
+                    NSArray(transformedValues)
+            }
+            is BPSet -> {
+                val transformedValues = thing.values.map { transformSupportedClasses(it) }
+                if(transformedValues.all { it is CodableBPListObject })
+                    BPSet(thing.entries, transformedValues.map { it as CodableBPListObject })
+                else
+                    NSArray(transformedValues)
+            }
             is BPDict -> {
                 if(thing.values.containsKey(classKey)) {
                     val className = ((thing.values[classKey] as BPDict).values[classNameKey] as BPAsciiString).value

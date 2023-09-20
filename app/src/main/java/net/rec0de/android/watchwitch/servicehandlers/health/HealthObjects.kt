@@ -23,8 +23,8 @@ class WorkoutEvent(
             val type = pb.readShortVarInt(1)
             val date = pb.readOptDate(2)
             val swimmingStrokeStyle = pb.readOptShortVarInt(3)
-            val metadataDictionary = MetadataDictionary.fromPB(pb.readOptionalSinglet(4) as ProtoBuf?)
-            val duration = (pb.readOptionalSinglet(5) as ProtoI64?)?.asDouble()
+            val metadataDictionary = MetadataDictionary.fromPB(pb.readOptPB(4))
+            val duration = pb.readOptDouble(5)
             return WorkoutEvent(type, date, swimmingStrokeStyle, metadataDictionary, duration)
         }
     }
@@ -37,12 +37,12 @@ class WorkoutEvent(
 class QuantitySeriesDatum(
     val startDate: Date,
     val endDate: Date,
-    val value: Long
+    val value: Double
 ) {
     companion object : PBParsable<QuantitySeriesDatum>() {
         override fun fromSafePB(pb: ProtoBuf): QuantitySeriesDatum {
             val endDate = pb.readOptDate(1)!!
-            val value = (pb.readAssertedSinglet(2) as ProtoI64).value
+            val value = pb.readOptDouble(2)!!
             val startDate = pb.readOptDate(3)!!
             return QuantitySeriesDatum(startDate, endDate, value)
         }
@@ -66,7 +66,7 @@ class TimestampedKeyValuePair(
             val key = pb.readOptString(1)!!
             val timestamp = pb.readOptDate(2)!!
             val numberIntValue = pb.readOptShortVarInt(3)
-            val numberDoubleValue = (pb.readOptionalSinglet(4) as ProtoI64?)?.asDouble()
+            val numberDoubleValue = pb.readOptDouble(4)
             val stringValue = pb.readOptString(5)
             val bytesValue = (pb.readOptionalSinglet(6) as ProtoLen?)?.value
 
@@ -118,8 +118,8 @@ class MetadataKeyValuePair(
             val stringValue = pb.readOptString(2)
             val dateValue = pb.readOptDate(3)
             val numberIntValue = pb.readOptShortVarInt(4)
-            val numberDoubleValue = (pb.readOptionalSinglet(5) as ProtoI64?)?.asDouble()
-            val quantityValue = Quantity.fromPB(pb.readOptionalSinglet(6) as ProtoBuf?)
+            val numberDoubleValue = pb.readOptDouble(5)
+            val quantityValue = Quantity.fromPB(pb.readOptPB(6))
             val dataValue = pb.readOptionalSinglet(7)
 
             return MetadataKeyValuePair(key, stringValue, dateValue, numberIntValue, numberDoubleValue, quantityValue, dataValue)
@@ -146,7 +146,7 @@ class Quantity(
 ) {
     companion object : PBParsable<Quantity>() {
         override fun fromSafePB(pb: ProtoBuf): Quantity {
-            val value = (pb.readAssertedSinglet(1) as ProtoI64).asDouble()
+            val value = pb.readOptDouble(1)!!
             val unitString = pb.readOptString(2)!!
             return Quantity(value, unitString)
         }
@@ -174,6 +174,36 @@ class StatisticsQuantityInfo(
     override fun toString() = "StatisticsQuantityInfo(${(value*1000).roundToInt().toDouble()/1000}$unit @ $startDate - $endDate)"
 }
 
+class LocationDatum(
+    val timestamp: Date,
+    val latitude: Double,
+    val longitude: Double,
+    val altitude: Double?,
+    val speed: Double?,
+    val course: Double?,
+    val horizontalAccuracy: Double?,
+    val verticalAccuracy: Double?
+) {
+    companion object : PBParsable<LocationDatum>() {
+        override fun fromSafePB(pb: ProtoBuf): LocationDatum {
+            val timestamp = pb.readOptDate(1)!!
+            val latitude = pb.readOptDouble(2)!!
+            val longitude = pb.readOptDouble(3)!!
+            val altitude = pb.readOptDouble(4)
+            val speed = pb.readOptDouble(5)
+            val course = pb.readOptDouble(6)
+            val horizontalAccuracy = pb.readOptDouble(7)
+            val verticalAccuracy = pb.readOptDouble(8)
+
+            return LocationDatum(timestamp, latitude, longitude, altitude, speed, course, horizontalAccuracy, verticalAccuracy)
+        }
+    }
+
+    override fun toString(): String {
+        return "LocationDatum($timestamp, $latitude, $longitude, ${altitude}m, $speed, $course, +-$horizontalAccuracy/$verticalAccuracy)"
+    }
+}
+
 class HealthObject(
     val uuid: UUID,
     val metadataDictionary: MetadataDictionary?,
@@ -185,9 +215,9 @@ class HealthObject(
         override fun fromSafePB(pb: ProtoBuf): HealthObject {
 
             val uuid = Utils.uuidFromBytes((pb.readAssertedSinglet(1) as ProtoLen).value)
-            val metadata = MetadataDictionary.fromPB(pb.readOptionalSinglet(2) as ProtoBuf?)
+            val metadata = MetadataDictionary.fromPB(pb.readOptPB(2))
             val bundle = pb.readOptString(3)
-            val created = (pb.readOptionalSinglet(4) as ProtoI64?)?.asDate()
+            val created = pb.readOptDate(4)
             val syncObjCode = pb.readOptLongVarInt(5)
 
             return HealthObject(uuid, metadata, bundle, created, syncObjCode)
@@ -212,7 +242,7 @@ class Authorization(
             val objectType = pb.readOptShortVarInt(1)
             val authorizationStatus = pb.readOptLongVarInt(2)
             val authorizationRequest = pb.readOptLongVarInt(3)
-            val modificationDate = (pb.readOptionalSinglet(4) as ProtoI64?)?.asDate()
+            val modificationDate = pb.readOptDate(4)
             val modificationEpoch = pb.readOptLongVarInt(5)
             val authorizationMode = pb.readOptLongVarInt(6)
 

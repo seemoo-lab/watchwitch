@@ -54,7 +54,7 @@ object HealthSync : UTunService {
             Logger.logUTUN("HealthSync: got encrypted message but no keys to decrypt", 1)
         else {
             val plaintext = decryptor.decrypt(parsed as BPDict) ?: throw Exception("HealthSync decryption failed for $parsed")
-            val syncMsg = parseSyncMsg(plaintext, msg.responseIdentifier != null)
+            val syncMsg = parseSyncMsg(plaintext, msg.responseIdentifier != null) ?: return
 
             if(!initialized) {
                 persistentUUID = syncMsg.persistentPairingUUID
@@ -77,7 +77,7 @@ object HealthSync : UTunService {
     }
 
     // based on HDIDSMessageCenter::service:account:incomingData:fromID:context: in HealthDaemon binary
-    private fun parseSyncMsg(msg: ByteArray, isReply: Boolean): NanoSyncMessage {
+    private fun parseSyncMsg(msg: ByteArray, isReply: Boolean): NanoSyncMessage? {
         // first two bytes are message type (referred to message ID in apple sources)
         val type = UInt.fromBytesLittle(msg.sliceArray(0 until 2)).toInt()
         var offset = 2
@@ -95,7 +95,12 @@ object HealthSync : UTunService {
 
         val syncMsg = when(type) {
             2 -> parseNanoSyncMessage(msg.fromIndex(offset))
-            else -> throw Exception("Unsupported HealthSync message type $type")
+            else -> {
+                Logger.logIDS("Unsupported HealthSync message type $type", 0)
+                Logger.logIDS("bytes: ${msg.hex()}", 0)
+                null
+                //throw Exception("Unsupported HealthSync message type $type")
+            }
         }
 
         Logger.logUTUN("rcv HealthSync $syncMsg", 1)
@@ -110,6 +115,7 @@ object HealthSync : UTunService {
         catch(e: Exception) {
             // if we fail parsing something, print the failing protobuf for debugging and then still fail
             println("Failed while parsing: $pb")
+            println("Bytes: ${bytes.hex()}")
             throw e
         }
     }
@@ -119,7 +125,7 @@ object HealthSync : UTunService {
         changeSet.changes.forEach { change ->
             var handled = true
             when(change.objectTypeString) {
-                "CategorySamples", "QuantitySamples", "Workouts", "DeletedSamples", "BinarySamples", "ActivityCaches" -> handleObjectCollectionGeneric(change.objectData as ObjectCollection)
+                "CategorySamples", "QuantitySamples", "Workouts", "DeletedSamples", "BinarySamples", "ActivityCaches", "LocationSeriesSamples" -> handleObjectCollectionGeneric(change.objectData as ObjectCollection)
                 "ProtectedNanoUserDefaults" -> handleUserDefaults(change.objectData as CategoryDomainDictionary, true)
                 "NanoUserDefaults" -> handleUserDefaults(change.objectData as CategoryDomainDictionary, false)
                 else -> {
@@ -149,6 +155,7 @@ object HealthSync : UTunService {
             samples.activityCaches.isNotEmpty() -> samples.activityCaches.forEach { DatabaseWrangler.insertActivityCache(it, provenanceId) }
             samples.workouts.isNotEmpty() -> samples.workouts.forEach { DatabaseWrangler.insertWorkout(it, provenanceId) }
             samples.binarySamples.isNotEmpty() -> samples.binarySamples.forEach { DatabaseWrangler.insertBinarySample(it, provenanceId) }
+            samples.locationSeries.isNotEmpty() -> samples.locationSeries.forEach { DatabaseWrangler.insertLocationSeries(it, provenanceId) }
             samples.deletedSamples.isNotEmpty() -> samples.deletedSamples.forEach { DatabaseWrangler.markSampleDeleted(it.sample.healthObject.uuid) }
         }
     }

@@ -30,14 +30,34 @@
                 tools:text="Sample Title" />
 
             <TextView
+                android:id="@+id/labelStats"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="?attr/colorOnPrimary"
+                android:visibility="gone"
+                tools:text="min: 3.0 max: 4.8"
+                tools:visibility="visible" />
+
+            <TextView
+                android:id="@+id/labelMetadata"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="?attr/colorOnPrimary"
+                android:visibility="gone"
+                tools:text="Metadata: lorem ipsum"
+                tools:visibility="visible" />
+
+            <TextView
                 android:id="@+id/labelTime"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:alpha="1"
-                android:text="TextView"
                 android:textAlignment="textEnd"
-                android:textColor="?attr/colorOnPrimary" />
+                android:textColor="?attr/colorOnPrimary"
+                tools:text="Sun 13:37" />
         </LinearLayout>
 
     </androidx.cardview.widget.CardView>

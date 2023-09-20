@@ -1,7 +1,9 @@
 package net.rec0de.android.watchwitch.servicehandlers.health.db
 
 import android.content.ContentValues
+import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.hex
@@ -9,6 +11,7 @@ import net.rec0de.android.watchwitch.servicehandlers.health.ActivityCache
 import net.rec0de.android.watchwitch.servicehandlers.health.BinarySample
 import net.rec0de.android.watchwitch.servicehandlers.health.CategorySample
 import net.rec0de.android.watchwitch.servicehandlers.health.HealthObject
+import net.rec0de.android.watchwitch.servicehandlers.health.LocationSeries
 import net.rec0de.android.watchwitch.servicehandlers.health.Provenance
 import net.rec0de.android.watchwitch.servicehandlers.health.QuantitySample
 import net.rec0de.android.watchwitch.servicehandlers.health.Sample
@@ -32,7 +35,13 @@ object DatabaseWrangler {
     }
 
     fun insertCategorySample(value: Int, provenanceId: Int, sample: Sample) {
-        val id = insertObject(sample.healthObject, provenanceId)
+        val id = try {
+            insertObject(sample.healthObject, provenanceId)
+        } catch(e: SQLiteConstraintException) {
+            Logger.logSQL("HealthObject UUID constraint failed for category sample $sample", 0)
+            return
+        }
+
         if(id == -1)
             return
 
@@ -46,7 +55,13 @@ object DatabaseWrangler {
     }
 
     fun insertBinarySample(sample: BinarySample, provenanceId: Int) {
-        val id = insertObject(sample.sample.healthObject, provenanceId)
+        val id = try {
+            insertObject(sample.sample.healthObject, provenanceId)
+        } catch(e: SQLiteConstraintException) {
+            Logger.logSQL("HealthObject UUID constraint failed for binary sample $sample", 0)
+            return
+        }
+
         if(id == -1)
             return
 
@@ -60,7 +75,13 @@ object DatabaseWrangler {
     }
 
     fun insertWorkout(sample: Workout, provenanceId: Int) {
-        val id = insertObject(sample.sample.healthObject, provenanceId)
+        val id = try {
+            insertObject(sample.sample.healthObject, provenanceId)
+        } catch(e: SQLiteConstraintException) {
+            Logger.logSQL("HealthObject UUID constraint failed for workout $sample", 0)
+            return
+        }
+
         if(id == -1)
             return
 
@@ -96,11 +117,31 @@ object DatabaseWrangler {
     }
 
     fun insertActivityCache(ac: ActivityCache, provenanceId: Int) {
-        val id = insertObject(ac.sample.healthObject, provenanceId)
+        // looks like activity caches can be updated once inserted -> check if the given health object already exists
+        // android sqlite API does not allow selecting by blob, so we'll do it manually
+        val uuidHex = Utils.uuidToBytes(ac.sample.healthObject.uuid).hex()
+        val query = "SELECT ${HealthSyncSecureContract.Objects.DATA_ID} FROM ${HealthSyncSecureContract.OBJECTS} WHERE ${HealthSyncSecureContract.Objects.UUID} = X'$uuidHex';"
+        val cursor = secure.readableDatabase.rawQuery(query, null);
+
+        var isUpdate = false
+
+        val id = if(cursor.count > 0) {
+            isUpdate = true
+            cursor.moveToFirst()
+            cursor.getInt(0)
+        }
+        else {
+            insertObject(ac.sample.healthObject, provenanceId)
+
+        }
+        cursor.close()
+
         if(id == -1)
             return
 
-        insertSample(id, ac.sample)
+        if(!isUpdate)
+            insertSample(id, ac.sample)
+
         val values = ContentValues().apply {
             put(HealthSyncSecureContract.ActivityCaches.DATA_ID, id)
             put(HealthSyncSecureContract.ActivityCaches.CACHE_INDEX, ac.cacheIndex)
@@ -125,17 +166,59 @@ object DatabaseWrangler {
             put(HealthSyncSecureContract.ActivityCaches.ENERGY_BURNED_STATS, ac.dailyEnergyBurnedStatistics.toString()) // usually stored as NSArchiver bplist
             // missing: dailyMoveMinutesStats
             put(HealthSyncSecureContract.ActivityCaches.BRISK_MINUTES_STATS, ac.dailyBriskMinutesStatistics.toString()) // usually stored as NSArchiver bplist
-
         }
 
-        secure.writableDatabase.insert(HealthSyncSecureContract.ACTIVITY_CACHES, null, values)
-        Logger.logSQL("Inserting activity cache: $ac", 0)
+        secure.writableDatabase.insertWithOnConflict(HealthSyncSecureContract.ACTIVITY_CACHES, null, values, CONFLICT_REPLACE)
+        val verb = if(isUpdate) "Updating" else "Inserting"
+        Logger.logSQL("$verb activity cache: $ac", 0)
+    }
+
+    fun insertLocationSeries(sample: LocationSeries, provenanceId: Int) {
+        Logger.logSQL("got LocationSeries: $sample", 0)
+        val id = try {
+            insertObject(sample.sample.healthObject, provenanceId)
+        } catch(e: SQLiteConstraintException) {
+            Logger.logSQL("HealthObject UUID constraint failed for location series $sample", 0)
+            return
+        }
+
+        if(id == -1)
+            return
+
+        insertSample(id, sample.sample)
+
+        val seriesMetadata = ContentValues().apply() {
+            put(HealthSyncSecureContract.LocationSeries.DATA_ID, id)
+            put(HealthSyncSecureContract.LocationSeries.CONTINUATION_UUID, if(sample.continuationUUID == null) null else Utils.uuidToBytes(sample.continuationUUID))
+            put(HealthSyncSecureContract.LocationSeries.FINAL, sample.final)
+            put(HealthSyncSecureContract.LocationSeries.FROZEN, sample.frozen)
+        }
+        val seriesId = secure.writableDatabase.insert(HealthSyncSecureContract.LOCATION_SERIES, null, seriesMetadata)
+
+        sample.locationData.forEachIndexed { i, datum ->
+            val point = ContentValues().apply {
+                put(HealthSyncSecureContract.LocationSeriesData.SERIES_ID, seriesId)
+                put(HealthSyncSecureContract.LocationSeriesData.DATUM_ID, i)
+                put(HealthSyncSecureContract.LocationSeriesData.TIMESTAMP, datum.timestamp.toAppleTimestamp())
+                put(HealthSyncSecureContract.LocationSeriesData.LATITUDE, datum.latitude)
+                put(HealthSyncSecureContract.LocationSeriesData.LONGITUDE, datum.longitude)
+                put(HealthSyncSecureContract.LocationSeriesData.ALTITUDE, datum.altitude)
+                put(HealthSyncSecureContract.LocationSeriesData.COURSE, datum.course)
+                put(HealthSyncSecureContract.LocationSeriesData.SPEED, datum.speed)
+                put(HealthSyncSecureContract.LocationSeriesData.HORIZONTAL_ACCURACY, datum.horizontalAccuracy)
+                put(HealthSyncSecureContract.LocationSeriesData.VERTICAL_ACCURACY, datum.verticalAccuracy)
+            }
+            secure.writableDatabase.insert(HealthSyncSecureContract.LOCATION_SERIES_DATA, null, point)
+        }
     }
 
     fun insertQuantitySample(sample: QuantitySample, provenanceId: Int) {
-        val id = insertObject(sample.sample.healthObject, provenanceId)
-        if(id == -1)
+        val id = try {
+            insertObject(sample.sample.healthObject, provenanceId)
+        } catch(e: SQLiteConstraintException) {
+            Logger.logSQL("HealthObject UUID constraint failed for $sample", 0)
             return
+        }
 
         insertSample(id, sample.sample)
 
@@ -164,9 +247,27 @@ object DatabaseWrangler {
             Logger.logSQL("Inserting quantity sample statistics", 1)
         }
 
+        if(sample.quantitySeriesData.isNotEmpty()) {
+            Logger.logSQL("Quantity sample has data series: ${sample.quantitySeriesData}", 0)
+            val seriesMetadata = ContentValues().apply {
+                put(HealthSyncSecureContract.QuantitySeries.DATA_ID, id)
+                put(HealthSyncSecureContract.QuantitySeries.COUNT, sample.quantitySeriesData.size)
+            }
+            val seriesId = secure.writableDatabase.insert(HealthSyncSecureContract.QUANTITY_SERIES, null, seriesMetadata)
+
+            sample.quantitySeriesData.forEachIndexed { i, datum ->
+                val values = ContentValues().apply {
+                    put(HealthSyncSecureContract.QuantitySeriesData.SERIES_ID, seriesId)
+                    put(HealthSyncSecureContract.QuantitySeriesData.DATUM_ID, i)
+                    put(HealthSyncSecureContract.QuantitySeriesData.START_DATE, datum.startDate.toAppleTimestamp())
+                    put(HealthSyncSecureContract.QuantitySeriesData.END_DATE, datum.endDate.toAppleTimestamp())
+                    put(HealthSyncSecureContract.QuantitySeriesData.VALUE, datum.value)
+                }
+                secure.writableDatabase.insert(HealthSyncSecureContract.QUANTITY_SERIES_DATA, null, values)
+            }
+        }
+
         // unhandled:
-        //sample.quantitySeriesData
-        //sample.count
         //sample.final
         //sample.frozen
     }
@@ -546,7 +647,7 @@ object DatabaseWrangler {
         val cursor = secure.readableDatabase.rawQuery("SELECT start_date, end_date, data_type, value FROM $cat INNER JOIN $sam ON $cat.data_id=$sam.data_id INNER JOIN $objs ON $sam.data_id=$objs.data_id WHERE $objs.type != 2;", null)
         while (cursor.moveToNext()) {
             val start = Utils.dateFromAppleTimestamp(cursor.getDouble(0))
-            val end = Utils.dateFromAppleTimestamp(cursor.getDouble(0))
+            val end = Utils.dateFromAppleTimestamp(cursor.getDouble(1))
             list.add(DisplaySample(start, end, CategorySample.categoryTypeToString(cursor.getInt(2)), cursor.getInt(3).toDouble(), ""))
         }
         cursor.close()
@@ -558,11 +659,12 @@ object DatabaseWrangler {
         val sam = HealthSyncSecureContract.SAMPLES
         val objs = HealthSyncSecureContract.OBJECTS
         val units = HealthSyncSecureContract.UNIT_STRINGS
+        val stats = HealthSyncSecureContract.QUANTITY_SAMPLE_STATISTICS
         val list = mutableListOf<DisplaySample>()
-        val cursor = secure.readableDatabase.rawQuery("SELECT start_date, end_date, data_type, quantity, original_quantity, unit_string FROM $qua INNER JOIN $sam ON $qua.data_id=$sam.data_id LEFT JOIN $units ON $units.ROWID=$qua.original_unit INNER JOIN $objs ON $sam.data_id=$objs.data_id WHERE $objs.type != 2;", null)
+        val cursor = secure.readableDatabase.rawQuery("SELECT start_date, end_date, data_type, quantity, original_quantity, unit_string, min, max, $objs.data_id FROM $qua INNER JOIN $sam ON $qua.data_id=$sam.data_id LEFT JOIN $units ON $units.ROWID=$qua.original_unit LEFT JOIN $stats ON $stats.owner_id=$qua.data_id INNER JOIN $objs ON $sam.data_id=$objs.data_id WHERE $objs.type != 2;", null)
         while (cursor.moveToNext()) {
             val start = Utils.dateFromAppleTimestamp(cursor.getDouble(0))
-            val end = Utils.dateFromAppleTimestamp(cursor.getDouble(0))
+            val end = Utils.dateFromAppleTimestamp(cursor.getDouble(1))
 
             val type = QuantitySample.quantityTypeToString(cursor.getInt(2))
             var quantity = cursor.getDouble(3)
@@ -576,11 +678,109 @@ object DatabaseWrangler {
                 unit = cursor.getString(5)
             }
 
-            list.add(DisplaySample(start, end, type, quantity, unit))
+            val min = if(cursor.isNull(6)) null else cursor.getDouble(6)
+            val max = if(cursor.isNull(7)) null else cursor.getDouble(7)
+
+            val metadata = getMetadataOfSample(cursor.getInt(8))
+
+            list.add(DisplaySample(start, end, type, quantity, unit, min, max, metadata))
         }
         cursor.close()
         return list
     }
 
-    data class DisplaySample(val startDate: Date, val endDate: Date, val dataType: String, val value: Double, val unit: String)
+    fun getLocationSeries() : List<DisplayLocationSeries> {
+        val loc = HealthSyncSecureContract.LOCATION_SERIES
+        val pts = HealthSyncSecureContract.LOCATION_SERIES_DATA
+        val sam = HealthSyncSecureContract.SAMPLES
+        val objs = HealthSyncSecureContract.OBJECTS
+        val list = mutableListOf<DisplayLocationSeries>()
+        val cursor = secure.readableDatabase.rawQuery("SELECT start_date, end_date, series_id FROM $loc INNER JOIN $sam ON $loc.data_id=$sam.data_id INNER JOIN $objs ON $sam.data_id=$objs.data_id WHERE $objs.type != 2;", null)
+        while (cursor.moveToNext()) {
+            val seriesId = cursor.getInt(2)
+            val start = Utils.dateFromAppleTimestamp(cursor.getDouble(0))
+            val end = Utils.dateFromAppleTimestamp(cursor.getDouble(1))
+
+            val points = mutableListOf<Pair<Double,Double>>()
+            val pointCursor = secure.readableDatabase.rawQuery("SELECT latitude, longitude FROM $pts WHERE series_id = ? ORDER BY datum_id ASC;", arrayOf(seriesId.toString()))
+            while(pointCursor.moveToNext()) {
+                points.add(Pair(pointCursor.getDouble(0), pointCursor.getDouble(1)))
+            }
+            pointCursor.close()
+
+            list.add(DisplayLocationSeries(start, end, seriesId, points))
+        }
+        cursor.close()
+        return list
+    }
+
+    fun getLocationSeries(id: Int) : DisplayLocationSeries? {
+        val loc = HealthSyncSecureContract.LOCATION_SERIES
+        val pts = HealthSyncSecureContract.LOCATION_SERIES_DATA
+        val sam = HealthSyncSecureContract.SAMPLES
+        val objs = HealthSyncSecureContract.OBJECTS
+        val cursor = secure.readableDatabase.rawQuery("SELECT start_date, end_date FROM $loc INNER JOIN $sam ON $loc.data_id=$sam.data_id INNER JOIN $objs ON $sam.data_id=$objs.data_id WHERE $objs.type != 2 AND series_id = ?;", arrayOf(id.toString()))
+
+        if(cursor.count == 0) {
+            cursor.close()
+            return null
+        }
+        else {
+            cursor.moveToFirst()
+            val start = Utils.dateFromAppleTimestamp(cursor.getDouble(0))
+            val end = Utils.dateFromAppleTimestamp(cursor.getDouble(1))
+
+            val points = mutableListOf<Pair<Double,Double>>()
+            val pointCursor = secure.readableDatabase.rawQuery("SELECT latitude, longitude FROM $pts WHERE series_id = ? ORDER BY datum_id ASC;", arrayOf(id.toString()))
+            while(pointCursor.moveToNext()) {
+                points.add(Pair(pointCursor.getDouble(0), pointCursor.getDouble(1)))
+            }
+            pointCursor.close()
+            cursor.close()
+            return DisplayLocationSeries(start, end, id, points)
+        }
+    }
+
+    private fun getMetadataOfSample(id: Int): Map<String, String> {
+        val meta = HealthSyncSecureContract.METADATA_VALUES
+        val keys = HealthSyncSecureContract.METADATA_KEYS
+        val cursor = secure.readableDatabase.rawQuery("SELECT key, value_type, string_value, numerical_value, date_value, data_value FROM $meta INNER JOIN $keys ON $meta.key_id=$keys.ROWID WHERE object_id = ?", arrayOf(id.toString()))
+        val results = mutableMapOf<String,String>()
+        while (cursor.moveToNext()) {
+            val key = cursor.getString(0)
+            val type = cursor.getInt(1)
+
+            val value = when(type) {
+                0 -> cursor.getString(2)
+                2 -> Utils.dateFromAppleTimestamp(cursor.getDouble(4)).toString()
+                else -> cursor.getDouble(3).toString()
+            }
+            results[key] = value
+        }
+        cursor.close()
+        return results
+    }
+
+    abstract class HealthLogDisplayItem {
+        abstract val startDate: Date
+        abstract val endDate: Date
+    }
+
+    data class DisplaySample(
+        override val startDate: Date,
+        override val endDate: Date,
+        val dataType: String,
+        val value: Double,
+        val unit: String,
+        val min: Double? = null,
+        val max: Double? = null,
+        val metadata: Map<String, String> = mapOf()
+    ) : HealthLogDisplayItem()
+
+    data class DisplayLocationSeries(
+        override val startDate: Date,
+        override val endDate: Date,
+        val seriesId: Int,
+        val points: List<Pair<Double, Double>>
+    ) : HealthLogDisplayItem()
 }

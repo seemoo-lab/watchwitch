@@ -20,6 +20,9 @@
             android:name=".NetworkLogActivity"
             android:exported="false" />
         <activity
+            android:name=".MapActivity"
+            android:exported="false" />
+        <activity
             android:name=".HealthLogActivity"
             android:exported="false"
             android:label="@string/title_activity_health_log"

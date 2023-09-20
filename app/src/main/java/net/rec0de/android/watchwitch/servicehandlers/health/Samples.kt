@@ -1,10 +1,12 @@
 package net.rec0de.android.watchwitch.servicehandlers.health
 
+import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.hex
 import java.util.Date
+import java.util.UUID
 
 class Sample(
     val dataType: Int,
@@ -94,8 +96,8 @@ class QuantitySample(
                 0x0d -> "NikeFuel"
                 0x0e -> "OxygenSaturation"
                 0x0f -> "BloodGlucose"
-                0x10 -> "BloodPressureSys->lic"
-                0x11 -> "BloodPressureDias->lic"
+                0x10 -> "BloodPressureSystolic"
+                0x11 -> "BloodPressureDiastolic"
                 0x12 -> "BloodAlcoholContent"
                 0x13 -> "PeripheralPerfusionIndex"
                 0x14 -> "DietaryFatTotal"
@@ -281,6 +283,9 @@ class ActivityCache(
 ) {
     companion object : PBParsable<ActivityCache>() {
         override fun fromSafePB(pb: ProtoBuf): ActivityCache {
+
+            println(pb)
+
             val sample = Sample.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
             val cacheIndex = pb.readOptShortVarInt(2)
             val energyBurned = pb.readOptDouble(3)
@@ -302,6 +307,11 @@ class ActivityCache(
             val sequence = pb.readOptShortVarInt(33)
             val briskMinutesGoal = pb.readOptDouble(34)
             val activeHoursGoal = pb.readOptDouble(35)
+            val moveMinutesGoal = pb.readOptDouble(36) // highly speculative, not present in my version of healthd
+
+            val someTimestamp1 = pb.readOptDate(40)
+            val someTimestamp2 = pb.readOptDate(41)
+            val someNumber = pb.readOptShortVarInt(42)
 
             return ActivityCache(sample, cacheIndex, energyBurned, briskMinutes, activeHours, stepCount, energyBurnedGoal, walkingAndRunningDistance, energyBurnedGoalDate, deepBreathingDuration, pushCount, flightsClimbed, wheelchairUse, sequence, briskMinutesGoal, activeHoursGoal, dailyEnergyBurnedStats, dailyBriskMinutesStats)
         }
@@ -352,12 +362,37 @@ class Workout(
                 in 1..73 -> activityTypes[type - 1]
                 2000 -> "Wheelchair"
                 3000 -> "Other"
-                else -> "Unknown"
+                else -> "Unknown($type)"
             }
         }
     }
 
     override fun toString(): String {
         return "Workout(${typeToString(type)}, sample $sample, event $workoutEvent, duration $duration, energy $totalEnergyBurnedInCanonicalUnit, distance $totalDistanceInCanonicalUnit, goalType $goalType, goal $goal, flights $totalFlightsClimbedInCanonicalUnit, strokes $totalSwimmingStrokeCountInCanonicalUnit, basal energy $totalBasalEnergyBurnedInCanonicalUnit)"
+    }
+}
+
+class LocationSeries(
+    val sample: Sample,
+    val frozen: Boolean?,
+    val final: Boolean?,
+    val continuationUUID: UUID?,
+    val locationData: List<LocationDatum>
+) {
+    companion object : PBParsable<LocationSeries>() {
+        override fun fromSafePB(pb: ProtoBuf): LocationSeries {
+            println(pb.toString())
+            val sample = Sample.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
+            val frozen = pb.readOptBool(2)
+            val uuidBytes = (pb.readOptionalSinglet(3) as ProtoLen?)?.value
+            val continuationUUID = if(uuidBytes == null) null else Utils.uuidFromBytes(uuidBytes)
+            val final = pb.readOptBool(4)
+            val locationData = pb.readMulti(10).map { LocationDatum.fromSafePB(it as ProtoBuf) }
+            return LocationSeries(sample, frozen, final, continuationUUID, locationData)
+        }
+    }
+
+    override fun toString(): String {
+        return "LocationSeries($sample, contUUID $continuationUUID, points $locationData)"
     }
 }

@@ -9,7 +9,6 @@ object HealthSyncSecureContract {
     const val CATEGORY_SAMPLES = "category_samples"
     const val QUANTITY_SAMPLES = "quantity_samples"
     const val QUANTITY_SAMPLE_STATISTICS = "quantity_sample_statistics"
-    const val QUANTITY_SAMPLE_SERIES = "quantity_sample_series"
     const val ACTIVITY_CACHES = "activity_caches"
     const val WORKOUTS = "workouts"
     const val WORKOUT_EVENTS = "workout_events"
@@ -20,27 +19,37 @@ object HealthSyncSecureContract {
     const val UNIT_STRINGS = "unit_strings"
     const val DATA_PROVENANCES = "data_provenances"
 
-    const val SQL_CREATE_SAMPLES = "CREATE TABLE samples (data_id INTEGER PRIMARY KEY, start_date REAL, end_date REAL, data_type INTEGER);"
-    const val SQL_CREATE_BINARY_SAMPLES = "CREATE TABLE binary_samples (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, payload BLOB);"
-    const val SQL_CREATE_CATEGORY_SAMPLES = "CREATE TABLE category_samples (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, value INTEGER);"
-    const val SQL_CREATE_QUANTITY_SAMPLES = "CREATE TABLE quantity_samples (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, quantity REAL, original_quantity REAL, original_unit INTEGER REFERENCES unit_strings (ROWID) ON DELETE NO ACTION);"
-    const val SQL_CREATE_QUANTITY_SAMPLE_STATISTICS = "CREATE TABLE quantity_sample_statistics (owner_id INTEGER PRIMARY KEY REFERENCES quantity_samples (data_id) ON DELETE CASCADE, min REAL, max REAL, most_recent REAL, most_recent_date REAL, most_recent_duration REAL);"
-    const val SQL_CREATE_QUANTITY_SAMPLE_SERIES = "CREATE TABLE quantity_sample_series (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, count INTEGER NOT NULL DEFAULT 0, insertion_era INTEGER, hfd_key INTEGER UNIQUE NOT NULL);"
-    const val SQL_CREATE_ACTIVITY_CACHES = "CREATE TABLE activity_caches (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, cache_index INTEGER, sequence INTEGER NOT NULL, activity_mode INTEGER, wheelchair_use INTEGER, energy_burned REAL, energy_burned_goal REAL, energy_burned_goal_date REAL, move_minutes REAL, move_minutes_goal REAL, move_minutes_goal_date REAL, brisk_minutes REAL, brisk_minutes_goal REAL, brisk_minutes_goal_date REAL, active_hours REAL, active_hours_goal REAL, active_hours_goal_date REAL, steps REAL, pushes REAL, walk_distance REAL, deep_breathing_duration REAL, flights INTEGER, energy_burned_stats BLOB, move_minutes_stats BLOB, brisk_minutes_stats BLOB);"
-    const val SQL_CREATE_WORKOUTS = "CREATE TABLE workouts (data_id INTEGER PRIMARY KEY, duration REAL, total_energy_burned REAL, total_basal_energy_burned REAL, total_distance REAL, activity_type INTEGER, goal_type INTEGER, goal REAL, total_w_steps REAL, total_flights_climbed REAL, condenser_version INTEGER, condenser_date REAL);"
-    const val SQL_CREATE_WORKOUT_EVENTS = "CREATE TABLE workout_events (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL REFERENCES workouts (data_id) ON DELETE CASCADE, date REAL NOT NULL, type INTEGER NOT NULL, duration REAL NOT NULL, metadata BLOB, session_uuid BLOB, error BLOB);"
-    const val SQL_CREATE_OBJECTS = "CREATE TABLE objects (data_id INTEGER PRIMARY KEY AUTOINCREMENT, uuid BLOB UNIQUE, provenance INTEGER NOT NULL, type INTEGER, creation_date REAL);"
-    const val SQL_CREATE_METADATA_KEYS = "CREATE TABLE metadata_keys (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT UNIQUE);"
-    const val SQL_CREATE_METADATA_VALUES = "CREATE TABLE metadata_values (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, key_id INTEGER, object_id INTEGER, value_type INTEGER NOT NULL DEFAULT 0, string_value TEXT, numerical_value REAL, date_value REAL, data_value BLOB);"
-    const val SQL_CREATE_KEY_VALUE_SECURE = "CREATE TABLE key_value_secure (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, category INTEGER NOT NULL, domain TEXT NOT NULL, key TEXT NOT NULL, value, provenance INTEGER NOT NULL, mod_date REAL NOT NULL, UNIQUE(category, domain, key));"
-    const val SQL_CREATE_UNIT_STRINGS = "CREATE TABLE unit_strings (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, unit_string TEXT UNIQUE);"
-    const val SQL_CREATE_DATA_PROVENANCES = "CREATE TABLE data_provenances (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, sync_provenance INTEGER NOT NULL, origin_product_type TEXT NOT NULL, origin_build TEXT NOT NULL, local_product_type TEXT NOT NULL, local_build TEXT NOT NULL, source_id INTEGER NOT NULL, device_id INTEGER NOT NULL, contributor_id INTEGER NOT NULL, source_version TEXT NOT NULL, tz_name TEXT NOT NULL, origin_major_version INTEGER NOT NULL, origin_minor_version INTEGER NOT NULL, origin_patch_version INTEGER NOT NULL, derived_flags INTEGER NOT NULL, UNIQUE(sync_provenance, origin_product_type, origin_build, local_product_type, local_build, source_id, device_id, contributor_id, source_version, tz_name, origin_major_version, origin_minor_version, origin_patch_version));"
+    // Synthetic tables not present in original health db (required as helpers or to replace hfd storage)
+    const val QUANTITY_SERIES = "ww_quantity_series"
+    const val QUANTITY_SERIES_DATA = "ww_quantity_series_data"
+    const val LOCATION_SERIES = "ww_location_series"
+    const val LOCATION_SERIES_DATA = "ww_location_series_data"
 
-    const val SQL_INDEX_OBJECTS_DELETED = "CREATE INDEX objects_deleted ON objects (type) WHERE (objects.type = 2);"
-    const val SQL_INDEX_METADATA_VALUES_OBJECT = "CREATE INDEX metadata_values_object ON metadata_values (object_id);"
-    const val SQL_INDEX_SAMPLES_TYPE_DATES = "CREATE INDEX samples_type_dates ON samples (data_type, start_date, end_date);"
-    const val SQL_INDEX_SAMPLES_TYPE_END = "CREATE INDEX samples_type_end ON samples (data_type, end_date);"
-    const val SQL_INDEX_SAMPLES_TYPE_ANCHOR = "CREATE INDEX samples_type_anchor ON samples (data_type, data_id);"
+    const val SQL_CREATE_SAMPLES = "CREATE TABLE $SAMPLES (data_id INTEGER PRIMARY KEY, start_date REAL, end_date REAL, data_type INTEGER);"
+    const val SQL_CREATE_BINARY_SAMPLES = "CREATE TABLE $BINARY_SAMPLES (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, payload BLOB);"
+    const val SQL_CREATE_CATEGORY_SAMPLES = "CREATE TABLE $CATEGORY_SAMPLES (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, value INTEGER);"
+    const val SQL_CREATE_QUANTITY_SAMPLES = "CREATE TABLE $QUANTITY_SAMPLES (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, quantity REAL, original_quantity REAL, original_unit INTEGER REFERENCES unit_strings (ROWID) ON DELETE NO ACTION);"
+    const val SQL_CREATE_QUANTITY_SAMPLE_STATISTICS = "CREATE TABLE $QUANTITY_SAMPLE_STATISTICS (owner_id INTEGER PRIMARY KEY REFERENCES quantity_samples (data_id) ON DELETE CASCADE, min REAL, max REAL, most_recent REAL, most_recent_date REAL, most_recent_duration REAL);"
+    const val SQL_CREATE_ACTIVITY_CACHES = "CREATE TABLE $ACTIVITY_CACHES (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, cache_index INTEGER, sequence INTEGER NOT NULL, activity_mode INTEGER, wheelchair_use INTEGER, energy_burned REAL, energy_burned_goal REAL, energy_burned_goal_date REAL, move_minutes REAL, move_minutes_goal REAL, move_minutes_goal_date REAL, brisk_minutes REAL, brisk_minutes_goal REAL, brisk_minutes_goal_date REAL, active_hours REAL, active_hours_goal REAL, active_hours_goal_date REAL, steps REAL, pushes REAL, walk_distance REAL, deep_breathing_duration REAL, flights INTEGER, energy_burned_stats BLOB, move_minutes_stats BLOB, brisk_minutes_stats BLOB);"
+    const val SQL_CREATE_WORKOUTS = "CREATE TABLE $WORKOUTS (data_id INTEGER PRIMARY KEY, duration REAL, total_energy_burned REAL, total_basal_energy_burned REAL, total_distance REAL, activity_type INTEGER, goal_type INTEGER, goal REAL, total_w_steps REAL, total_flights_climbed REAL, condenser_version INTEGER, condenser_date REAL);"
+    const val SQL_CREATE_WORKOUT_EVENTS = "CREATE TABLE $WORKOUT_EVENTS (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL REFERENCES workouts (data_id) ON DELETE CASCADE, date REAL NOT NULL, type INTEGER NOT NULL, duration REAL NOT NULL, metadata BLOB, session_uuid BLOB, error BLOB);"
+    const val SQL_CREATE_OBJECTS = "CREATE TABLE $OBJECTS (data_id INTEGER PRIMARY KEY AUTOINCREMENT, uuid BLOB UNIQUE, provenance INTEGER NOT NULL, type INTEGER, creation_date REAL);"
+    const val SQL_CREATE_METADATA_KEYS = "CREATE TABLE $METADATA_KEYS (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT UNIQUE);"
+    const val SQL_CREATE_METADATA_VALUES = "CREATE TABLE $METADATA_VALUES (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, key_id INTEGER, object_id INTEGER, value_type INTEGER NOT NULL DEFAULT 0, string_value TEXT, numerical_value REAL, date_value REAL, data_value BLOB);"
+    const val SQL_CREATE_KEY_VALUE_SECURE = "CREATE TABLE $KEY_VALUE_SECURE (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, category INTEGER NOT NULL, domain TEXT NOT NULL, key TEXT NOT NULL, value, provenance INTEGER NOT NULL, mod_date REAL NOT NULL, UNIQUE(category, domain, key));"
+    const val SQL_CREATE_UNIT_STRINGS = "CREATE TABLE $UNIT_STRINGS (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, unit_string TEXT UNIQUE);"
+    const val SQL_CREATE_DATA_PROVENANCES = "CREATE TABLE $DATA_PROVENANCES (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, sync_provenance INTEGER NOT NULL, origin_product_type TEXT NOT NULL, origin_build TEXT NOT NULL, local_product_type TEXT NOT NULL, local_build TEXT NOT NULL, source_id INTEGER NOT NULL, device_id INTEGER NOT NULL, contributor_id INTEGER NOT NULL, source_version TEXT NOT NULL, tz_name TEXT NOT NULL, origin_major_version INTEGER NOT NULL, origin_minor_version INTEGER NOT NULL, origin_patch_version INTEGER NOT NULL, derived_flags INTEGER NOT NULL, UNIQUE(sync_provenance, origin_product_type, origin_build, local_product_type, local_build, source_id, device_id, contributor_id, source_version, tz_name, origin_major_version, origin_minor_version, origin_patch_version));"
+
+    const val SQL_CREATE_QUANTITY_SERIES = "CREATE TABLE $QUANTITY_SERIES (series_id INTEGER PRIMARY KEY AUTOINCREMENT, data_id INTEGER REFERENCES quantity_samples (data_id), count INTEGER NOT NULL);"
+    const val SQL_CREATE_QUANTITY_SERIES_DATA = "CREATE TABLE $QUANTITY_SERIES_DATA (series_id INTEGER, datum_id INTEGER, start_date REAL, end_date REAL, value REAL NOT NULL, primary key (series_id, datum_id));"
+    const val SQL_CREATE_LOCATION_SERIES = "CREATE TABLE $LOCATION_SERIES (series_id INTEGER PRIMARY KEY AUTOINCREMENT, data_id INTEGER REFERENCES samples (data_id), final BOOLEAN, frozen BOOLEAN, continuation_uuid BLOB);"
+    const val SQL_CREATE_LOCATION_SERIES_DATA = "CREATE TABLE $LOCATION_SERIES_DATA (series_id INTEGER, datum_id INTEGER, timestamp REAL, latitude REAL, longitude REAL, altitude REAL, speed REAL, course REAL, vertical_accuracy REAL, horizontal_accuracy REAL, primary key (series_id, datum_id));"
+
+    const val SQL_INDEX_OBJECTS_DELETED = "CREATE INDEX objects_deleted ON $OBJECTS (type) WHERE (objects.type = 2);"
+    const val SQL_INDEX_METADATA_VALUES_OBJECT = "CREATE INDEX metadata_values_object ON $METADATA_VALUES (object_id);"
+    const val SQL_INDEX_SAMPLES_TYPE_DATES = "CREATE INDEX samples_type_dates ON $SAMPLES (data_type, start_date, end_date);"
+    const val SQL_INDEX_SAMPLES_TYPE_END = "CREATE INDEX samples_type_end ON $SAMPLES (data_type, end_date);"
+    const val SQL_INDEX_SAMPLES_TYPE_ANCHOR = "CREATE INDEX samples_type_anchor ON $SAMPLES (data_type, data_id);"
 
     object Samples : BaseColumns {
         const val DATA_ID = "data_id"
@@ -73,13 +82,6 @@ object HealthSyncSecureContract {
         const val MOST_RECENT = "most_recent"
         const val MOST_RECENT_DATE = "most_recent_date"
         const val MOST_RECENT_DURATION = "most_recent_duration"
-    }
-
-    object QuantitySampleSeries : BaseColumns {
-        const val DATA_ID = "data_id"
-        const val COUNT = "count"
-        const val INSERTION_ERA = "insertion_era"
-        const val HFD_KEY = "hfd_key"
     }
 
     object Workouts : BaseColumns {
@@ -191,6 +193,41 @@ object HealthSyncSecureContract {
         const val ORIGIN_MINOR_VERSION = "origin_minor_version"
         const val ORIGIN_PATCH_VERSION = "origin_patch_version"
         const val DERIVED_FLAGS = "derived_flags"
+    }
+
+    object QuantitySeries : BaseColumns {
+        const val DATA_ID = "data_id"
+        const val COUNT = "count"
+        const val SERIES_ID = "series_id"
+    }
+
+    object QuantitySeriesData : BaseColumns {
+        const val SERIES_ID = "series_id"
+        const val DATUM_ID = "datum_id"
+        const val START_DATE = "start_date"
+        const val END_DATE = "end_date"
+        const val VALUE = "value"
+    }
+
+    object LocationSeries : BaseColumns {
+        const val SERIES_ID = "series_id"
+        const val DATA_ID = "data_id"
+        const val FROZEN = "frozen"
+        const val FINAL = "final"
+        const val CONTINUATION_UUID = "continuation_uuid"
+    }
+
+    object LocationSeriesData : BaseColumns {
+        const val SERIES_ID = "series_id"
+        const val DATUM_ID = "datum_id"
+        const val TIMESTAMP = "timestamp"
+        const val LATITUDE = "latitude"
+        const val LONGITUDE = "longitude"
+        const val ALTITUDE = "altitude"
+        const val SPEED = "speed"
+        const val COURSE = "course"
+        const val HORIZONTAL_ACCURACY = "horizontal_accuracy"
+        const val VERTICAL_ACCURACY = "vertical_accuracy"
     }
 
 }

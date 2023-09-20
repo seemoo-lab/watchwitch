@@ -23,7 +23,7 @@ object Logger {
     private const val CMD_LOG_LVL = 1
 
     private const val SQL_SCREEN_LVL = 0
-    private const val SQL_LOG_LVL = 5
+    private const val SQL_LOG_LVL = 0
 
     @SuppressLint("StaticFieldLeak")
     private var activity: MainActivity? = null

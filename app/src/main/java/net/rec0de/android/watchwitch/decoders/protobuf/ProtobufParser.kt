@@ -36,7 +36,7 @@ class ProtobufParser {
             result[fieldNo]!!.add(value)
         }
 
-        return ProtoBuf(result)
+        return ProtoBuf(result, bytes)
     }
 
     private fun readTag(): Pair<Int, ProtobufField> {
@@ -97,7 +97,7 @@ class ProtobufParser {
             val nested = ProtobufParser().parse(data.value)
             // we sometimes get spurious UUIDs that are valid protobufs and get misclassified
             // checking that field ids are in sane ranges should help avoid that
-            if(nested.value.keys.all { it in 1..99 })
+            if(nested.objs.keys.all { it in 1..99 })
                 return nested
         } catch (_: Exception) { }
 
@@ -157,17 +157,16 @@ interface ProtoValue {
     }
 }
 
-data class ProtoBuf(val value: Map<Int, List<ProtoValue>>) : ProtoValue {
-    override val wireType = 2 // LEN
-    override fun toString() = "Protobuf($value)"
+data class ProtoBuf(val objs: Map<Int, List<ProtoValue>>, val bytes: ByteArray = byteArrayOf()) : ProtoLen(bytes) {
+    override fun toString() = "Protobuf($objs)"
 
     fun readOptionalSinglet(field: Int) : ProtoValue? {
-        val f = value[field]
+        val f = objs[field]
         return if(f == null) null else f[0]
     }
 
     fun readAssertedSinglet(field: Int) : ProtoValue {
-        return value[field]!![0]
+        return objs[field]!![0]
     }
 
     fun readBool(field: Int) : Boolean {
@@ -182,9 +181,9 @@ data class ProtoBuf(val value: Map<Int, List<ProtoValue>>) : ProtoValue {
     fun readOptString(field: Int) : String? {
         val v = readOptionalSinglet(field)
         // i think empty strings can be parsed ambiguously as empty protobufs
-        if(v != null && v is ProtoBuf && v.value.isEmpty())
+        if(v != null && v is ProtoBuf && v.objs.isEmpty())
             return ""
-        return (v as ProtoString?)?.value
+        return (v as ProtoLen?)?.asString()
     }
 
     fun readOptDate(field: Int) : Date? {
@@ -195,6 +194,10 @@ data class ProtoBuf(val value: Map<Int, List<ProtoValue>>) : ProtoValue {
         return (readOptionalSinglet(field) as ProtoI64?)?.asDouble()
     }
 
+    fun readOptPB(field: Int) : ProtoBuf? {
+        return (readOptionalSinglet(field) as ProtoLen?)?.asProtoBuf()
+    }
+
     fun readShortVarInt(field: Int) = readLongVarInt(field).toInt()
 
     fun readOptShortVarInt(field: Int) = (readOptionalSinglet(field) as ProtoVarInt?)?.value?.toInt()
@@ -203,13 +206,14 @@ data class ProtoBuf(val value: Map<Int, List<ProtoValue>>) : ProtoValue {
 
     fun readOptLongVarInt(field: Int) = (readOptionalSinglet(field) as ProtoVarInt?)?.value
 
-
     fun readMulti(field: Int): List<ProtoValue> {
-        return value[field] ?: emptyList()
+        return objs[field] ?: emptyList()
     }
 
+    override fun asProtoBuf() = this
+
     fun renderStandalone(): ByteArray {
-        val fieldRecords = value.map { field ->
+        val fieldRecords = objs.map { field ->
             val fieldId = field.key
             val renderedRecords = field.value.map { it.renderWithFieldId(fieldId) }
             renderedRecords.fold(byteArrayOf()){ acc, new -> acc + new }
@@ -266,23 +270,27 @@ data class ProtoVarInt(val value: Long) : ProtoValue {
     override fun render() = renderAsVarInt(value)
 }
 
-class ProtoLen(val value: ByteArray) : ProtoValue {
+open class ProtoLen(val value: ByteArray) : ProtoValue {
     override val wireType = 2 // LEN
     override fun toString() = "LEN(${value.hex()})"
 
     override fun render(): ByteArray {
         return renderAsVarInt(value.size.toLong()) + value
     }
+
+    open fun asString() = value.decodeToString()
+    open fun asProtoBuf() = ProtobufParser().parse(value)
 }
 
-data class ProtoString(val value: String) : ProtoValue {
-    override val wireType = 2 // LEN
-    override fun toString() = "String($value)"
+data class ProtoString(val stringValue: String) : ProtoLen(stringValue.toByteArray()) {
+    override fun toString() = "String($stringValue)"
 
     override fun render(): ByteArray {
-        val bytes = value.encodeToByteArray()
+        val bytes = stringValue.encodeToByteArray()
         return renderAsVarInt(bytes.size.toLong()) + bytes
     }
+
+    override fun asString() = stringValue
 }
 
 class ProtoBPList(val value: ByteArray) : ProtoValue {

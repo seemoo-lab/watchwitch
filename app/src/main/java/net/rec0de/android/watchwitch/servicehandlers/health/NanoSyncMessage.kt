@@ -59,7 +59,7 @@ class NanoSyncMessage(
 }
 
 class NanoSyncChangeSet(
-    val sessionUUID: UUID?,
+    val sessionUUID: UUID,
     val sessionStart: Date?,
     val statusCode: Int?,
     val changes: List<NanoSyncChange>,

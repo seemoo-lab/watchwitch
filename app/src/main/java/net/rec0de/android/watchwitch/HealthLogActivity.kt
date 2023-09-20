@@ -1,12 +1,19 @@
 package net.rec0de.android.watchwitch
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.ContactsContract.Data
 import android.widget.Button
+import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
 import net.rec0de.android.watchwitch.adapter.HealthLogAdapter
 import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
+import java.util.Date
+
 
 class HealthLogActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -15,8 +22,10 @@ class HealthLogActivity : AppCompatActivity() {
 
         val categoryData = DatabaseWrangler.getCategorySamples()
         val quantityData = DatabaseWrangler.getQuantitySamples()
+        val locationSeries = DatabaseWrangler.getLocationSeries()
 
-        val data = (categoryData + quantityData).sortedBy { it.startDate }
+
+        val data = (categoryData + quantityData + locationSeries).sortedBy { it.startDate }
 
         val recyclerView = findViewById<RecyclerView>(R.id.hostList)
         recyclerView.adapter = HealthLogAdapter(data)

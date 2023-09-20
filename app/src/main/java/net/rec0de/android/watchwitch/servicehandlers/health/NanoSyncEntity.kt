@@ -93,25 +93,26 @@ class ObjectCollection(
     val activityCaches: List<ActivityCache>,
     val workouts: List<Workout>,
     val binarySamples: List<BinarySample>,
+    val locationSeries: List<LocationSeries>,
     val deletedSamples: List<DeletedSample>,
     val provenance: Provenance
 ) : NanoSyncEntity {
     companion object : PBParsable<ObjectCollection>() {
         override fun fromSafePB(pb: ProtoBuf): ObjectCollection {
             val sourceBundle = pb.readOptString(1)
-            val source = Source.fromPB(pb.readOptionalSinglet(2) as ProtoBuf?)
+            val source = Source.fromPB(pb.readOptPB(2))
 
             val categorySample = pb.readMulti(3).map{ CategorySample.fromSafePB(it as ProtoBuf) }
             val quantitySample = pb.readMulti(4).map{ QuantitySample.fromSafePB(it as ProtoBuf) }
             val workout = pb.readMulti(5).map{ Workout.fromSafePB(it as ProtoBuf) }
             // 6: Correlation
-            val activityCache = pb.readMulti(7).map { ActivityCache.fromSafePB(it as ProtoBuf) }
-            val binarySample = pb.readMulti(8).map { BinarySample.fromSafePB(it as ProtoBuf) }
+            val activityCache = pb.readMulti(7).map{ ActivityCache.fromSafePB(it as ProtoBuf) }
+            val binarySample = pb.readMulti(8).map{ BinarySample.fromSafePB(it as ProtoBuf) }
             val deletedSample = pb.readMulti(9).map{ DeletedSample.fromSafePB(it as ProtoBuf) }
-            // 10: LocationSeries
-            val provenance = Provenance.fromSafePB(pb.readOptionalSinglet(20) as ProtoBuf)
+            val locationSeries = pb.readMulti(10).map{ LocationSeries.fromSafePB(it as ProtoBuf) }
+            val provenance = Provenance.fromSafePB(pb.readOptPB(20)!!)
 
-            return ObjectCollection(sourceBundle, source, categorySample, quantitySample, activityCache, workout, binarySample, deletedSample, provenance)
+            return ObjectCollection(sourceBundle, source, categorySample, quantitySample, activityCache, workout, binarySample, locationSeries, deletedSample, provenance)
         }
     }
 
@@ -123,6 +124,7 @@ class ObjectCollection(
         containedObjects.addAll(workouts)
         containedObjects.addAll(deletedSamples)
         containedObjects.addAll(binarySamples)
+        containedObjects.addAll(locationSeries)
 
         return "ObjectCollection(sourceBundle $sourceBundleIdentifier, source $source, provenance $provenance, ${containedObjects.joinToString(", ")})"
     }
@@ -135,7 +137,7 @@ class CategoryDomainDictionary(
 ) : NanoSyncEntity {
     companion object : PBParsable<CategoryDomainDictionary>() {
         override fun fromSafePB(pb: ProtoBuf): CategoryDomainDictionary {
-            val entries = pb.readMulti(3).map { TimestampedKeyValuePair.fromSafePB(it as ProtoBuf) }
+            val entries = pb.readMulti(3).map { TimestampedKeyValuePair.fromSafePB((it as ProtoLen).asProtoBuf()) }
             val domain = pb.readOptString(2)
             val category = pb.readOptShortVarInt(1)
 
@@ -221,10 +223,10 @@ class SourceAuthorization(
     companion object : PBParsable<SourceAuthorization>() {
         override fun fromSafePB(pb: ProtoBuf): SourceAuthorization {
             val sourceUUID = Utils.uuidFromBytes((pb.readAssertedSinglet(1) as ProtoLen).value)
-            val authorization = Authorization.fromPB(pb.readOptionalSinglet(2) as ProtoBuf?)
+            val authorization = Authorization.fromPB(pb.readOptPB(2))
             val backupUUIDBytes = (pb.readOptionalSinglet(3) as ProtoLen?)?.value
             val backupUUID = if(backupUUIDBytes == null) null else Utils.uuidFromBytes(backupUUIDBytes)
-            val source = Source.fromPB(pb.readOptionalSinglet(4) as ProtoBuf?)
+            val source = Source.fromPB(pb.readOptPB(4))
             return SourceAuthorization(sourceUUID, authorization, backupUUID, source)
         }
 
@@ -265,7 +267,7 @@ class Source(
             val product = pb.readOptString(3)
             val options = pb.readOptLongVarInt(4)
             val uuid = Utils.uuidFromBytes((pb.readAssertedSinglet(5) as ProtoLen).value)
-            val modified = (pb.readOptionalSinglet(6) as ProtoI64?)?.asDate()
+            val modified = pb.readOptDate(6)
             val deleted = pb.readOptBool(7)
             val owningBundle = pb.readOptString(8)
 
