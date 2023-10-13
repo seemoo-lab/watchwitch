@@ -16,8 +16,8 @@ interface NanoSyncEntity {
         private val objectTypes = mapOf(
             0x1 to "CategorySamples",               // Sample > Data (supported)
             0x2 to "QuantitySamples",               // Sample > Data (supported, no series support)
-            0x3 to "Workouts",                      // Sample > Data (supported?)
-            0x4 to "ActivityCaches",                // Sample > Data
+            0x3 to "Workouts",                      // Sample > Data (supported)
+            0x4 to "ActivityCaches",                // Sample > Data (supported)
             0x5 to "LegacyAchievements",            // dead
             0x6 to "UserCharacteristics",           // KeyValue >
             0x7 to "Deprecated7",                   // dead
@@ -29,9 +29,9 @@ interface NanoSyncEntity {
             0xd to "Correlations",                  // Sample > Data
             0xe to "ObjectTypeSourceOrder",         // root class
             0xf to "MedicalID",                     // root class
-            0x10 to "NanoUserDefaults",             // KeyValue > (supported?)
+            0x10 to "NanoUserDefaults",             // KeyValue > (supported)
             0x11 to "ProtectedNanoUserDefaults",    // NanoUserDefaults > KeyValue > (supported)
-            0x12 to "LocationSeriesSamples",        // Sample > Data
+            0x12 to "LocationSeriesSamples",        // Sample > Data (supported)
             0x13 to "DeletedSamples",               // Sample > Data (supported)
             0x14 to "LegacyAchievementKeyValue",    // dead
             0x15 to "ActivityAchievementsKeyValue", // dead?
@@ -52,7 +52,8 @@ interface NanoSyncEntity {
             0x29 to "UserDefaults",
             0x2a to "ClinicalDeletedAccounts",
             0x2b to "AccountOwners",
-            0x2c to "UnknownRecords"
+            0x2c to "UnknownRecords",
+            0x2f to "ECGSamples" // manually reversed, not present in my versions of phone health daemon
         )
 
         fun objTypeToString(objectType: Int): String {
@@ -70,7 +71,7 @@ interface NanoSyncEntity {
 
         fun fromSafePB(pb: ProtoBuf, type: Int): NanoSyncEntity {
             return when (type) {
-                0x1, 0x2, 0x3, 0x4, 0xd, 0x12, 0x13, 0x16 -> ObjectCollection.fromSafePB(pb)
+                0x1, 0x2, 0x3, 0x4, 0xd, 0x12, 0x13, 0x16, 0x2f -> ObjectCollection.fromSafePB(pb)
                 0x6, 0x9, 0x10, 0x11 -> CategoryDomainDictionary.fromSafePB(pb)
                 0x8 -> ObjectAssociation.fromSafePB(pb)
                 0xa -> Source.fromSafePB(pb)
@@ -95,6 +96,7 @@ class ObjectCollection(
     val binarySamples: List<BinarySample>,
     val locationSeries: List<LocationSeries>,
     val deletedSamples: List<DeletedSample>,
+    val ecgSamples: List<ECGSample>,
     val provenance: Provenance
 ) : NanoSyncEntity {
     companion object : PBParsable<ObjectCollection>() {
@@ -112,7 +114,9 @@ class ObjectCollection(
             val locationSeries = pb.readMulti(10).map{ LocationSeries.fromSafePB(it as ProtoBuf) }
             val provenance = Provenance.fromSafePB(pb.readOptPB(20)!!)
 
-            return ObjectCollection(sourceBundle, source, categorySample, quantitySample, activityCache, workout, binarySample, locationSeries, deletedSample, provenance)
+            val ecgSamples = pb.readMulti(22).map{ ECGSample.fromSafePB(it as ProtoBuf) }
+
+            return ObjectCollection(sourceBundle, source, categorySample, quantitySample, activityCache, workout, binarySample, locationSeries, deletedSample, ecgSamples, provenance)
         }
     }
 
@@ -125,6 +129,7 @@ class ObjectCollection(
         containedObjects.addAll(deletedSamples)
         containedObjects.addAll(binarySamples)
         containedObjects.addAll(locationSeries)
+        containedObjects.addAll(ecgSamples)
 
         return "ObjectCollection(sourceBundle $sourceBundleIdentifier, source $source, provenance $provenance, ${containedObjects.joinToString(", ")})"
     }

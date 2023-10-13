@@ -11,6 +11,7 @@ class HealthSyncSecureHelper (context: Context) : SQLiteOpenHelper(context, DATA
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_SAMPLES)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_CATEGORY_SAMPLES)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_BINARY_SAMPLES)
+        db.execSQL(HealthSyncSecureContract.SQL_CREATE_ECG_SAMPLES)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLES)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_QUANTITY_SAMPLE_STATISTICS)
         db.execSQL(HealthSyncSecureContract.SQL_CREATE_WORKOUTS)
@@ -61,6 +62,9 @@ class HealthSyncSecureHelper (context: Context) : SQLiteOpenHelper(context, DATA
             db.execSQL(HealthSyncSecureContract.SQL_CREATE_LOCATION_SERIES)
             db.execSQL(HealthSyncSecureContract.SQL_CREATE_LOCATION_SERIES_DATA)
         }
+        if(oldVersion < 5) {
+            db.execSQL(HealthSyncSecureContract.SQL_CREATE_ECG_SAMPLES)
+        }
     }
 
     override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -69,7 +73,7 @@ class HealthSyncSecureHelper (context: Context) : SQLiteOpenHelper(context, DATA
 
     companion object {
         // If you change the database schema, you must increment the database version.
-        const val DATABASE_VERSION = 4
+        const val DATABASE_VERSION = 5
         const val DATABASE_NAME = "healthdb_secure.db"
     }
 }

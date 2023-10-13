@@ -2,6 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:card_view="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
     <!-- A CardView that contains a TextView -->
@@ -20,24 +21,65 @@
             android:orientation="vertical"
             android:padding="8dp">
 
-            <TextView
-                android:id="@+id/labelTitle"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAlignment="textStart"
-                android:textColor="?attr/colorOnPrimary"
-                android:textSize="16sp"
-                tools:text="Sample Title" />
+                android:layout_height="match_parent"
+                android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/labelStats"
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/labelTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textAlignment="textStart"
+                        android:textColor="?attr/colorOnPrimary"
+                        android:textSize="16sp"
+                        tools:text="Sample Title" />
+
+                    <TextView
+                        android:id="@+id/labelStats"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="?attr/colorOnPrimary"
+                        android:visibility="gone"
+                        tools:text="min: 3.0 max: 4.8"
+                        tools:visibility="visible" />
+
+                </LinearLayout>
+
+                <Space
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/iconEntryType"
+                    android:layout_width="32dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0"
+                    android:adjustViewBounds="true"
+                    card_view:srcCompat="@drawable/icon_health_unknown"
+                    card_view:tint="?attr/colorOnPrimary" />
+
+            </LinearLayout>
+
+            <com.patrykandpatrick.vico.views.chart.ChartView
+                android:id="@+id/chartEcg"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="?attr/colorOnPrimary"
-                android:visibility="gone"
-                tools:text="min: 3.0 max: 4.8"
-                tools:visibility="visible" />
+                android:layout_height="96dp"
+                android:layout_marginTop="8dp"
+                android:background="?android:attr/colorBackground"
+                android:padding="4dp"
+                app:chart="line"
+                app:showBottomAxis="true"
+                app:showStartAxis="false"
+                card_view:chartHorizontalScrollingEnabled="true"
+                card_view:endContentPadding="0dp" />
 
             <TextView
                 android:id="@+id/labelMetadata"

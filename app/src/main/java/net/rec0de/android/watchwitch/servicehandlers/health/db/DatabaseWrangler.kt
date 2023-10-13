@@ -7,9 +7,11 @@ import android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.hexBytes
 import net.rec0de.android.watchwitch.servicehandlers.health.ActivityCache
 import net.rec0de.android.watchwitch.servicehandlers.health.BinarySample
 import net.rec0de.android.watchwitch.servicehandlers.health.CategorySample
+import net.rec0de.android.watchwitch.servicehandlers.health.ECGSample
 import net.rec0de.android.watchwitch.servicehandlers.health.HealthObject
 import net.rec0de.android.watchwitch.servicehandlers.health.LocationSeries
 import net.rec0de.android.watchwitch.servicehandlers.health.Provenance
@@ -20,6 +22,8 @@ import net.rec0de.android.watchwitch.servicehandlers.health.SyncStatusKey
 import net.rec0de.android.watchwitch.servicehandlers.health.TimestampedKeyValuePair
 import net.rec0de.android.watchwitch.servicehandlers.health.Workout
 import net.rec0de.android.watchwitch.toAppleTimestamp
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.Date
 import java.util.UUID
 
@@ -72,6 +76,34 @@ object DatabaseWrangler {
         }
         secure.writableDatabase.insert(HealthSyncSecureContract.BINARY_SAMPLES, null, values)
         Logger.logSQL("Inserting binary sample: $sample payload: ${sample.payload.hex()}", 0)
+    }
+
+    fun insertEcgSample(sample: ECGSample, provenanceId: Int) {
+        val id = try {
+            insertObject(sample.sample.healthObject, provenanceId)
+        } catch(e: SQLiteConstraintException) {
+            Logger.logSQL("HealthObject UUID constraint failed for ECG sample $sample", 0)
+            return
+        }
+
+        if(id == -1)
+            return
+
+        insertSample(id, sample.sample)
+
+        val buffer = ByteBuffer.allocate(4 * sample.ecg.lead.samples.size).order(ByteOrder.BIG_ENDIAN)
+        sample.ecg.lead.samples.forEach { buffer.putFloat(it) }
+        val payload = buffer.array()
+
+        val values = ContentValues().apply {
+            put(HealthSyncSecureContract.EcgSamples.DATA_ID, id)
+            put(HealthSyncSecureContract.EcgSamples.AVERAGE_HEART_RATE, sample.heartRate)
+            put(HealthSyncSecureContract.EcgSamples.SYMPTOPMS_STATUS, sample.version) // this is likely not correct but we'll just put the "version" here to save it
+            put(HealthSyncSecureContract.EcgSamples.PRIVATE_CLASSIFICATION, sample.classification)
+            put(HealthSyncSecureContract.EcgSamples.VOLTAGE_PAYLOAD, payload)
+        }
+        secure.writableDatabase.insert(HealthSyncSecureContract.ECG_SAMPLES, null, values)
+        Logger.logSQL("Inserting ECG sample: $sample", 0)
     }
 
     fun insertWorkout(sample: Workout, provenanceId: Int) {
@@ -689,6 +721,54 @@ object DatabaseWrangler {
         return list
     }
 
+    fun getWorkouts() : List<DisplayWorkout> {
+        val wor = HealthSyncSecureContract.WORKOUTS
+        val sam = HealthSyncSecureContract.SAMPLES
+        val objs = HealthSyncSecureContract.OBJECTS
+        val list = mutableListOf<DisplayWorkout>()
+        val cursor = secure.readableDatabase.rawQuery("SELECT start_date, end_date, activity_type, duration, total_energy_burned, total_distance, total_w_steps, $objs.data_id FROM $wor INNER JOIN $sam ON $wor.data_id=$sam.data_id INNER JOIN $objs ON $sam.data_id=$objs.data_id WHERE $objs.type != 2;", null)
+        while (cursor.moveToNext()) {
+            val start = Utils.dateFromAppleTimestamp(cursor.getDouble(0))
+            val end = Utils.dateFromAppleTimestamp(cursor.getDouble(1))
+
+            val type = Workout.typeToString(cursor.getInt(2))
+            val duration = cursor.getDouble(3)
+            val energy = cursor.getDouble(4)
+            val distance = cursor.getDouble(5)
+            val steps = cursor.getDouble(6)
+            val metadata = getMetadataOfSample(cursor.getInt(7))
+
+            list.add(DisplayWorkout(start, end, type, duration, energy, distance, steps, metadata))
+        }
+        cursor.close()
+        return list
+    }
+
+    fun getEcgSamples() : List<DisplayEcg> {
+        val ecg = HealthSyncSecureContract.ECG_SAMPLES
+        val sam = HealthSyncSecureContract.SAMPLES
+        val objs = HealthSyncSecureContract.OBJECTS
+        val list = mutableListOf<DisplayEcg>()
+        val cursor = secure.readableDatabase.rawQuery("SELECT start_date, end_date, average_heart_rate, private_classification, voltage_payload, $objs.data_id FROM $ecg INNER JOIN $sam ON $ecg.data_id=$sam.data_id INNER JOIN $objs ON $sam.data_id=$objs.data_id WHERE $objs.type != 2;", null)
+        while (cursor.moveToNext()) {
+            val start = Utils.dateFromAppleTimestamp(cursor.getDouble(0))
+            val end = Utils.dateFromAppleTimestamp(cursor.getDouble(1))
+            val heartrate = cursor.getDouble(2)
+            val classification = cursor.getInt(3)
+            val voltageBlob = cursor.getBlob(4)
+            val metadata = getMetadataOfSample(cursor.getInt(5))
+
+            val buf = ByteBuffer.wrap(voltageBlob)
+            val data = mutableListOf<Float>()
+            while(buf.hasRemaining())
+                data.add(buf.float)
+
+            list.add(DisplayEcg(start, end, heartrate, classification, data, metadata))
+        }
+        cursor.close()
+        return list
+    }
+
     fun getLocationSeries() : List<DisplayLocationSeries> {
         val loc = HealthSyncSecureContract.LOCATION_SERIES
         val pts = HealthSyncSecureContract.LOCATION_SERIES_DATA
@@ -782,5 +862,25 @@ object DatabaseWrangler {
         override val endDate: Date,
         val seriesId: Int,
         val points: List<Pair<Double, Double>>
+    ) : HealthLogDisplayItem()
+
+    data class DisplayWorkout(
+        override val startDate: Date,
+        override val endDate: Date,
+        val type: String,
+        val duration: Double,
+        val energy: Double,
+        val distance: Double,
+        val steps: Double,
+        val metadata: Map<String, String> = mapOf()
+    ) : HealthLogDisplayItem()
+
+    data class DisplayEcg(
+        override val startDate: Date,
+        override val endDate: Date,
+        val heartrate: Double,
+        val classification: Int,
+        val voltageSamples: List<Float>,
+        val metadata: Map<String, String> = mapOf()
     ) : HealthLogDisplayItem()
 }

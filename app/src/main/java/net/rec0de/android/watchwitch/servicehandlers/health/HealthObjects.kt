@@ -2,9 +2,8 @@ package net.rec0de.android.watchwitch.servicehandlers.health
 
 import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
-import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI32
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
-import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.hex
 import java.util.Date
@@ -251,4 +250,39 @@ class Authorization(
     }
 
     override fun toString() = "Authorization(objType $objectType, status: $authorizationStatus, req: $authorizationRequest, modified $modificationDate, modifyEpoch $modificationEpoch, mode $authorizationMode)"
+}
+
+// from binarysample::ElectrocardiogramLead::readFrom(ElectrocardiogramLead *this,Reader *param_1) in HealthKit
+class ElectrocardiogramLead(
+    val unkInt: Int?,
+    val samples: List<Float>
+) {
+    companion object : PBParsable<ElectrocardiogramLead>() {
+        override fun fromSafePB(pb: ProtoBuf): ElectrocardiogramLead {
+            val unkInt = pb.readOptShortVarInt(1)
+            val samples = pb.readMulti(3).map { (it as ProtoI32).asFloat() }
+            return ElectrocardiogramLead(unkInt, samples)
+        }
+    }
+
+    override fun toString(): String {
+        return "Lead($unkInt, ${samples.size} voltage samples)"
+    }
+}
+
+class Electrocardiogram(
+    val sampleRate: Double?,
+    val lead: ElectrocardiogramLead
+) {
+    companion object : PBParsable<Electrocardiogram>() {
+        override fun fromSafePB(pb: ProtoBuf): Electrocardiogram {
+            val sampleRate = pb.readOptDouble(2)
+            val lead = ElectrocardiogramLead.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
+            return Electrocardiogram(sampleRate, lead)
+        }
+    }
+
+    override fun toString(): String {
+        return "ECG(${sampleRate}hz, $lead)"
+    }
 }

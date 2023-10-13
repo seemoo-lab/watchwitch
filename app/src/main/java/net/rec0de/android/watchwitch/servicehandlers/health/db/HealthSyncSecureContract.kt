@@ -6,6 +6,7 @@ object HealthSyncSecureContract {
 
     const val SAMPLES = "samples"
     const val BINARY_SAMPLES = "binary_samples"
+    const val ECG_SAMPLES = "ecg_samples"
     const val CATEGORY_SAMPLES = "category_samples"
     const val QUANTITY_SAMPLES = "quantity_samples"
     const val QUANTITY_SAMPLE_STATISTICS = "quantity_sample_statistics"
@@ -27,6 +28,7 @@ object HealthSyncSecureContract {
 
     const val SQL_CREATE_SAMPLES = "CREATE TABLE $SAMPLES (data_id INTEGER PRIMARY KEY, start_date REAL, end_date REAL, data_type INTEGER);"
     const val SQL_CREATE_BINARY_SAMPLES = "CREATE TABLE $BINARY_SAMPLES (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, payload BLOB);"
+    const val SQL_CREATE_ECG_SAMPLES = "CREATE TABLE $ECG_SAMPLES (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, private_classification INTEGER NOT NULL, average_heart_rate REAL, voltage_payload BLOB NOT NULL, symptoms_status INTEGER NOT NULL);"
     const val SQL_CREATE_CATEGORY_SAMPLES = "CREATE TABLE $CATEGORY_SAMPLES (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, value INTEGER);"
     const val SQL_CREATE_QUANTITY_SAMPLES = "CREATE TABLE $QUANTITY_SAMPLES (data_id INTEGER PRIMARY KEY REFERENCES samples (data_id) ON DELETE CASCADE, quantity REAL, original_quantity REAL, original_unit INTEGER REFERENCES unit_strings (ROWID) ON DELETE NO ACTION);"
     const val SQL_CREATE_QUANTITY_SAMPLE_STATISTICS = "CREATE TABLE $QUANTITY_SAMPLE_STATISTICS (owner_id INTEGER PRIMARY KEY REFERENCES quantity_samples (data_id) ON DELETE CASCADE, min REAL, max REAL, most_recent REAL, most_recent_date REAL, most_recent_duration REAL);"
@@ -61,6 +63,14 @@ object HealthSyncSecureContract {
     object BinarySamples : BaseColumns {
         const val DATA_ID = "data_id"
         const val PAYLOAD = "payload"
+    }
+
+    object EcgSamples : BaseColumns {
+        const val DATA_ID = "data_id"
+        const val PRIVATE_CLASSIFICATION = "private_classification"
+        const val AVERAGE_HEART_RATE = "average_heart_rate"
+        const val VOLTAGE_PAYLOAD = "voltage_payload"
+        const val SYMPTOPMS_STATUS = "symptoms_status"
     }
 
     object CategorySamples : BaseColumns {

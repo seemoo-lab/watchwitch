@@ -1,5 +1,6 @@
 package net.rec0de.android.watchwitch.servicehandlers.health
 
+import android.provider.ContactsContract.Data
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.decoders.aoverc.Decryptor
@@ -72,7 +73,7 @@ object HealthSync : UTunService {
             val reply = NanoSyncMessage(12, syncMsg.persistentPairingUUID, syncMsg.healthPairingUUID, nanoSyncStatus, null, null)
             val protoBytes = "0200".hexBytes() + reply.renderProtobuf() // responses are only prefixed with msgid, not priority
 
-            sendEncrypted(protoBytes, msg.streamID, msg.messageUUID, handler)
+            sendEncrypted(protoBytes, msg.streamID, msg.messageUUID.toString(), handler)
         }
     }
 
@@ -84,15 +85,18 @@ object HealthSync : UTunService {
 
         if(!isReply){
             // third byte is priority (0: default, 1: urgent, 2: sync)
-            val priority = msg[3].toInt()
+            val priority = when(msg[2].toInt()) {
+                0 -> "default"
+                1 -> "urgent"
+                2 -> "sync"
+                else -> "unk(${msg[2].toInt()})"
+            }
             offset = 3
             Logger.logUTUN("rcv HealthSync msg type $type priority $priority", 2)
         }
         else {
             Logger.logUTUN("rcv HealthSync msg type $type (reply)", 2)
         }
-
-        println(msg.hex())
 
         val syncMsg = when(type) {
             2 -> parseNanoSyncMessage(msg.fromIndex(offset))
@@ -108,16 +112,16 @@ object HealthSync : UTunService {
         return syncMsg
     }
 
-    private fun parseNanoSyncMessage(bytes: ByteArray): NanoSyncMessage {
+    private fun parseNanoSyncMessage(bytes: ByteArray): NanoSyncMessage? {
         val pb = ProtobufParser().parse(bytes)
         try {
             return NanoSyncMessage.fromSafePB(pb)
         }
         catch(e: Exception) {
             // if we fail parsing something, print the failing protobuf for debugging and then still fail
-            println("Failed while parsing: $pb")
-            println("Bytes: ${bytes.hex()}")
-            throw e
+            Logger.log("Failed while parsing: $pb", 0)
+            Logger.log("bytes: ${bytes.hex()}", 0)
+            return null
         }
     }
 
@@ -126,7 +130,7 @@ object HealthSync : UTunService {
         changeSet.changes.forEach { change ->
             var handled = true
             when(change.objectTypeString) {
-                "CategorySamples", "QuantitySamples", "Workouts", "DeletedSamples", "BinarySamples", "ActivityCaches", "LocationSeriesSamples" -> handleObjectCollectionGeneric(change.objectData as ObjectCollection)
+                "CategorySamples", "QuantitySamples", "Workouts", "DeletedSamples", "BinarySamples", "ActivityCaches", "LocationSeriesSamples", "ECGSamples" -> handleObjectCollectionGeneric(change.objectData as ObjectCollection)
                 "ProtectedNanoUserDefaults" -> handleUserDefaults(change.objectData as CategoryDomainDictionary, true)
                 "NanoUserDefaults" -> handleUserDefaults(change.objectData as CategoryDomainDictionary, false)
                 else -> {
@@ -158,6 +162,7 @@ object HealthSync : UTunService {
             samples.binarySamples.isNotEmpty() -> samples.binarySamples.forEach { DatabaseWrangler.insertBinarySample(it, provenanceId) }
             samples.locationSeries.isNotEmpty() -> samples.locationSeries.forEach { DatabaseWrangler.insertLocationSeries(it, provenanceId) }
             samples.deletedSamples.isNotEmpty() -> samples.deletedSamples.forEach { DatabaseWrangler.markSampleDeleted(it.sample.healthObject.uuid) }
+            samples.ecgSamples.isNotEmpty() -> samples.ecgSamples.forEach { DatabaseWrangler.insertEcgSample(it, provenanceId) }
         }
     }
 
@@ -170,7 +175,7 @@ object HealthSync : UTunService {
         }
     }
 
-    private fun sendEncrypted(bytes: ByteArray, streamId: Int, inResponseTo: UUID?, handler: UTunHandler) {
+    private fun sendEncrypted(bytes: ByteArray, streamId: Int, inResponseTo: String?, handler: UTunHandler) {
         val encrypted = decryptor!!.encrypt(bytes).renderAsTopLevelObject()
         val dataMsg = DataMessage(utunSequence, streamId, 0, inResponseTo, UUID.randomUUID(), null, null, encrypted)
         utunSequence += 1

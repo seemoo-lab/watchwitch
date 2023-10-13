@@ -354,12 +354,13 @@ class Workout(
             return Workout(sample, type, workoutEvent, duration, totalEnergyBurnedInCanonicalUnit, totalDistanceInCanonicalUnit, goalType, goal, totalBasalEnergyBurnedInCanonicalUnit, totalSwimmingStrokeCountInCanonicalUnit, totalFlightsClimbedInCanonicalUnit)
         }
 
-        private val activityTypes = listOf("AmericanFootball", "Archery", "AustralianFootball", "Badminton", "Baseball", "Basketball", "Bowling", "Boxing", "Climbing", "Cricket", "CrossTraining", "Curling", "Cycling", "Dance", "DanceInspiredTraining", "Elliptical", "EquestrianSports", "Fencing", "Fishing", "FunctionalStrengthTraining", "Golf", "Gymnastics", "Handball", "Hiking", "Hockey", "Hunting", "Lacrosse", "MartialArts", "MindAndBody", "MixedMetabolicCardioTraining", "PaddleSports", "Play", "PreparationAndRecovery", "Racquetball", "Rowing", "Rugby", "Running", "Sailing", "SkatingSports", "SnowSports", "Soccer", "Softball", "Squash", "StairClimbing", "SurfingSports", "Swimming", "TableTennis", "Tennis", "TrackAndField", "TraditionalStrengthTraining", "Volleyball", "Walking", "WaterFitness", "WaterPolo", "WaterSports", "Wrestling", "Yoga", "Barre", "CoreTraining", "CrossCountrySkiing", "DownhillSkiing", "Flexibility", "HighIntensityIntervalTraining", "JumpRope", "Kickboxing", "Pilates", "Snowboarding", "Stairs", "StepTraining", "WheelchairWalk", "WheelchairRun", "HandCycling", "TaiChi")
+        // from __HKWorkoutActivityNameForActivityType(long param_1) in HealthKit
+        private val activityTypes = listOf("AmericanFootball", "Archery", "AustralianFootball", "Badminton", "Baseball", "Basketball", "Bowling", "Boxing", "Climbing", "Cricket", "CrossTraining", "Curling", "Cycling", "Dance", "DanceInspiredTraining", "Elliptical", "EquestrianSports", "Fencing", "Fishing", "FunctionalStrengthTraining", "Golf", "Gymnastics", "Handball", "Hiking", "Hockey", "Hunting", "Lacrosse", "MartialArts", "MindAndBody", "MixedMetabolicCardioTraining", "PaddleSports", "Play", "PreparationAndRecovery", "Racquetball", "Rowing", "Rugby", "Running", "Sailing", "SkatingSports", "SnowSports", "Soccer", "Softball", "Squash", "StairClimbing", "SurfingSports", "Swimming", "TableTennis", "Tennis", "TrackAndField", "TraditionalStrengthTraining", "Volleyball", "Walking", "WaterFitness", "WaterPolo", "WaterSports", "Wrestling", "Yoga", "Barre", "CoreTraining", "CrossCountrySkiing", "DownhillSkiing", "Flexibility", "HighIntensityIntervalTraining", "JumpRope", "Kickboxing", "Pilates", "Snowboarding", "Stairs", "StepTraining", "WheelchairWalk", "WheelchairRun", "TaiChi", "MixedCardio", "HandCycling", "DiscSports", "FitnessGaming")
 
         fun typeToString(type: Int?): String {
             return when (type) {
                 null -> "null"
-                in 1..73 -> activityTypes[type - 1]
+                in 1..76 -> activityTypes[type - 1]
                 2000 -> "Wheelchair"
                 3000 -> "Other"
                 else -> "Unknown($type)"
@@ -381,7 +382,6 @@ class LocationSeries(
 ) {
     companion object : PBParsable<LocationSeries>() {
         override fun fromSafePB(pb: ProtoBuf): LocationSeries {
-            println(pb.toString())
             val sample = Sample.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
             val frozen = pb.readOptBool(2)
             val uuidBytes = (pb.readOptionalSinglet(3) as ProtoLen?)?.value
@@ -394,5 +394,29 @@ class LocationSeries(
 
     override fun toString(): String {
         return "LocationSeries($sample, contUUID $continuationUUID, points $locationData)"
+    }
+}
+
+class ECGSample(
+    val sample: Sample,
+    val version: Int?,
+    val heartRate: Double?,
+    val ecg: Electrocardiogram,
+    val classification: Int?
+) {
+    companion object : PBParsable<ECGSample>() {
+        override fun fromSafePB(pb: ProtoBuf): ECGSample {
+            val sample = Sample.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
+            val maybeVersion = pb.readOptShortVarInt(2)
+            val heartrate = pb.readOptDouble(3)
+            val ecg = Electrocardiogram.fromSafePB(pb.readAssertedSinglet(4) as ProtoBuf)
+            val maybeClassification = pb.readOptShortVarInt(5)
+
+            return ECGSample(sample, maybeVersion, heartrate, ecg, maybeClassification)
+        }
+    }
+
+    override fun toString(): String {
+        return "ECGSample($sample, $version, heartrate $heartRate, $classification, $ecg)"
     }
 }

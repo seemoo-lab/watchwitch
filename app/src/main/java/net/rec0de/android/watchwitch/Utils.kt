@@ -146,6 +146,12 @@ fun Long.doubleFromLongBytes(): Double {
     return b.getDouble(0)
 }
 
+fun Int.floatFromIntBytes(): Float {
+    val b = ByteBuffer.allocate(4)
+    b.putInt(this)
+    return b.getFloat(0)
+}
+
 fun Date.toAppleTimestamp(): Double {
     // NSDate timestamps encode time as seconds since Jan 01 2001 with millisecond precision as doubles
     val canonicalTimestamp = this.time

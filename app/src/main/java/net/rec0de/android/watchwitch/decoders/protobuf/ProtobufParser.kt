@@ -2,6 +2,7 @@ package net.rec0de.android.watchwitch.decoders.protobuf
 
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.doubleFromLongBytes
+import net.rec0de.android.watchwitch.floatFromIntBytes
 import net.rec0de.android.watchwitch.fromBytesLittle
 import net.rec0de.android.watchwitch.hex
 import java.nio.ByteBuffer
@@ -238,6 +239,8 @@ data class ProtoI32(val value: Int) : ProtoValue {
         buf.putInt(value)
         return buf.array()
     }
+
+    fun asFloat(): Float = value.floatFromIntBytes()
 }
 
 data class ProtoI64(val value: Long) : ProtoValue {
