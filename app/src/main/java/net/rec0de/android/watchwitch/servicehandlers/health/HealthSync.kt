@@ -92,6 +92,7 @@ object HealthSync : UTunService {
             Logger.logUTUN("rcv HealthSync msg type $type (reply)", 2)
         }
 
+        println(msg.hex())
 
         val syncMsg = when(type) {
             2 -> parseNanoSyncMessage(msg.fromIndex(offset))

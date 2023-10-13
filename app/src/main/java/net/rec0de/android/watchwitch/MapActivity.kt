@@ -10,7 +10,9 @@ import android.view.ViewTreeObserver.OnGlobalLayoutListener
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
+import org.osmdroid.config.Configuration
 import org.osmdroid.config.Configuration.getInstance
+import org.osmdroid.library.BuildConfig
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -27,6 +29,7 @@ class MapActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        Configuration.getInstance().userAgentValue = BuildConfig.LIBRARY_PACKAGE_NAME
         setContentView(R.layout.activity_map)
 
         map = findViewById(R.id.map)

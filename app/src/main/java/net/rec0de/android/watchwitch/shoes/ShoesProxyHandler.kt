@@ -1,15 +1,11 @@
 package net.rec0de.android.watchwitch.shoes
 
-import android.app.Application
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.rec0de.android.watchwitch.Logger
-import net.rec0de.android.watchwitch.RoutingManager
 import net.rec0de.android.watchwitch.fromBytesBig
-import net.rec0de.android.watchwitch.hex
-import net.rec0de.android.watchwitch.hexBytes
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
@@ -33,90 +29,72 @@ object ShoesProxyHandler {
 
             //Logger.logShoes("TLS rcv trying to read $headerLen header bytes", 10)
 
-            val header = ByteArray(headerLen)
+            val requestBytes = ByteArray(headerLen)
             withContext(Dispatchers.IO) {
-                fromWatch.readFully(header, 0, header.size)
+                fromWatch.readFully(requestBytes, 0, requestBytes.size)
             }
+            val request = ShoesRequest.parse(requestBytes)
+            Logger.logShoes("SHOES request $request", 0)
 
-            // first byte is always 0x01, may be command byte from SOCKS spec (0x01 = establish TCP/IP connection)
-            val headerMagic = header[0]
-            val targetPort = UInt.fromBytesBig(header.sliceArray(1 until 3))
-            val hostnameLen = header[3].toUByte().toInt()
-            val hostname = header.sliceArray(4 until 4+hostnameLen).toString(Charsets.UTF_8)
+            when(request) {
+                is ShoesHostnameRequest, is ShoesIPv4Request, is ShoesIPv6Request -> {
+                    val host = when(request) {
+                        is ShoesHostnameRequest -> request.hostname
+                        is ShoesIPv4Request -> request.ip.hostAddress
+                        is ShoesIPv6Request -> request.ip.hostAddress
+                        else -> throw Exception("unreachable")
+                    }
 
-            Logger.logShoes("TLS req to $hostname", 0)
+                    NetworkStats.connect(host, request.bundleId)
+                    val reply = ShoesReply.simple(connectionExpensive, connectionCellular, connectionWiFi)
 
+                    withContext(Dispatchers.IO) {
+                        toWatch.write(reply.render())
+                        toWatch.flush()
+                    }
 
-            // next up we have what looks like TLVs
-            var offset = 4 + hostnameLen
-            var bundleID: String? = null
-            while(offset < headerLen) {
-                val type = header[offset].toInt()
-                val len = UInt.fromBytesBig(header.sliceArray(offset+1 until offset+3)).toInt()
-                offset += 3
-                val content = header.sliceArray(offset until offset+len)
-                if(type == 0x03) {
-                    Logger.logShoes("from process ${content.toString(Charsets.UTF_8)}", 1)
-                    bundleID = content.toString(Charsets.UTF_8)
+                    val clientSocket = withContext(Dispatchers.IO) {
+                        Socket(host, request.port)
+                    }
+                    toRemote = withContext(Dispatchers.IO) {
+                        clientSocket.getOutputStream()
+                    }
+                    fromRemote = DataInputStream(withContext(Dispatchers.IO) {
+                        clientSocket.getInputStream()
+                    })
+
+                    GlobalScope.launch { forwardForever(fromRemote, toWatch, host) }
+
+                    while(true) {
+                        // we expect a TLS record header here, which is 1 byte record type, 2 bytes TLS version, 2 bytes length
+                        val recordHeader = ByteArray(5)
+                        withContext(Dispatchers.IO) {
+                            fromWatch.readFully(recordHeader)
+                        }
+                        val len = UInt.fromBytesBig(recordHeader.sliceArray(3 until 5)).toInt()
+                        val packet = ByteArray(5+len)
+                        recordHeader.copyInto(packet)
+
+                        withContext(Dispatchers.IO) {
+                            fromWatch.readFully(packet, 5, len)
+                            toRemote.write(packet)
+                            toRemote.flush()
+                        }
+
+                        //Logger.logShoes("TLS to remote: ${packet.hex()}", 10)
+                        NetworkStats.packetSent(host, len)
+                    }
                 }
-                else
-                    Logger.logShoes("TLS req unknown TLV: type $type, payload ${content.hex()}", 1)
-                offset += len
-            }
-
-            NetworkStats.connect(hostname, bundleID)
-
-            // send acknowledge, exact purpose unknown
-            // best guess: 0006 is high-level length (handled at unknown location)
-            // 0000 is unknown (possibly type 0 length 0 TLV?)
-            // 04000120 is type 4 length 1 TLV carrying connection type info
-            // type byte: expensive? | cellular? | wifi? | constrained? | denied interface |  000 (unknown / reserved bits)
-
-            // see ___nw_shoes_read_reply_tlvs_block_invoke in libnetwork.dylib
-
-            val wifiFlag = (if(connectionWiFi) 0x20 else 0x00).toUByte()
-            val cellFlag = (if(connectionCellular) 0x40 else 0x00).toUByte()
-            val expensiveFlag = (if(connectionExpensive) 0x80 else 0x00).toUByte()
-            val networkByte = wifiFlag or cellFlag or expensiveFlag
-
-            Logger.logShoes("responding with network flags $networkByte", 2)
-
-            withContext(Dispatchers.IO) {
-                toWatch.write("00060000040001".hexBytes())
-                toWatch.writeByte(networkByte.toInt())
-                toWatch.flush()
-            }
-
-            val clientSocket = withContext(Dispatchers.IO) {
-                Socket(hostname, targetPort.toInt())
-            }
-            toRemote = withContext(Dispatchers.IO) {
-                clientSocket.getOutputStream()
-            }
-            fromRemote = DataInputStream(withContext(Dispatchers.IO) {
-                clientSocket.getInputStream()
-            })
-
-            GlobalScope.launch { forwardForever(fromRemote, toWatch, hostname) }
-
-            while(true) {
-                // we expect a TLS record header here, which is 1 byte record type, 2 bytes TLS version, 2 bytes length
-                val recordHeader = ByteArray(5)
-                withContext(Dispatchers.IO) {
-                    fromWatch.readFully(recordHeader)
+                else -> {
+                    Logger.logShoes("Unsupported shoes request type: $request, denying", 0)
+                    val reply = ShoesReply.reject()
+                    withContext(Dispatchers.IO) {
+                        toWatch.write(reply.render())
+                        toWatch.flush()
+                        toWatch.close()
+                        fromWatch.close()
+                    }
                 }
-                val len = UInt.fromBytesBig(recordHeader.sliceArray(3 until 5)).toInt()
-                val packet = ByteArray(5+len)
-                recordHeader.copyInto(packet)
-
-                withContext(Dispatchers.IO) {
-                    fromWatch.readFully(packet, 5, len)
-                    toRemote.write(packet)
-                    toRemote.flush()
-                }
-
-                //Logger.logShoes("TLS to remote: ${packet.hex()}", 10)
-                NetworkStats.packetSent(hostname, len)
             }
         } catch (e: Exception) {
             try {
