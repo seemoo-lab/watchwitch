@@ -167,7 +167,10 @@ class HealthLogAdapter(
     private fun setMetadata(metadata: Map<String, String>, holder: ItemViewHolder) {
         if(metadata.isNotEmpty()) {
             holder.metadata.text = metadata.map {
-                val shortKey = it.key.replace("_HKPrivateMetadataKey", "").replace("HKMetadataKey", "")
+                val shortKey = it.key.replace("_HKPrivateMetadataKey", "")
+                                     .replace("HKMetadataKey", "")
+                                     .replace("_HKPrivate", "")
+                                     .replace("HK", "")
                 "$shortKey: ${it.value}"
             }.joinToString("\n")
             holder.metadata.visibility = VISIBLE

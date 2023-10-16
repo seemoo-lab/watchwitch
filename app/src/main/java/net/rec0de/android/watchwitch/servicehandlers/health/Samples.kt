@@ -283,9 +283,6 @@ class ActivityCache(
 ) {
     companion object : PBParsable<ActivityCache>() {
         override fun fromSafePB(pb: ProtoBuf): ActivityCache {
-
-            println(pb)
-
             val sample = Sample.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
             val cacheIndex = pb.readOptShortVarInt(2)
             val energyBurned = pb.readOptDouble(3)

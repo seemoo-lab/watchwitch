@@ -24,27 +24,32 @@ class BPListParser {
      */
     @Synchronized
     fun parse(bytes: ByteArray): BPListObject {
+        val rootObject = parseCodable(bytes)
+        return if(KeyedArchiveDecoder.isKeyedArchive(rootObject))
+                KeyedArchiveDecoder.decode(rootObject as BPDict)
+            else
+                rootObject
+    }
+
+    @Synchronized
+    fun parseCodable(bytes: ByteArray): CodableBPListObject {
         objectMap.clear()
 
         val header = bytes.sliceArray(0 until 8)
-        if(header.decodeToString() != "bplist00")
+        if (header.decodeToString() != "bplist00")
             throw Exception("Expected bplist header 'bplist00' in bytes ${bytes.hex()}")
 
-        val trailer = bytes.fromIndex(bytes.size-32)
+        val trailer = bytes.fromIndex(bytes.size - 32)
         offsetTableOffsetSize = trailer[6].toInt()
         objectRefSize = trailer[7].toInt()
         val numObjects = ULong.fromBytesBig(trailer.sliceArray(8 until 16)).toInt()
         val topObjectOffset = ULong.fromBytesBig(trailer.sliceArray(16 until 24)).toInt()
         val offsetTableStart = ULong.fromBytesBig(trailer.sliceArray(24 until 32)).toInt()
 
-        offsetTable = bytes.sliceArray(offsetTableStart until (offsetTableStart + numObjects * offsetTableOffsetSize))
+        offsetTable =
+            bytes.sliceArray(offsetTableStart until (offsetTableStart + numObjects * offsetTableOffsetSize))
 
-        val rootObject = readObjectFromOffsetTableEntry(bytes, topObjectOffset)
-
-        return if(KeyedArchiveDecoder.isKeyedArchive(rootObject))
-                KeyedArchiveDecoder.decode(rootObject as BPDict)
-            else
-                rootObject
+        return readObjectFromOffsetTableEntry(bytes, topObjectOffset)
     }
 
     private fun readObjectFromOffsetTableEntry(bytes: ByteArray, index: Int): CodableBPListObject {
@@ -105,7 +110,7 @@ class BPListParser {
 
                 // decode nested bplists
                 return if(bufferIsBPList(data))
-                    BPListParser().parse(data) as CodableBPListObject
+                    BPListParser().parseCodable(data)
                 else
                     BPData(data)
             }
