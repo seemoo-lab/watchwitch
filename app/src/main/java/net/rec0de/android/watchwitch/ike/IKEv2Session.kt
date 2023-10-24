@@ -284,7 +284,7 @@ class IKEv2Session(
         val kex = KExPayload(x25519LocalKeys.public as X25519PublicKeyParameters)
         val nonce = NoncePayload(cryptoValues["nr"]!!)
 
-        // sending trash NAT detection payload to trick watch into doing UDP encapsulation?
+        // sending trash NAT detection payloads, they don't seem to do anything here either way
         val natSource = NATDetectionPayload(initiatorSPI, responderSPI, 0, 0, true)
         val natDestination = NATDetectionPayload(initiatorSPI, responderSPI, 1, 1, false)
         val fragSupport = NotifyPayload(16430)

@@ -97,10 +97,10 @@ class NanoSyncChangeSet(
 }
 
 class NanoSyncChange(
-    val objectType: Int?,
+    val objectType: Int,
     val startAnchor: Int,
     val endAnchor: Int,
-    val objectData: NanoSyncEntity?,
+    val objectData: List<NanoSyncEntity>,
     val syncAnchor: NanoSyncAnchor?,
     val speculative: Boolean?,
     val sequence: Int?,
@@ -110,11 +110,11 @@ class NanoSyncChange(
     companion object : PBParsable<NanoSyncChange>() {
         // based on _HDCodableNanoSyncChangeReadFrom in HealthDaemon binary
         override fun fromSafePB(pb: ProtoBuf): NanoSyncChange {
-            val objectType = pb.readOptShortVarInt(1)
+            val objectType = pb.readOptShortVarInt(1)!!
             val startAnchor = pb.readShortVarInt(2)
             val endAnchor = pb.readShortVarInt(3)
 
-            val objectData = NanoSyncEntity.fromPB(pb.readOptionalSinglet(4) as ProtoBuf?, objectType)
+            val objectData = pb.readMulti(4).map { NanoSyncEntity.fromSafePB(it as ProtoBuf, objectType) }
             val syncAnchor = NanoSyncAnchor.fromPB(pb.readOptionalSinglet(5) as ProtoBuf?)
             val speculative = pb.readOptBool(6)
             val sequence = pb.readOptShortVarInt(7)
@@ -125,8 +125,8 @@ class NanoSyncChange(
         }
     }
 
-    val objectTypeString: String?
-        get() = if(objectType == null) null else NanoSyncEntity.objTypeToString(objectType)
+    val objectTypeString: String
+        get() = NanoSyncEntity.objTypeToString(objectType)
 
     override fun toString(): String {
         return "Change(obj $objectTypeString, seq $sequence, startAnchor $startAnchor, endAnchor $endAnchor, syncAnchor $syncAnchor, spec? $speculative, comp? $complete, entID $entityIdentifier, data: $objectData)"

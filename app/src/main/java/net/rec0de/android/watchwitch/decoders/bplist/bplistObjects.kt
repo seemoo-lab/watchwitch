@@ -1,5 +1,6 @@
 package net.rec0de.android.watchwitch.decoders.bplist
 
+import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.fromIndex
 import net.rec0de.android.watchwitch.hex
 import net.rec0de.android.watchwitch.toAppleTimestamp
@@ -102,14 +103,16 @@ data class BPReal(val value: Double): BPListImmediateObject() {
         return buf.array()
     }
 }
-data class BPDate(val timestamp: Long) : BPListImmediateObject() {
+data class BPDate(val timestamp: Double) : BPListImmediateObject() {
     override fun toString() = "BPDate($timestamp)"
+
+    fun asDate(): Date = Utils.dateFromAppleTimestamp(timestamp)
 
     override fun renderToBytes(): ByteArray {
         val markerByte = 0x33
         val buf = ByteBuffer.allocate(9)
         buf.put(markerByte.toByte())
-        buf.putLong(timestamp)
+        buf.putDouble(timestamp)
         return buf.array()
     }
 }
@@ -127,7 +130,11 @@ class BPData(val value: ByteArray) : BPListImmediateObject() {
         }
     }
 }
-data class BPAsciiString(val value: String) : BPListImmediateObject() {
+
+abstract class BPString : BPListImmediateObject() {
+    abstract val value: String
+}
+data class BPAsciiString(override val value: String) : BPString() {
     override fun toString() = "\"$value\""
 
     override fun renderToBytes(): ByteArray {
@@ -144,7 +151,7 @@ data class BPAsciiString(val value: String) : BPListImmediateObject() {
         }
     }
 }
-data class BPUnicodeString(val value: String) : BPListImmediateObject() {
+data class BPUnicodeString(override val value: String) : BPString() {
     override fun toString() = "\"$value\""
 
     override fun renderToBytes(): ByteArray {

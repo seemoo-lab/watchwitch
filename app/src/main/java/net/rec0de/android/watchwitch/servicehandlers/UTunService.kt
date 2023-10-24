@@ -4,7 +4,7 @@ import net.rec0de.android.watchwitch.utun.UTunHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
 
 interface UTunService {
-    val name: String
+    val handlesTopics: List<String>
 
     fun acceptsMessageType(msg: UTunMessage): Boolean
 

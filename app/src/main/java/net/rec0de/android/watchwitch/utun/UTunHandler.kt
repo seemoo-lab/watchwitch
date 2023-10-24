@@ -3,6 +3,7 @@ package net.rec0de.android.watchwitch.utun
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
+import net.rec0de.android.watchwitch.fromIndex
 import net.rec0de.android.watchwitch.hex
 import java.io.DataOutputStream
 import java.time.Instant
@@ -45,7 +46,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
             is Handshake -> if(!handshakeSent) send(Handshake(4))
             is FragmentedMessage -> handleFragment(parsed)
             is AckMessage -> {}
-            else -> Logger.logUTUN("[$shortName] Unhandled UTun: $parsed", 0)
+            else -> Logger.logUTUN("[$shortName] Unhandled UTUN rcv for $channel: $parsed", 0)
         }
     }
 
@@ -83,15 +84,31 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
         when(message) {
             is DataMessage -> {
                 if(BPListParser.bufferIsBPList(message.payload))
-                    println(parser.parse(message.payload))
+                    Logger.logUTUN(parser.parse(message.payload).toString(), 2)
+                else {
+                    // DataMessage payloads can also be protobufs, with either 0, 2, or 3 byte unknown prefixes
+                    // *fun*, isn't it?
+                    try {
+                        Logger.logUTUN(ProtobufParser().parse(message.payload).toString(), 2)
+                    }
+                    catch(_: Exception) {}
+                    try {
+                        Logger.logUTUN(ProtobufParser().parse(message.payload.fromIndex(2)).toString(), 2)
+                    }
+                    catch(_: Exception) {}
+                    try {
+                        Logger.logUTUN(ProtobufParser().parse(message.payload.fromIndex(3)).toString(), 2)
+                    }
+                    catch(_: Exception) {}
+                }
             }
             is ProtobufMessage -> {
                 // for some reason Protobuf messages sometimes carry, guess what, bplists
                 if(BPListParser.bufferIsBPList(message.payload))
-                    println(parser.parse(message.payload))
+                    Logger.logUTUN(parser.parse(message.payload).toString(), 2)
                 else {
                     try {
-                        println(ProtobufParser().parse(message.payload))
+                        Logger.logUTUN(ProtobufParser().parse(message.payload).toString(), 2)
                     }
                     catch(_: Exception) {}
                 }
@@ -99,7 +116,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
         }
 
         if(message.wantsAppAck)
-            send(AppAckMessage(message.sequence, message.streamID, message.messageUUID.toString(), message.topic)) // todo: sequence echo correct?
+            send(AppAckMessage(message.sequence, message.streamID, message.messageUUID.toString(), message.topic))
     }
 
     private fun associateStreamWithTopic(streamID: Int, topic: String) {

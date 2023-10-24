@@ -83,6 +83,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        val watchStateButton: Button = findViewById(R.id.btnWatchState)
+        watchStateButton.setOnClickListener {
+            val watchState = Intent(this@MainActivity, WatchStateActivity::class.java)
+            this@MainActivity.startActivity(watchState)
+        }
+
         val networkLogButton: Button = findViewById(R.id.btnLogNetwork)
         networkLogButton.setOnClickListener {
             val netLog = Intent(this@MainActivity, NetworkLogActivity::class.java)
@@ -103,6 +109,10 @@ class MainActivity : AppCompatActivity() {
 
         startForegroundService(Intent(applicationContext, TcpServerService::class.java))
         startForegroundService(Intent(applicationContext, ShoesService::class.java))
+
+        val keys = LongTermStorage.getMPKeysForClass("A")
+        println(keys!!.ecdsaRemotePublic.hex())
+        println(keys.rsaLocalPrivate.hex())
     }
 
     override fun onDestroy() {

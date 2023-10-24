@@ -11,7 +11,7 @@ import net.rec0de.android.watchwitch.utun.UTunMessage
 import java.util.UUID
 
 object FindMyLocalDevice : UTunService {
-    override val name = "com.apple.private.alloy.findmylocaldevice"
+    override val handlesTopics = listOf("com.apple.private.alloy.findmylocaldevice")
 
     private var utunSequence = 0
 
@@ -24,7 +24,7 @@ object FindMyLocalDevice : UTunService {
         val fields = ProtobufParser().parse(msg.payload).objs
 
         val timestamp = (fields[1]?.first() as ProtoI64?)?.asDate()
-        println("rcv findmylocaldevice: $timestamp")
+        println("[findmyld] ping: $timestamp")
 
         val replyBytes = ProtoBuf(mapOf(1 to listOf(ProtoVarInt(0) as ProtoValue))).renderStandalone()
         handler.send(ProtobufMessage(utunSequence, msg.streamID, 0, null, UUID.randomUUID(), null, null, 1, 1, replyBytes))

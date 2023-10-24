@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import net.rec0de.android.watchwitch.adapter.NetworkStatsAdapter
+import net.rec0de.android.watchwitch.adapter.OpenAppsAdapter
 import net.rec0de.android.watchwitch.shoes.NetworkStats
 import net.rec0de.android.watchwitch.shoes.SHOES_MSG_STATS
 import net.rec0de.android.watchwitch.shoes.ShoesService

@@ -98,7 +98,12 @@ class BPListParser {
                 BPReal(value)
             }
             // Date, always 8 bytes long
-            0x33 -> BPDate(ULong.fromBytesBig(bytes.sliceArray(offset+1 until offset+9)).toLong())
+            0x33 -> {
+                val buf = ByteBuffer.allocate(8)
+                buf.put(bytes.sliceArray(offset+1 until offset+1+8))
+                val timestamp = buf.getDouble(0)
+                BPDate(timestamp)
+            }
             // Data
             in 0x40 until 0x50 -> {
                 // length bits encode byte count, if all ones additional length integer follows

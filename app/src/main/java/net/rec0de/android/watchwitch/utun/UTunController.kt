@@ -24,7 +24,7 @@ object UTunController {
 
     private val serviceNameToLocalUUID = mutableMapOf<String, UUID>()
 
-    val services: Map<String, UTunService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice).associateBy { it.name }
+    val services: Map<String, UTunService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
 
     fun usingOutput(out: DataOutputStream): UTunController {
         output = out

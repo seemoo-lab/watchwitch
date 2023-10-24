@@ -23,7 +23,7 @@ import java.util.Date
 import java.util.UUID
 
 object HealthSync : UTunService {
-    override val name = "com.apple.private.alloy.health.sync.classc"
+    override val handlesTopics = listOf("com.apple.private.alloy.health.sync.classc")
 
     private val keys = LongTermStorage.getMPKeysForClass("A")
     private val decryptor = if(keys != null) Decryptor(keys) else null
@@ -130,9 +130,9 @@ object HealthSync : UTunService {
         changeSet.changes.forEach { change ->
             var handled = true
             when(change.objectTypeString) {
-                "CategorySamples", "QuantitySamples", "Workouts", "DeletedSamples", "BinarySamples", "ActivityCaches", "LocationSeriesSamples", "ECGSamples" -> handleObjectCollectionGeneric(change.objectData as ObjectCollection)
-                "ProtectedNanoUserDefaults" -> handleUserDefaults(change.objectData as CategoryDomainDictionary, true)
-                "NanoUserDefaults" -> handleUserDefaults(change.objectData as CategoryDomainDictionary, false)
+                "CategorySamples", "QuantitySamples", "Workouts", "DeletedSamples", "BinarySamples", "ActivityCaches", "LocationSeriesSamples", "ECGSamples" -> change.objectData.forEach { handleObjectCollectionGeneric(it as ObjectCollection) }
+                "ProtectedNanoUserDefaults" -> change.objectData.forEach { handleUserDefaults(it as CategoryDomainDictionary, true) }
+                "NanoUserDefaults" -> change.objectData.forEach { handleUserDefaults(it as CategoryDomainDictionary, false) }
                 else -> {
                     handled = false
                     Logger.log("Unhandled health sync change type: ${change.objectTypeString}", 0)
@@ -196,7 +196,7 @@ object HealthSync : UTunService {
             TimestampedKeyValuePair("HKElectrocardiogramFirstOnboardingCompleted", timestamp, null, timestamp.toAppleTimestamp(), null, null)
         )
         val objectData = CategoryDomainDictionary("com.apple.private.health.heart-rhythm", 105, protectedUserDefaultEntries)
-        val change = NanoSyncChange(17, startAnchor, endAnchor, objectData, null, null,0, true, EntityIdentifier(17, null))
+        val change = NanoSyncChange(17, startAnchor, endAnchor, listOf(objectData), null, null,0, true, EntityIdentifier(17, null))
 
         val changeSet = NanoSyncChangeSet(sessionUUID, sessionStart, 1, listOf(change), null)
         return NanoSyncMessage(12, persistentUUID, healthPairingUUID, null, changeSet, null)

@@ -38,7 +38,7 @@ class HealthLogActivity : AppCompatActivity() {
 
         val recyclerView = findViewById<RecyclerView>(R.id.hostList)
         recyclerView.adapter = HealthLogAdapter(data)
-        recyclerView.setHasFixedSize(true)
+        recyclerView.setHasFixedSize(false)
 
         val resetButton = findViewById<Button>(R.id.btnResetSyncStatus)
         resetButton.setOnClickListener {
