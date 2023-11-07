@@ -20,7 +20,7 @@ class Sample(
             val obj = HealthObject.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
             val dataType = pb.readShortVarInt(2)
             val startDate = (pb.readOptionalSinglet(3) as ProtoI64?)?.asDate()
-            val endDate = (pb.readOptionalSinglet(3) as ProtoI64?)?.asDate()
+            val endDate = (pb.readOptionalSinglet(4) as ProtoI64?)?.asDate()
 
             return Sample(dataType, obj, startDate, endDate)
         }

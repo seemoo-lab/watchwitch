@@ -78,6 +78,9 @@ object KeyedArchiveDecoder {
                             val timestamp = (thing.values[BPAsciiString("NS.time")]!! as BPReal).value
                             NSDate(Utils.dateFromAppleTimestamp(timestamp))
                         }
+                        "NSUUID" -> {
+                            NSUUID((thing.values[BPAsciiString("NS.uuidbytes")]!! as BPData).value)
+                        }
                         else -> {
                             // keep things that are actually just plain bplist objects untouched while containing special objects in NSDicts
                             val entries = thing.values.map { Pair(transformSupportedClasses(it.key), transformSupportedClasses(it.value)) }

@@ -95,6 +95,9 @@ class Hello(
                         // bit 0x04: resume resource transfers
                         // bit 0x08: dynamic services
                         // bit 0x10: unknown
+                        // bit 0x80: checksum enabled
+                        // bit 0x100: support IPSec Link
+                        // bit 0x400: tinker flag
 
                         msg.capabilityFlags = ULong.fromBytesBig(bytes.sliceArray(parseOffset until parseOffset+length)).toLong()
                         parseOffset += length
@@ -181,6 +184,12 @@ class Hello(
         get() = (capabilityFlags and 0x04L) != 0L
     val dynamicServices: Boolean
         get() = (capabilityFlags and 0x08L) != 0L
+    val checksumEnabled: Boolean
+        get() = (capabilityFlags and 0x80L) != 0L
+    val supportIPSecLink: Boolean
+        get() = (capabilityFlags and 0x100L) != 0L
+    val tinker: Boolean
+        get() = (capabilityFlags and 0x400L) != 0L
 
     override fun toString(): String {
         return "Hello($productName $productVersion $build $model, ccv $ccVersion, iUUID $instanceID dUUID $deviceID)"
@@ -196,8 +205,8 @@ class SetupChannel(val protocol: Int, val receiverPort: Int, val senderPort: Int
             parseOffset = 1
 
             val proto = readInt(bytes, 1)
-            val remotePort = readInt(bytes, 2)
-            val localPort = readInt(bytes, 2)
+            val senderPort = readInt(bytes, 2)
+            val receiverPort = readInt(bytes, 2)
 
             val remoteUUIDLen = readInt(bytes, 2)
             val localUUIDLen = readInt(bytes, 2)
@@ -212,7 +221,7 @@ class SetupChannel(val protocol: Int, val receiverPort: Int, val senderPort: Int
             val service = readString(bytes, serviceLen)
             val name = readString(bytes, nameLen)
 
-            return SetupChannel(proto, localPort, remotePort, remoteUUID, localUUID, account, service, name)
+            return SetupChannel(proto, receiverPort, senderPort, remoteUUID, localUUID, account, service, name)
         }
     }
 
@@ -224,8 +233,8 @@ class SetupChannel(val protocol: Int, val receiverPort: Int, val senderPort: Int
         val header = ByteBuffer.allocate(16)
         header.put(0x02) // SetupChannel type byte
         header.put(protocol.toByte())
-        header.putShort(receiverPort.toShort())
         header.putShort(senderPort.toShort())
+        header.putShort(receiverPort.toShort())
         header.putShort(0x24) // sender UUID length
         header.putShort(if(receiverUUID != null) 0x24 else 0x00) // receiver UUID length
         header.putShort(accBytes.size.toShort())
@@ -395,9 +404,37 @@ class SetupEncryptedChannel(
             val name = readString(bytes, nameLen)
             val key = readBytes(bytes, keyLen)
 
-            return SetupEncryptedChannel(proto, receiverPort, senderPort, remoteUUID, localUUID, account, service, name, ssrc, startSeq, key)
+            return SetupEncryptedChannel(proto, senderPort, receiverPort, remoteUUID, localUUID, account, service, name, ssrc, startSeq, key)
         }
     }
+
+    fun toBytes(): ByteArray {
+        val accBytes = account.encodeToByteArray()
+        val serviceBytes = service.encodeToByteArray()
+        val nameBytes = name.encodeToByteArray()
+
+        val header = ByteBuffer.allocate(24)
+        header.put(0x06) // SetupChannel type byte
+        header.put(protocol.toByte())
+        header.putShort(senderPort.toShort())
+        header.putShort(receiverPort.toShort())
+        header.putShort(0x24) // sender UUID length
+        header.putShort(if(receiverUUID != null) 0x24 else 0x00) // receiver UUID length
+        header.putShort(accBytes.size.toShort())
+        header.putShort(serviceBytes.size.toShort())
+        header.putShort(nameBytes.size.toShort())
+        header.putInt(ssrc)
+        header.putShort(startSeq.toShort())
+        header.putShort(key.size.toShort())
+
+        val uuids = if(receiverUUID != null)
+            senderUUID.toString().encodeToByteArray() + receiverUUID.toString().encodeToByteArray()
+        else
+            senderUUID.toString().encodeToByteArray()
+
+        return header.array() + uuids + accBytes + serviceBytes + nameBytes + key
+    }
+
 
     override fun toString(): String {
         return "SetupEncryptedChannel(ssrc $ssrc startSeq $startSeq for $account $service $name ports $senderPort->$receiverPort proto $protocol uuids $senderUUID $receiverUUID key ${key.hex()})"

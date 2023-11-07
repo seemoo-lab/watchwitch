@@ -12,6 +12,8 @@ import net.rec0de.android.watchwitch.servicehandlers.PreferencesSync
 import net.rec0de.android.watchwitch.servicehandlers.UTunService
 import java.io.DataOutputStream
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.random.Random
 
 object UTunController {
 
@@ -23,6 +25,8 @@ object UTunController {
     private val requestingChannels = mutableSetOf<String>()
 
     private val serviceNameToLocalUUID = mutableMapOf<String, UUID>()
+
+    val nextSenderSequence: AtomicInteger = AtomicInteger(0)
 
     val services: Map<String, UTunService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
 
@@ -87,6 +91,7 @@ object UTunController {
         when (msg) {
             is SetupChannel -> setupChannel(msg)
             is CloseChannel -> closeChannel(msg)
+            is SetupEncryptedChannel -> setupEncryptedChannel(msg)
         }
     }
 
@@ -98,6 +103,26 @@ object UTunController {
             Logger.logUTUN("got request for $fullService, which we did not request - replying", 1)
             val ourUUID = serviceNameToLocalUUID.computeIfAbsent(fullService) { UUID.randomUUID()}
             val reply = SetupChannel(msg.protocol, msg.receiverPort, msg.senderPort, ourUUID, msg.senderUUID, msg.account, msg.service, msg.name)
+            Logger.logUTUN("UTUN snd $reply", 0)
+            send(reply.toBytes())
+        }
+    }
+
+    private fun setupEncryptedChannel(msg: SetupEncryptedChannel) {
+        val fullService = "${msg.account}/${msg.service}/${msg.name}"
+        remoteAnnouncedChannels.add(fullService)
+
+        if(!requestingChannels.contains(fullService)) {
+            Logger.logUTUN("got request for $fullService, which we did not request - replying", 1)
+            val ourUUID = serviceNameToLocalUUID.computeIfAbsent(fullService) { UUID.randomUUID()}
+            
+            // we don't really know how encrypted channels work since we haven't observed them in use
+            // but we CAN send an appropriate reply with random values for the key material
+            // (encrypted channels seem to use SRTP in some way shape or form)
+            val ssrc = Random.nextInt()
+            val keymat = Random.nextBytes(60)
+            val reply = SetupEncryptedChannel(msg.protocol, msg.receiverPort, msg.senderPort, ourUUID, msg.senderUUID, msg.account, msg.service, msg.name, ssrc, 0, keymat)
+            
             Logger.logUTUN("UTUN snd $reply", 0)
             send(reply.toBytes())
         }

@@ -109,10 +109,6 @@ class MainActivity : AppCompatActivity() {
 
         startForegroundService(Intent(applicationContext, TcpServerService::class.java))
         startForegroundService(Intent(applicationContext, ShoesService::class.java))
-
-        val keys = LongTermStorage.getMPKeysForClass("A")
-        println(keys!!.ecdsaRemotePublic.hex())
-        println(keys.rsaLocalPrivate.hex())
     }
 
     override fun onDestroy() {

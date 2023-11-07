@@ -60,6 +60,7 @@ class Decryptor(keys: MPKeys) {
         ecdsaRemotePublicKey = keys.friendlyEcdsaPublicKey()
     }
 
+    // based on IDSDaemon::_decryptAOverCMessage:topic:fromDeviceID:error: in identityservicesd
     fun decrypt(msg: BPDict): ByteArray? {
         val ekd = (msg.values[BPAsciiString("ekd")] as BPData).value
         val sed = (msg.values[BPAsciiString("sed")] as BPData).value
@@ -114,6 +115,7 @@ class Decryptor(keys: MPKeys) {
         return capsule.array()
     }
 
+    // based on _SecMPVerifyAndExposeMessage in MessageProtection
     private fun decapsulateEkd(ekd: ByteArray): ByteArray? {
         if (ekd[0].toInt() != 0x02)
             throw Exception("Unsupported version in ekd field of AoverC encrypted message: ${ekd[0]}, expected 2")

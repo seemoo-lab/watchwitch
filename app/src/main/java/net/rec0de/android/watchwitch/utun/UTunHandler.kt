@@ -39,7 +39,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
     open fun receive(message: ByteArray) {
         Logger.logUTUN("[$shortName] UTUN rcv raw for $channel: ${message.hex()}", 5)
         val parsed = UTunMessage.parse(message)
-        Logger.logUTUN("[$shortName] UTUN rcv for $channel: $parsed", 3)
+        Logger.logUTUN("[$shortName] seq ${parsed.sequence} UTUN rcv for $channel: $parsed", 3)
         
         when(parsed) {
             is UTunCommonMessage -> handleCommonMessage(parsed)
@@ -59,6 +59,9 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
 
         // acknowledge everything for now
         send(AckMessage(message.sequence))
+
+        if(message.wantsAppAck)
+            send(AppAckMessage(message.sequence, message.streamID, message.messageUUID.toString(), message.topic))
 
         if(message.hasTopic)
             associateStreamWithTopic(message.streamID, message.topic!!)
@@ -114,9 +117,6 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
                 }
             }
         }
-
-        if(message.wantsAppAck)
-            send(AppAckMessage(message.sequence, message.streamID, message.messageUUID.toString(), message.topic))
     }
 
     private fun associateStreamWithTopic(streamID: Int, topic: String) {

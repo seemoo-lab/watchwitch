@@ -16,6 +16,7 @@ abstract class NWSCPacket(val seq: Long) {
             return if(bytes.size == 0x4f) parsePubkeyRequest(bytes) else parseServiceRequest(bytes)
         }
 
+        // assuming 2 byte length prefix has already been consumed
         fun parseFeedback(bytes: ByteArray): NWSCFeedback {
             // 2 bytes accept flag
             val acceptFlag = UInt.fromBytesBig(bytes.sliceArray(0 until 2)).toUShort()
@@ -27,6 +28,7 @@ abstract class NWSCPacket(val seq: Long) {
             return NWSCFeedback(seq, acceptFlag, pubkey)
         }
 
+        // assuming 2 byte length prefix has already been consumed
         private fun parseServiceRequest(bytes: ByteArray): NWSCServiceRequest {
             // 2 bytes target port
             val targetPort = UInt.fromBytesBig(bytes.sliceArray(0 until 2)).toInt()
@@ -44,6 +46,7 @@ abstract class NWSCPacket(val seq: Long) {
             return NWSCServiceRequest(targetPort, seq, uuid, serviceName, signature)
         }
 
+        // assuming 2 byte length prefix has already been consumed
         private fun parsePubkeyRequest(bytes: ByteArray): NWSCPubkeyRequest {
             // 2 bytes target port
             val targetPort = UInt.fromBytesBig(bytes.sliceArray(0 until 2)).toInt()

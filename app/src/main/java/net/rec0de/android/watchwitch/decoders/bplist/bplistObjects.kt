@@ -271,3 +271,7 @@ data class NSDict(val values: Map<BPListObject, BPListObject>) : BPListObject() 
 data class NSDate(val value: Date) : BPListObject() {
     override fun toString() = value.toString()
 }
+
+data class NSUUID(val value: ByteArray) : BPListObject() {
+    override fun toString() = Utils.uuidFromBytes(value).toString()
+}

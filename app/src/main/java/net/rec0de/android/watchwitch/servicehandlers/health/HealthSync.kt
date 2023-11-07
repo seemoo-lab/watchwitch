@@ -17,6 +17,7 @@ import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncSecureContract
 import net.rec0de.android.watchwitch.toAppleTimestamp
 import net.rec0de.android.watchwitch.utun.DataMessage
+import net.rec0de.android.watchwitch.utun.UTunController
 import net.rec0de.android.watchwitch.utun.UTunHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
 import java.util.Date
@@ -29,7 +30,6 @@ object HealthSync : UTunService {
     private val decryptor = if(keys != null) Decryptor(keys) else null
 
     private val syncStatus = DatabaseWrangler.loadSyncAnchors().toMutableMap()
-    private var utunSequence = 0
 
     private val sessionUUID = UUID.randomUUID()
     private val sessionStart = Date()
@@ -177,8 +177,8 @@ object HealthSync : UTunService {
 
     private fun sendEncrypted(bytes: ByteArray, streamId: Int, inResponseTo: String?, handler: UTunHandler) {
         val encrypted = decryptor!!.encrypt(bytes).renderAsTopLevelObject()
-        val dataMsg = DataMessage(utunSequence, streamId, 0, inResponseTo, UUID.randomUUID(), null, null, encrypted)
-        utunSequence += 1
+        val sequence = UTunController.nextSenderSequence.addAndGet(1)
+        val dataMsg = DataMessage(sequence, streamId, 0, inResponseTo, UUID.randomUUID(), null, null, encrypted)
         handler.send(dataMsg)
     }
 
