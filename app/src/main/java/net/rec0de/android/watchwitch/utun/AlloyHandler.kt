@@ -8,7 +8,7 @@ import net.rec0de.android.watchwitch.hex
 import java.io.DataOutputStream
 import java.time.Instant
 
-open class UTunHandler(private val channel: String, var output: DataOutputStream?) {
+open class AlloyHandler(private val channel: String, var output: DataOutputStream?) {
 
     private var fragmentBuffer: ByteArray = byteArrayOf()
     private val parser = BPListParser()
@@ -19,7 +19,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
     private val streamIdAssociations = mutableMapOf<Int, String>()
 
     open fun init(weInitiated: Boolean) {
-        UTunController.registerChannelCreation(channel)
+        AlloyController.registerChannelCreation(channel)
         Logger.logUTUN("[$shortName] Creating handler for $channel", 1)
 
         // the accepting side initiates the handshake
@@ -71,8 +71,8 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
         }
 
         // try handing off to supported service
-        if(UTunController.services.containsKey(message.topic) && UTunController.services[message.topic]!!.acceptsMessageType(message)) {
-            val service = UTunController.services[message.topic]!!
+        if(AlloyController.services.containsKey(message.topic) && AlloyController.services[message.topic]!!.acceptsMessageType(message)) {
+            val service = AlloyController.services[message.topic]!!
             service.receiveMessage(message, this)
             return
         }
@@ -136,7 +136,7 @@ open class UTunHandler(private val channel: String, var output: DataOutputStream
     }
 
     open fun close() {
-        UTunController.registerChannelClose(channel)
+        AlloyController.registerChannelClose(channel)
         Logger.logUTUN("[$shortName] Handler closed for $channel", 1)
     }
 

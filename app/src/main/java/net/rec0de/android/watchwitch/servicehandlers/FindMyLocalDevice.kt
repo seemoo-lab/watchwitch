@@ -6,7 +6,7 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.utun.ProtobufMessage
-import net.rec0de.android.watchwitch.utun.UTunHandler
+import net.rec0de.android.watchwitch.utun.AlloyHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
 import java.util.UUID
 
@@ -17,7 +17,7 @@ object FindMyLocalDevice : UTunService {
 
     override fun acceptsMessageType(msg: UTunMessage) = msg is ProtobufMessage
 
-    override fun receiveMessage(msg: UTunMessage, handler: UTunHandler) {
+    override fun receiveMessage(msg: UTunMessage, handler: AlloyHandler) {
         if(msg !is ProtobufMessage)
             throw Exception("FindMyLocalDevice expects ProtobufMessage but got $msg")
 

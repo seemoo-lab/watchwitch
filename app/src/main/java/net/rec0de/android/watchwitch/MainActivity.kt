@@ -1,23 +1,23 @@
 package net.rec0de.android.watchwitch
 
+import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.ServiceConnection
 import android.net.ConnectivityManager
 import android.os.Bundle
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
-import android.os.Message
 import android.os.Messenger
-import android.os.RemoteException
+import android.text.InputType
 import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.LinearLayout.VERTICAL
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.switchmaterial.SwitchMaterial
-import net.rec0de.android.watchwitch.shoes.NetworkStats
-import net.rec0de.android.watchwitch.shoes.SHOES_MSG_CONNECTIVITY
 import net.rec0de.android.watchwitch.shoes.ShoesService
 
 
@@ -99,6 +99,29 @@ class MainActivity : AppCompatActivity() {
         healthLogButton.setOnClickListener {
             val healthLog = Intent(this@MainActivity, HealthLogActivity::class.java)
             this@MainActivity.startActivity(healthLog)
+        }
+
+        val transitKeyButton: Button = findViewById(R.id.btnSetTransitKey)
+        transitKeyButton.setOnClickListener {
+            val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+            builder.setTitle("Set Key Transit Secret")
+
+            val label = TextView(this)
+            label.text = getString(R.string.transit_key_explanation)
+
+            val input = EditText(this)
+            input.inputType = InputType.TYPE_CLASS_TEXT
+
+            val container = LinearLayout(this)
+            container.orientation = VERTICAL
+            container.setPadding(16, 16, 16, 16)
+            container.addView(label)
+            container.addView(input)
+
+            builder.setView(container)
+            builder.setPositiveButton("Save") { _, _ -> LongTermStorage.setKeyTransitSecret(input.text.toString()) }
+            builder.setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
+            builder.show()
         }
 
         LongTermStorage.context = applicationContext

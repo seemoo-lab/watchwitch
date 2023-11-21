@@ -25,6 +25,8 @@ object LongTermStorage {
     const val REMOTE_ADDRESS_CLASS_C = "remote.c.address"
     const val REMOTE_ADDRESS_CLASS_D = "remote.d.address"
 
+    const val KEY_TRANSIT_SECRET = "keyreceiver.sharedsecret"
+
     private const val MP_KEY_PREFIX = "mp."
 
     private val addresstypes = listOf(LOCAL_ADDRESS_CLASS_C, LOCAL_ADDRESS_CLASS_D, REMOTE_ADDRESS_CLASS_C, REMOTE_ADDRESS_CLASS_D)
@@ -94,6 +96,14 @@ object LongTermStorage {
             putString(type, value)
             apply()
         }
+    }
+
+    fun getKeyTransitSecret(): ByteArray {
+        return getKey(KEY_TRANSIT_SECRET) ?: "witchinthewatch-'#s[MZu!Xv*UZjbt".encodeToByteArray()
+    }
+
+    fun setKeyTransitSecret(secret: String) {
+        setKey(KEY_TRANSIT_SECRET, secret.encodeToByteArray())
     }
 
     private fun getKey(type: String): ByteArray? {

@@ -1,8 +1,6 @@
 package net.rec0de.android.watchwitch.servicehandlers
 
 import net.rec0de.android.watchwitch.Logger
-import net.rec0de.android.watchwitch.ParseCompanion
-import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.WatchState
 import net.rec0de.android.watchwitch.decoders.bplist.BPArray
 import net.rec0de.android.watchwitch.decoders.bplist.BPAsciiString
@@ -14,15 +12,10 @@ import net.rec0de.android.watchwitch.decoders.bplist.BPString
 import net.rec0de.android.watchwitch.decoders.bplist.BPTrue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBPList
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
-import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
-import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
-import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
-import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.servicehandlers.health.PBParsable
-import net.rec0de.android.watchwitch.utun.DataMessage
 import net.rec0de.android.watchwitch.utun.ProtobufMessage
-import net.rec0de.android.watchwitch.utun.UTunHandler
+import net.rec0de.android.watchwitch.utun.AlloyHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
 import java.util.Date
 
@@ -31,7 +24,7 @@ object PreferencesSync : UTunService {
 
     override fun acceptsMessageType(msg: UTunMessage) = msg is ProtobufMessage
 
-    override fun receiveMessage(msg: UTunMessage, handler: UTunHandler) {
+    override fun receiveMessage(msg: UTunMessage, handler: AlloyHandler) {
         if(msg !is ProtobufMessage)
             throw Exception("PreferencesSync expects ProtobufMessage but got $msg")
 
@@ -46,12 +39,12 @@ object PreferencesSync : UTunService {
         }
     }
 
-    private fun handleUserDefaultMessage(pb: ProtoBuf, handler: UTunHandler) {
+    private fun handleUserDefaultMessage(pb: ProtoBuf, handler: AlloyHandler) {
         val msg = UserDefaultsMessage.fromSafePB(pb)
         Logger.logIDS("[nps] received $msg", 1)
     }
 
-    private fun handleUserDefaultBackupMessage(pb: ProtoBuf, handler: UTunHandler) {
+    private fun handleUserDefaultBackupMessage(pb: ProtoBuf, handler: AlloyHandler) {
         val msg = UserDefaultsBackupMessage.fromSafePB(pb)
 
         when(msg.key) {
@@ -61,7 +54,7 @@ object PreferencesSync : UTunService {
         }
     }
 
-    private fun handleFileBackupMessage(pb: ProtoBuf, handler: UTunHandler) {
+    private fun handleFileBackupMessage(pb: ProtoBuf, handler: AlloyHandler) {
         val msg = FileBackupMessage.fromSafePB(pb)
         Logger.logIDS("[nps] received $msg", 1)
     }

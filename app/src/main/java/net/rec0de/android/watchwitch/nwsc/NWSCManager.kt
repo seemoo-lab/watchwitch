@@ -5,15 +5,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.hex
-import net.rec0de.android.watchwitch.utun.UTunController
-import net.rec0de.android.watchwitch.utun.UTunHandler
+import net.rec0de.android.watchwitch.utun.AlloyController
+import net.rec0de.android.watchwitch.utun.AlloyHandler
 import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator
 import org.bouncycastle.crypto.params.Ed25519KeyGenerationParameters
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
@@ -135,7 +134,7 @@ object NWSCManager {
             ccInitLock.lock()
             ccInitLock.unlock()
 
-            if(UTunController.shouldAcceptConnection(request.service)) {
+            if(AlloyController.shouldAcceptConnection(request.service)) {
                 Logger.logIDS("Accepting $request", 1)
                 accept(toWatch)
                 GlobalScope.launch { createHandlerAndForward(fromWatch, toWatch, request.service, false) }
@@ -287,30 +286,30 @@ object NWSCManager {
     }
 
     private fun forwardToUTunController(fromWatch: DataInputStream, toWatch: DataOutputStream) {
-        UTunController.usingOutput(toWatch)
-        UTunController.init()
+        AlloyController.usingOutput(toWatch)
+        AlloyController.init()
         try {
             while(true) {
                 val length = fromWatch.readUnsignedShort() // read length of incoming message
                 if (length > 0) {
                     val message = ByteArray(length)
                     fromWatch.readFully(message, 0, message.size)
-                    UTunController.receive(message)
+                    AlloyController.receive(message)
                 }
             }
         }
         catch (e: EOFException) {
-            UTunController.close()
+            AlloyController.close()
         }
     }
 
     private fun createHandlerAndForward(fromWatch: DataInputStream, toWatch: DataOutputStream, service: String, weInitiated: Boolean) {
-        val handler = UTunHandler(service, toWatch)
+        val handler = AlloyHandler(service, toWatch)
         handler.init(weInitiated)
         forwardToHandlerForever(fromWatch, handler)
     }
 
-    fun initiateChannelAndForward(service: String, port: Int, handler: UTunHandler) {
+    fun initiateChannelAndForward(service: String, port: Int, handler: AlloyHandler) {
         Logger.logIDS("initiating channel for $service", 1)
         val socket = Socket(
             LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_C),
@@ -349,7 +348,7 @@ object NWSCManager {
         }
     }
 
-    private fun forwardToHandlerForever(fromWatch: DataInputStream, handler: UTunHandler) {
+    private fun forwardToHandlerForever(fromWatch: DataInputStream, handler: AlloyHandler) {
         try {
             while(true) {
                 val type = fromWatch.readByte()

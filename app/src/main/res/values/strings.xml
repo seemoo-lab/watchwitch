@@ -35,4 +35,7 @@
     <string name="service_alloy_desc">Alloy message handling for Apple Watch</string>
     <string name="service_shoes_label">WatchWitch SHOES Server</string>
     <string name="service_alloy_label">WatchWitch Alloy Server</string>
+    <string name="set_key">Set Key</string>
+    <string name="watch_state_label">Watch</string>
+    <string name="transit_key_explanation">This secret will be used to decrypt key material sent from the iPhone</string>
 </resources>

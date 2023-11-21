@@ -15,7 +15,7 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 
-object UTunController {
+object AlloyController {
 
     private var output: DataOutputStream? = null
     private val instanceID = UUID.randomUUID()
@@ -30,7 +30,7 @@ object UTunController {
 
     val services: Map<String, UTunService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
 
-    fun usingOutput(out: DataOutputStream): UTunController {
+    fun usingOutput(out: DataOutputStream): AlloyController {
         output = out
         return this
     }
@@ -74,7 +74,7 @@ object UTunController {
                 delay((200 + 30*i).toLong())
                 // we may have received and accepted an incoming request for this channel in the meantime
                 if(!establishedChannels.contains(fullService)) {
-                    val handler = UTunHandler(fullService, null)
+                    val handler = AlloyHandler(fullService, null)
                     NWSCManager.initiateChannelAndForward(fullService, targetPort, handler)
                 }
             }

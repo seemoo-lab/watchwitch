@@ -1,6 +1,5 @@
 package net.rec0de.android.watchwitch.servicehandlers.health
 
-import android.provider.ContactsContract.Data
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.decoders.aoverc.Decryptor
@@ -14,11 +13,10 @@ import net.rec0de.android.watchwitch.hex
 import net.rec0de.android.watchwitch.hexBytes
 import net.rec0de.android.watchwitch.servicehandlers.UTunService
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
-import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncSecureContract
 import net.rec0de.android.watchwitch.toAppleTimestamp
 import net.rec0de.android.watchwitch.utun.DataMessage
-import net.rec0de.android.watchwitch.utun.UTunController
-import net.rec0de.android.watchwitch.utun.UTunHandler
+import net.rec0de.android.watchwitch.utun.AlloyController
+import net.rec0de.android.watchwitch.utun.AlloyHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
 import java.util.Date
 import java.util.UUID
@@ -40,7 +38,7 @@ object HealthSync : UTunService {
 
     override fun acceptsMessageType(msg: UTunMessage) = msg is DataMessage
 
-    override fun receiveMessage(msg: UTunMessage, handler: UTunHandler) {
+    override fun receiveMessage(msg: UTunMessage, handler: AlloyHandler) {
         msg as DataMessage
 
         if(!BPListParser.bufferIsBPList(msg.payload))
@@ -175,9 +173,9 @@ object HealthSync : UTunService {
         }
     }
 
-    private fun sendEncrypted(bytes: ByteArray, streamId: Int, inResponseTo: String?, handler: UTunHandler) {
+    private fun sendEncrypted(bytes: ByteArray, streamId: Int, inResponseTo: String?, handler: AlloyHandler) {
         val encrypted = decryptor!!.encrypt(bytes).renderAsTopLevelObject()
-        val sequence = UTunController.nextSenderSequence.addAndGet(1)
+        val sequence = AlloyController.nextSenderSequence.addAndGet(1)
         val dataMsg = DataMessage(sequence, streamId, 0, inResponseTo, UUID.randomUUID(), null, null, encrypted)
         handler.send(dataMsg)
     }

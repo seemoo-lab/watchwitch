@@ -28,10 +28,16 @@ class KeyReceiver : Thread() {
 
                 val trimmed = packet.data.sliceArray(0 until packet.length)
 
-                val key = "witchinthewatch-'#s[MZu!Xv*UZjbt".encodeToByteArray()
+                val key = LongTermStorage.getKeyTransitSecret()
                 val nonce = trimmed.sliceArray(0 until 12)
                 val ciphertext = trimmed.fromIndex(12)
-                val json = Utils.chachaPolyDecrypt(key, nonce, byteArrayOf(), ciphertext).decodeToString()
+
+                val json = try {
+                    Utils.chachaPolyDecrypt(key, nonce, byteArrayOf(), ciphertext).decodeToString()
+                } catch (e: Exception) {
+                    Logger.log("failed to decrypt keys, do you have the right key?", 0)
+                    continue
+                }
 
                 val map = Json.decodeFromString<Map<String, String>>(json)
 

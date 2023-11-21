@@ -184,6 +184,8 @@ class Hello(
         get() = (capabilityFlags and 0x04L) != 0L
     val dynamicServices: Boolean
         get() = (capabilityFlags and 0x08L) != 0L
+    val encryptionKeyRenegotiationSupported: Boolean
+        get() = (capabilityFlags and 0x20L) != 0L
     val checksumEnabled: Boolean
         get() = (capabilityFlags and 0x80L) != 0L
     val supportIPSecLink: Boolean
