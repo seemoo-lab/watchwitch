@@ -6,6 +6,7 @@ import java.net.DatagramSocket
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import net.rec0de.android.watchwitch.decoders.aoverc.MPKeys
+import java.security.MessageDigest
 
 
 class KeyReceiver : Thread() {
@@ -28,12 +29,16 @@ class KeyReceiver : Thread() {
 
                 val trimmed = packet.data.sliceArray(0 until packet.length)
 
-                val key = LongTermStorage.getKeyTransitSecret()
+                val plainKey = LongTermStorage.getKeyTransitSecret()
+                val md = MessageDigest.getInstance("SHA-256");
+                md.update(plainKey)
+                val keyBytes = md.digest()
+
                 val nonce = trimmed.sliceArray(0 until 12)
                 val ciphertext = trimmed.fromIndex(12)
 
                 val json = try {
-                    Utils.chachaPolyDecrypt(key, nonce, byteArrayOf(), ciphertext).decodeToString()
+                    Utils.chachaPolyDecrypt(keyBytes, nonce, byteArrayOf(), ciphertext).decodeToString()
                 } catch (e: Exception) {
                     Logger.log("failed to decrypt keys, do you have the right key?", 0)
                     continue

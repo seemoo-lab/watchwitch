@@ -106,6 +106,13 @@ object LongTermStorage {
         setKey(KEY_TRANSIT_SECRET, secret.encodeToByteArray())
     }
 
+    fun resetKeyTransitSecret() {
+        with (context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).edit()) {
+            remove(KEY_TRANSIT_SECRET)
+            apply()
+        }
+    }
+
     private fun getKey(type: String): ByteArray? {
         return context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).getString(type, null)?.hexBytes()
     }

@@ -120,7 +120,7 @@ class MainActivity : AppCompatActivity() {
 
             builder.setView(container)
             builder.setPositiveButton("Save") { _, _ -> LongTermStorage.setKeyTransitSecret(input.text.toString()) }
-            builder.setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
+            builder.setNegativeButton("Reset") { dialog, _ -> LongTermStorage.resetKeyTransitSecret() }
             builder.show()
         }
 
