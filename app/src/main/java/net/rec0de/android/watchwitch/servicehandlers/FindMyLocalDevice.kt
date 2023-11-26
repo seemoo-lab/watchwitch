@@ -10,9 +10,8 @@ import net.rec0de.android.watchwitch.utun.AlloyHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
 import java.util.UUID
 
-object FindMyLocalDevice : UTunService {
+object FindMyLocalDevice : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.findmylocaldevice")
-
     private var utunSequence = 0
 
     override fun acceptsMessageType(msg: UTunMessage) = msg is ProtobufMessage
@@ -27,7 +26,8 @@ object FindMyLocalDevice : UTunService {
         println("[findmyld] ping: $timestamp")
 
         val replyBytes = ProtoBuf(mapOf(1 to listOf(ProtoVarInt(0) as ProtoValue))).renderStandalone()
-        handler.send(ProtobufMessage(utunSequence, msg.streamID, 0, null, UUID.randomUUID(), null, null, 1, 1, replyBytes))
+        val replyMsg = ProtobufMessage(utunSequence, msg.streamID, 0, null, UUID.randomUUID(), null, null, 1, 1, replyBytes)
+        handler.send(replyMsg)
         utunSequence += 1
     }
 }

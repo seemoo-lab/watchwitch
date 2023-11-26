@@ -11,7 +11,7 @@ import net.rec0de.android.watchwitch.fromBytesLittle
 import net.rec0de.android.watchwitch.fromIndex
 import net.rec0de.android.watchwitch.hex
 import net.rec0de.android.watchwitch.hexBytes
-import net.rec0de.android.watchwitch.servicehandlers.UTunService
+import net.rec0de.android.watchwitch.servicehandlers.AlloyService
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import net.rec0de.android.watchwitch.toAppleTimestamp
 import net.rec0de.android.watchwitch.utun.DataMessage
@@ -21,7 +21,7 @@ import net.rec0de.android.watchwitch.utun.UTunMessage
 import java.util.Date
 import java.util.UUID
 
-object HealthSync : UTunService {
+object HealthSync : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.health.sync.classc")
 
     private val keys = LongTermStorage.getMPKeysForClass("A")

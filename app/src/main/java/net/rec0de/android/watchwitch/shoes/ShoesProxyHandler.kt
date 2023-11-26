@@ -46,6 +46,21 @@ object ShoesProxyHandler {
                     }
 
                     NetworkStats.connect(host, request.bundleId)
+
+                    var networkFlags = if(connectionExpensive) 0x80 else 0x00
+                    networkFlags = networkFlags or if(connectionCellular) 0x40 else 0x00
+                    networkFlags = networkFlags or if(connectionWiFi) 0x20 else 0x00
+
+                    // I'm not 100% sure this is how it works but I think the request flags specify under which conditions the phone should reject the connection
+                    if(request.flags and networkFlags != 0) {
+                        val reply = ShoesReply.reject()
+                        withContext(Dispatchers.IO) {
+                            toWatch.write(reply.render())
+                            toWatch.flush()
+                        }
+                        return
+                    }
+
                     val reply = ShoesReply.simple(connectionExpensive, connectionCellular, connectionWiFi)
 
                     withContext(Dispatchers.IO) {

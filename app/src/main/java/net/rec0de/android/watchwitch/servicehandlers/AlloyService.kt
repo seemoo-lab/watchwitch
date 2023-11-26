@@ -3,7 +3,7 @@ package net.rec0de.android.watchwitch.servicehandlers
 import net.rec0de.android.watchwitch.utun.AlloyHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
 
-interface UTunService {
+interface AlloyService {
     val handlesTopics: List<String>
 
     fun acceptsMessageType(msg: UTunMessage): Boolean

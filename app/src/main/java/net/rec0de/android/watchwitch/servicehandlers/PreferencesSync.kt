@@ -19,7 +19,7 @@ import net.rec0de.android.watchwitch.utun.AlloyHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
 import java.util.Date
 
-object PreferencesSync : UTunService {
+object PreferencesSync : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.preferencessync", "com.apple.private.alloy.preferencessync.pairedsync")
 
     override fun acceptsMessageType(msg: UTunMessage) = msg is ProtobufMessage

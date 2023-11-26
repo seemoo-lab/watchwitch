@@ -6,7 +6,7 @@ import net.rec0de.android.watchwitch.utun.DataMessage
 import net.rec0de.android.watchwitch.utun.AlloyHandler
 import net.rec0de.android.watchwitch.utun.UTunMessage
 
-object CoreDuet : UTunService {
+object CoreDuet : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.coreduet")
 
     override fun acceptsMessageType(msg: UTunMessage) = msg is DataMessage
