@@ -8,6 +8,7 @@ import net.rec0de.android.watchwitch.fromBytesBig
 import net.rec0de.android.watchwitch.fromIndex
 import net.rec0de.android.watchwitch.hex
 import net.rec0de.android.watchwitch.hexBytes
+import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair
 import org.bouncycastle.crypto.agreement.X25519Agreement
 import org.bouncycastle.crypto.generators.X25519KeyPairGenerator
@@ -92,6 +93,9 @@ class IKEv2Session(
                 // save for authentication purposes
                 cryptoValues["peerSAinit"] = data
                 cryptoValues["ownSAinit"] = reply
+
+                // reset NWSC session
+                NWSCManager.reset()
             }
             "AUTH" -> {
                 if(!sessionKeysReady)
@@ -110,6 +114,9 @@ class IKEv2Session(
                 socket.send(packet)
                 Logger.logIKE("snd: HEARTBEAT", 0)
                 Logger.logIKE(reply.hex(), 3)
+
+                // trigger NWSC init if not done already
+                NWSCManager.tryRequestIdscc()
             }
         }
     }
@@ -319,6 +326,9 @@ class IKEv2Session(
     }
 
     private fun replyToHeartbeat(): ByteArray {
+
+
+
         val msg = IKEMessage(exchangeType = 37, nextMsgId, initiatorSPI, responderSPI)
         msg.encrypt(cryptoValues["skr"]!!, cryptoValues["skrSalt"]!!)
         nextMsgId += 1

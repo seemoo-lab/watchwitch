@@ -17,7 +17,7 @@ import net.rec0de.android.watchwitch.toAppleTimestamp
 import net.rec0de.android.watchwitch.utun.DataMessage
 import net.rec0de.android.watchwitch.utun.AlloyController
 import net.rec0de.android.watchwitch.utun.AlloyHandler
-import net.rec0de.android.watchwitch.utun.UTunMessage
+import net.rec0de.android.watchwitch.utun.AlloyMessage
 import java.util.Date
 import java.util.UUID
 
@@ -36,9 +36,9 @@ object HealthSync : AlloyService {
     private lateinit var persistentUUID: UUID
     private lateinit var healthPairingUUID: UUID
 
-    override fun acceptsMessageType(msg: UTunMessage) = msg is DataMessage
+    override fun acceptsMessageType(msg: AlloyMessage) = msg is DataMessage
 
-    override fun receiveMessage(msg: UTunMessage, handler: AlloyHandler) {
+    override fun receiveMessage(msg: AlloyMessage, handler: AlloyHandler) {
         msg as DataMessage
 
         if(!BPListParser.bufferIsBPList(msg.payload))
@@ -119,6 +119,7 @@ object HealthSync : AlloyService {
             // if we fail parsing something, print the failing protobuf for debugging and then still fail
             Logger.log("Failed while parsing: $pb", 0)
             Logger.log("bytes: ${bytes.hex()}", 0)
+            Logger.log(e.toString(), 0)
             return null
         }
     }

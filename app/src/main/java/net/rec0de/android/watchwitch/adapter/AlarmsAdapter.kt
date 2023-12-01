@@ -32,8 +32,6 @@ class AlarmsAdapter(alarms: Map<String,WatchState.Alarm>) : RecyclerView.Adapter
 
     override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
         val item = items[position]
-
-        val id = item.first
         val hourString = item.second.hour.toString().padStart(2, '0')
         val minuteString = item.second.minute.toString().padStart(2, '0')
 

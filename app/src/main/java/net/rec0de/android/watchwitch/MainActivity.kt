@@ -3,7 +3,6 @@ package net.rec0de.android.watchwitch
 import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.ServiceConnection
 import android.net.ConnectivityManager
@@ -18,6 +17,7 @@ import android.widget.LinearLayout.VERTICAL
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.switchmaterial.SwitchMaterial
+import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import net.rec0de.android.watchwitch.shoes.ShoesService
 
 
@@ -80,6 +80,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 statusLabel.text = getString(R.string.status_stopping)
                 udpHandler?.kill()
+                NWSCManager.reset()
             }
         }
 
@@ -120,7 +121,7 @@ class MainActivity : AppCompatActivity() {
 
             builder.setView(container)
             builder.setPositiveButton("Save") { _, _ -> LongTermStorage.setKeyTransitSecret(input.text.toString()) }
-            builder.setNegativeButton("Reset") { dialog, _ -> LongTermStorage.resetKeyTransitSecret() }
+            builder.setNegativeButton("Reset") { _, _ -> LongTermStorage.resetKeyTransitSecret() }
             builder.show()
         }
 

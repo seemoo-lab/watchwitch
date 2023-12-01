@@ -7,7 +7,7 @@ import java.nio.ByteBuffer
 import java.util.Date
 import java.util.UUID
 
-abstract class UTunMessage(val sequence: Int) {
+abstract class AlloyMessage(val sequence: Int) {
     companion object {
         // message types from jump table in IDSSocketPairMessage::messageWithCommand:data:
         val typeMap = mapOf(
@@ -102,7 +102,7 @@ abstract class UTunMessage(val sequence: Int) {
             0x29 to 0xee
         )
 
-        fun parse(bytes: ByteArray): UTunMessage {
+        fun parse(bytes: ByteArray): AlloyMessage {
             return when(val type = bytes[0].toInt()) {
                 0x00 -> DataMessage.parse(bytes)
                 0x01 -> AckMessage.parse(bytes)
@@ -112,23 +112,12 @@ abstract class UTunMessage(val sequence: Int) {
                 0x05 -> EncryptedMessage.parse(bytes)
                 0x06 -> DictionaryMessage.parse(bytes)
                 0x07 -> AppAckMessage.parse(bytes)
-                0x08 -> SessionInvitationMessage.parse(bytes)
-                0x09 -> SessionAcceptMessage.parse(bytes)
-                0x0a -> SessionDeclineMessage.parse(bytes)
-                0x0b -> SessionCancelMessage.parse(bytes)
-                0x0c -> SessionMessage.parse(bytes)
-                0x0d -> SessionEndMessage.parse(bytes)
-                0x0e -> SMSTextMessage.parse(bytes)
-                0x0f -> SMSTextDownloadMessage.parse(bytes)
-                0x10 -> SMSOutgoing.parse(bytes)
-                0x11 -> SMSDownloadOutgoing.parse(bytes)
-                0x12 -> SMSDeliveryReceipt.parse(bytes)
-                0x13 -> SMSReadReceipt.parse(bytes)
-                0x14 -> SMSFailure.parse(bytes)
+                in 0x08..0x14 -> GenericDataMessage.parse(bytes, typeMap[type]!!, type)
                 0x15 -> FragmentedMessage.parse(bytes)
                 0x16 -> ResourceTransferMessage.parse(bytes)
                 0x17 -> OTREncryptedMessage.parse(bytes)
                 0x18 -> OTRMessage.parse(bytes)
+                in 0x19..0x24 -> GenericDataMessage.parse(bytes, typeMap[type]!!, type)
                 0x25 -> ExpiredAckMessage.parse(bytes)
                 0x27 -> ServiceMapMessage.parse(bytes)
                 in 0x17..0x29 -> throw Exception("Unsupported UTunMsg ${typeMap[type]!!} in ${bytes.hex()}")
@@ -149,10 +138,10 @@ abstract class UTunMessage(val sequence: Int) {
     }
 }
 
-open class UTunCommonMessage(sequence: Int, val streamID: Int, var flags: Int, val responseIdentifier: String?, val messageUUID: UUID, var topic: String?, val expiryDate: Long?) : UTunMessage(sequence) {
+open class AlloyCommonMessage(sequence: Int, val streamID: Int, var flags: Int, val responseIdentifier: String?, val messageUUID: UUID, var topic: String?, val expiryDate: Long?) : AlloyMessage(sequence) {
     companion object : UTunParseCompanion() {
         @Synchronized
-        fun parse(bytes: ByteArray, expectedType: Int): Pair<UTunCommonMessage, ByteArray> {
+        fun parse(bytes: ByteArray, expectedType: Int): Pair<AlloyCommonMessage, ByteArray> {
             parseOffset = 0
             val sequence = checkHeader(bytes, expectedType)
             val streamID = readInt(bytes, 2)
@@ -173,12 +162,12 @@ open class UTunCommonMessage(sequence: Int, val streamID: Int, var flags: Int, v
             val expiryDate = if(hasExpiryDate) readInt(bytes, 4).toLong() else null
             assertParseComplete(bytes)
 
-            return Pair(UTunCommonMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate), payload)
+            return Pair(AlloyCommonMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate), payload)
         }
     }
 
     override fun toBytes(): ByteArray {
-        throw Exception("Attempting to call toBytes on UTunCommonMessage")
+        throw Exception("Attempting to call toBytes on AlloyCommonMessage")
     }
 
     protected fun wrapPayloadWithCommonFields(payload: ByteArray, type: Int): ByteArray {
@@ -241,16 +230,13 @@ abstract class AbstractSessionMessage(sequence: Int, streamID: Int, flags: Int, 
 abstract class AbstractSMSMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray) : DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
     override val shouldAck = true // SMS messages are always acknowledged
 }
-abstract class AbstractIMessageMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray) : DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {
-    override val shouldAck = true // iMessage messages are always acknowledged
-}
 
 
 abstract class UTunParseCompanion : ParseCompanion() {
     protected fun checkHeader(bytes: ByteArray, expectedType: Int): Int {
         // common header: type, len, seq
         if(bytes[0].toInt() != expectedType)
-            throw Exception("Expected UTunMsg type 0x${expectedType.toString(16)} for ${UTunMessage.typeMap[expectedType]!!} but got 0x${bytes[0].toString(16)}")
+            throw Exception("Expected UTunMsg type 0x${expectedType.toString(16)} for ${AlloyMessage.typeMap[expectedType]!!} but got 0x${bytes[0].toString(16)}")
         parseOffset = 1
 
         val length = readInt(bytes, 4).toUInt()

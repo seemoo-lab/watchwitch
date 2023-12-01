@@ -16,15 +16,15 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.servicehandlers.health.PBParsable
 import net.rec0de.android.watchwitch.utun.ProtobufMessage
 import net.rec0de.android.watchwitch.utun.AlloyHandler
-import net.rec0de.android.watchwitch.utun.UTunMessage
+import net.rec0de.android.watchwitch.utun.AlloyMessage
 import java.util.Date
 
 object PreferencesSync : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.preferencessync", "com.apple.private.alloy.preferencessync.pairedsync")
 
-    override fun acceptsMessageType(msg: UTunMessage) = msg is ProtobufMessage
+    override fun acceptsMessageType(msg: AlloyMessage) = msg is ProtobufMessage
 
-    override fun receiveMessage(msg: UTunMessage, handler: AlloyHandler) {
+    override fun receiveMessage(msg: AlloyMessage, handler: AlloyHandler) {
         if(msg !is ProtobufMessage)
             throw Exception("PreferencesSync expects ProtobufMessage but got $msg")
 

@@ -39,7 +39,7 @@ object NWSCManager {
     val localPublicKey: Ed25519PublicKeyParameters
     private lateinit var remotePubKey: ByteArray
 
-    private val base: Long = microsecondsSinceEpoch()
+    private var base: Long = microsecondsSinceEpoch()
     private var counter: AtomicInteger = AtomicInteger(0)
 
     private val waitingForPubkeyQueue = mutableListOf<Triple<NWSCRequest, DataInputStream, DataOutputStream>>()
@@ -54,6 +54,23 @@ object NWSCManager {
 
         localPrivateKey = keyPair.private as Ed25519PrivateKeyParameters
         localPublicKey = keyPair.public as Ed25519PublicKeyParameters
+    }
+
+    fun reset() {
+        gotIdsChannel = false
+        requestedIdsChannel.set(false)
+        requestedPubkey.set(false)
+        gotPubkey = false
+
+        if(idsHandlerJob != null) {
+            idsHandlerJob!!.cancel("resetting connection")
+            idsHandlerJob = null
+        }
+
+        base = microsecondsSinceEpoch()
+        counter.set(0)
+
+        ccInitialized = false
     }
 
     @Synchronized
@@ -114,6 +131,11 @@ object NWSCManager {
         }
     }
 
+    fun tryRequestIdscc() {
+        if(!gotIdsChannel && !requestedIdsChannel.getAndSet(true))
+            GlobalScope.launch { requestIdsChannel() }
+    }
+
     @OptIn(DelicateCoroutinesApi::class)
     private suspend fun handleServiceRequest(request: NWSCServiceRequest, fromWatch: DataInputStream, toWatch: DataOutputStream) {
         Logger.logIDS("NWSC rcv $request", 1)
@@ -126,8 +148,7 @@ object NWSCManager {
             Logger.logIDS("no control channel, rejecting", 1)
             reject(toWatch)
             close(fromWatch, toWatch)
-            if(!requestedIdsChannel.getAndSet(true))
-                GlobalScope.launch { requestIdsChannel() }
+            tryRequestIdscc()
         }
         else {
             // ensure that initialization of the control channel is complete

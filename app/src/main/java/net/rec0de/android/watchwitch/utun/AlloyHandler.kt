@@ -38,11 +38,11 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
 
     open fun receive(message: ByteArray) {
         Logger.logUTUN("[$shortName] UTUN rcv raw for $channel: ${message.hex()}", 5)
-        val parsed = UTunMessage.parse(message)
+        val parsed = AlloyMessage.parse(message)
         Logger.logUTUN("[$shortName] seq ${parsed.sequence} UTUN rcv for $channel: $parsed", 3)
         
         when(parsed) {
-            is UTunCommonMessage -> handleCommonMessage(parsed)
+            is AlloyCommonMessage -> handleCommonMessage(parsed)
             is Handshake -> if(!handshakeSent) send(Handshake(4))
             is FragmentedMessage -> handleFragment(parsed)
             is AckMessage -> {}
@@ -50,7 +50,7 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
         }
     }
 
-    private fun handleCommonMessage(message: UTunCommonMessage) {
+    private fun handleCommonMessage(message: AlloyCommonMessage) {
         // message is expired
         if(message.normalizedExpiryDate != null && message.normalizedExpiryDate!!.toInstant() < Instant.now()) {
             send(ExpiredAckMessage(message.sequence))
@@ -140,7 +140,7 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
         Logger.logUTUN("[$shortName] Handler closed for $channel", 1)
     }
 
-    fun send(message: UTunMessage) {
+    fun send(message: AlloyMessage) {
         Logger.logUTUN("[$shortName] UTUN snd for $channel: $message", 1)
         send(message.toBytes())
     }

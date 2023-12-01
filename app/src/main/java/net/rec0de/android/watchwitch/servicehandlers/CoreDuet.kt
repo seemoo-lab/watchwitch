@@ -4,14 +4,14 @@ import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.decoders.bplist.NSDict
 import net.rec0de.android.watchwitch.utun.DataMessage
 import net.rec0de.android.watchwitch.utun.AlloyHandler
-import net.rec0de.android.watchwitch.utun.UTunMessage
+import net.rec0de.android.watchwitch.utun.AlloyMessage
 
 object CoreDuet : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.coreduet")
 
-    override fun acceptsMessageType(msg: UTunMessage) = msg is DataMessage
+    override fun acceptsMessageType(msg: AlloyMessage) = msg is DataMessage
 
-    override fun receiveMessage(msg: UTunMessage, handler: AlloyHandler) {
+    override fun receiveMessage(msg: AlloyMessage, handler: AlloyHandler) {
         if(msg !is DataMessage)
             throw Exception("CoreDuet expects DataMessage but got $msg")
 

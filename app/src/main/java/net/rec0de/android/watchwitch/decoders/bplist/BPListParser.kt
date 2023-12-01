@@ -153,7 +153,7 @@ class BPListParser {
                     readObjectFromOffsetTableEntry(bytes, objectIndex)
                 }
 
-                BPArray(entries, values)
+                BPArray(values)
             }
             // Set
             in 0xc0 until 0xd0 -> {

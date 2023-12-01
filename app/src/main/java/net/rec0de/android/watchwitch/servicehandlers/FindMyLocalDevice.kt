@@ -7,16 +7,16 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.utun.ProtobufMessage
 import net.rec0de.android.watchwitch.utun.AlloyHandler
-import net.rec0de.android.watchwitch.utun.UTunMessage
+import net.rec0de.android.watchwitch.utun.AlloyMessage
 import java.util.UUID
 
 object FindMyLocalDevice : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.findmylocaldevice")
     private var utunSequence = 0
 
-    override fun acceptsMessageType(msg: UTunMessage) = msg is ProtobufMessage
+    override fun acceptsMessageType(msg: AlloyMessage) = msg is ProtobufMessage
 
-    override fun receiveMessage(msg: UTunMessage, handler: AlloyHandler) {
+    override fun receiveMessage(msg: AlloyMessage, handler: AlloyHandler) {
         if(msg !is ProtobufMessage)
             throw Exception("FindMyLocalDevice expects ProtobufMessage but got $msg")
 

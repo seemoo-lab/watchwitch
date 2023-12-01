@@ -31,21 +31,31 @@ object KeyedArchiveDecoder {
     private fun optionallyResolveObjectReference(thing: CodableBPListObject, objects: BPArray): CodableBPListObject {
         return when(thing) {
             is BPUid -> optionallyResolveObjectReference(objects.values[UInt.fromBytesBig(thing.value).toInt()], objects)
-            is BPArray -> BPArray(thing.entries, thing.values.map { optionallyResolveObjectReference(it, objects) })
+            is BPArray -> BPArray(thing.values.map { optionallyResolveObjectReference(it, objects) })
             is BPSet -> BPSet(thing.entries, thing.values.map { optionallyResolveObjectReference(it, objects) })
-            is BPDict -> BPDict(thing.values.map {
-                Pair(optionallyResolveObjectReference(it.key, objects), optionallyResolveObjectReference(it.value, objects))
-            }.toMap())
+            is BPDict -> {
+                // nested archives are decoded in later transformSupportedClasses step
+                if(isKeyedArchive(thing))
+                    thing
+                else
+                    BPDict(thing.values.map {
+                        Pair(optionallyResolveObjectReference(it.key, objects), optionallyResolveObjectReference(it.value, objects))
+                    }.toMap())
+            }
             else -> thing
         }
     }
 
     private fun transformSupportedClasses(thing: CodableBPListObject): BPListObject {
+        // decode nested archives
+        if(isKeyedArchive(thing))
+            return decode(thing as BPDict)
+
         return when(thing) {
             is BPArray -> {
                 val transformedValues = thing.values.map { transformSupportedClasses(it) }
                 if(transformedValues.all { it is CodableBPListObject })
-                    BPArray(thing.entries, transformedValues.map { it as CodableBPListObject })
+                    BPArray(transformedValues.map { it as CodableBPListObject })
                 else
                     NSArray(transformedValues)
             }

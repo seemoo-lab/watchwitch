@@ -26,7 +26,7 @@ abstract class CodableBPListObject : BPListObject() {
         val objMap = objects.mapIndexed { index, obj -> Pair(obj, index) }.toMap()
 
         val renderedObjects = objects.map { it.renderWithObjectMapping(objMap, refSize) }
-        val objectTable = renderedObjects.foldRight(byteArrayOf()){ gathered, obj -> gathered + obj}
+        val objectTable = renderedObjects.fold(byteArrayOf()){ gathered, obj -> gathered + obj}
 
         val offsets = mutableListOf<Int>()
         var cumulativeOffset = header.size // offsets are from beginning of file, not end of header
@@ -39,7 +39,7 @@ abstract class CodableBPListObject : BPListObject() {
         val offsetSize = ceil(log2(offsets.last().toDouble()) / 8).toInt()
 
         // render offsets to bytes and cut to appropriate size
-        val offsetTable = offsets.map { it.toBytesBig().fromIndex(4-offsetSize) }.foldRight(byteArrayOf()) {
+        val offsetTable = offsets.map { it.toBytesBig().fromIndex(4-offsetSize) }.fold(byteArrayOf()) {
             gathered, offset -> gathered + offset
         }
 
@@ -53,7 +53,7 @@ abstract class CodableBPListObject : BPListObject() {
         trailer.putLong(objMap[this]!!.toLong()) // top object offset
         trailer.putLong((header.size + objectTable.size).toLong()) // offset table start
 
-        return header + objectTable + offsetTable
+        return header + objectTable + offsetTable + trailer.array()
     }
 }
 
@@ -139,7 +139,7 @@ data class BPAsciiString(override val value: String) : BPString() {
 
     override fun renderToBytes(): ByteArray {
         val charCount = value.length
-        val bytes = Charsets.UTF_16BE.encode(value).array()
+        val bytes = Charsets.US_ASCII.encode(value).array()
 
         val lengthBits = if(charCount > 14) 0x0F else charCount
         val markerByte = (0x50 or lengthBits).toByte()
@@ -169,6 +169,13 @@ data class BPUnicodeString(override val value: String) : BPString() {
     }
 }
 class BPUid(val value: ByteArray) : BPListImmediateObject() {
+    companion object {
+        fun fromInt(value: Int): BPUid {
+            val bytes = value.toBytesBig()
+            val firstNonZero = bytes.indexOfFirst { it.toInt() != 0 }
+            return BPUid(bytes.fromIndex(firstNonZero))
+        }
+    }
     override fun toString() = "BPUid(${value.hex()})"
 
     override fun renderToBytes(): ByteArray {
@@ -177,7 +184,7 @@ class BPUid(val value: ByteArray) : BPListImmediateObject() {
         return byteArrayOf(markerByte) + value
     }
 }
-data class BPArray(val entries: Int, val values: List<CodableBPListObject>) : CodableBPListObject() {
+data class BPArray(val values: List<CodableBPListObject>) : CodableBPListObject() {
     override fun collectObjects() = values.flatMap { it.collectObjects() }.toSet() + this
 
     override fun renderWithObjectMapping(mapping: Map<CodableBPListObject, Int>, refSize: Int): ByteArray {
@@ -196,7 +203,7 @@ data class BPArray(val entries: Int, val values: List<CodableBPListObject>) : Co
         val references = values.map { mapping[it]!!.toBytesBig().fromIndex(4-refSize) }
 
         // start with the marker and length, then append all the references
-        return references.foldRight(result){ gathered, reference -> gathered + reference}
+        return references.fold(result){ gathered, reference -> gathered + reference}
     }
 
     override fun toString() = "[${values.joinToString(", ")}]"
@@ -217,7 +224,7 @@ data class BPSet(val entries: Int, val values: List<CodableBPListObject>) : Coda
         val references = values.map { mapping[it]!!.toBytesBig().fromIndex(4-refSize) }
 
         // start with the marker and length, then append all the references
-        return references.foldRight(result){ gathered, reference -> gathered + reference}
+        return references.fold(result){ gathered, reference -> gathered + reference}
     }
 
     override fun toString() = "<${values.joinToString(", ")}>"
@@ -249,9 +256,9 @@ data class BPDict(val values: Map<CodableBPListObject, CodableBPListObject>) : C
         }
 
         val keyRefs = references.map { it.first }
-            .foldRight(byteArrayOf()) { gathered, reference -> gathered + reference }
+            .fold(byteArrayOf()) { gathered, reference -> gathered + reference }
         val objRefs = references.map { it.second }
-            .foldRight(byteArrayOf()) { gathered, reference -> gathered + reference }
+            .fold(byteArrayOf()) { gathered, reference -> gathered + reference }
 
         // encode marker, then all key refs, then all value refs
         return result + keyRefs + objRefs
@@ -260,18 +267,18 @@ data class BPDict(val values: Map<CodableBPListObject, CodableBPListObject>) : C
     override fun toString() = values.toString()
 }
 
-data class NSArray(val values: List<BPListObject>): BPListObject() {
+data class NSArray(val values: List<BPListObject>): BPListObject(), KeyedArchiveCodable {
     override fun toString() = values.toString()
 }
 
-data class NSDict(val values: Map<BPListObject, BPListObject>) : BPListObject() {
+data class NSDict(val values: Map<BPListObject, BPListObject>) : BPListObject(), KeyedArchiveCodable {
     override fun toString() = values.toString()
 }
 
-data class NSDate(val value: Date) : BPListObject() {
+data class NSDate(val value: Date) : BPListObject(), KeyedArchiveCodable {
     override fun toString() = value.toString()
 }
 
-data class NSUUID(val value: ByteArray) : BPListObject() {
+data class NSUUID(val value: ByteArray) : BPListObject(), KeyedArchiveCodable {
     override fun toString() = Utils.uuidFromBytes(value).toString()
 }
