@@ -46,7 +46,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="connectedDevice"
-            android:icon="@drawable/ic_launcher_monochrome"
+            android:icon="@drawable/witch_monochrome"
             android:label="@string/service_alloy_label" />
         <service
             android:name=".shoes.ShoesService"
@@ -54,7 +54,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="connectedDevice"
-            android:icon="@drawable/ic_launcher_monochrome"
+            android:icon="@drawable/witch_monochrome"
             android:label="@string/service_shoes_label"
             android:process=":wwshoes" />
     </application>
