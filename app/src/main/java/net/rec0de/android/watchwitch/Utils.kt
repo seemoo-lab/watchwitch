@@ -1,5 +1,6 @@
 package net.rec0de.android.watchwitch
 
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import org.bouncycastle.crypto.digests.SHA512Digest
 import org.bouncycastle.crypto.modes.ChaCha20Poly1305
 import org.bouncycastle.crypto.params.AEADParameters
@@ -114,6 +115,15 @@ open class ParseCompanion {
     }
 }
 
+abstract class PBParsable<TargetClass> {
+    abstract fun fromSafePB(pb: ProtoBuf): TargetClass
+    fun fromPB(pb: ProtoBuf?): TargetClass? {
+        if(pb == null)
+            return null
+        return fromSafePB(pb)
+    }
+}
+
 fun ByteArray.hex() = joinToString("") { "%02x".format(it) }
 fun ByteArray.fromIndex(i: Int) = sliceArray(i until size)
 fun String.hexBytes(): ByteArray {
@@ -146,6 +156,12 @@ fun Long.doubleFromLongBytes(): Double {
     return b.getDouble(0)
 }
 
+fun Double.longBytesFromDouble(): Long {
+    val b = ByteBuffer.allocate(8)
+    b.putDouble(this)
+    return b.getLong(0)
+}
+
 fun Int.floatFromIntBytes(): Float {
     val b = ByteBuffer.allocate(4)
     b.putInt(this)
@@ -156,4 +172,8 @@ fun Date.toAppleTimestamp(): Double {
     // NSDate timestamps encode time as seconds since Jan 01 2001 with millisecond precision as doubles
     val canonicalTimestamp = this.time
     return (canonicalTimestamp - 978307200000).toDouble() / 1000
+}
+
+fun Date.toCanonicalTimestamp(): Double {
+    return this.time.toDouble() / 1000
 }

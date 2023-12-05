@@ -1,4 +1,4 @@
-package net.rec0de.android.watchwitch.utun
+package net.rec0de.android.watchwitch.alloy
 
 import net.rec0de.android.watchwitch.decoders.compression.GzipDecoder
 import net.rec0de.android.watchwitch.fromIndex

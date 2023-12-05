@@ -14,10 +14,10 @@ import net.rec0de.android.watchwitch.hexBytes
 import net.rec0de.android.watchwitch.servicehandlers.AlloyService
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import net.rec0de.android.watchwitch.toAppleTimestamp
-import net.rec0de.android.watchwitch.utun.DataMessage
-import net.rec0de.android.watchwitch.utun.AlloyController
-import net.rec0de.android.watchwitch.utun.AlloyHandler
-import net.rec0de.android.watchwitch.utun.AlloyMessage
+import net.rec0de.android.watchwitch.alloy.DataMessage
+import net.rec0de.android.watchwitch.alloy.AlloyController
+import net.rec0de.android.watchwitch.alloy.AlloyHandler
+import net.rec0de.android.watchwitch.alloy.AlloyMessage
 import java.util.Date
 import java.util.UUID
 
@@ -176,7 +176,7 @@ object HealthSync : AlloyService {
 
     private fun sendEncrypted(bytes: ByteArray, streamId: Int, inResponseTo: String?, handler: AlloyHandler) {
         val encrypted = decryptor!!.encrypt(bytes).renderAsTopLevelObject()
-        val sequence = AlloyController.nextSenderSequence.addAndGet(1)
+        val sequence = AlloyController.nextSenderSequence.incrementAndGet()
         val dataMsg = DataMessage(sequence, streamId, 0, inResponseTo, UUID.randomUUID(), null, null, encrypted)
         handler.send(dataMsg)
     }

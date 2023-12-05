@@ -2,9 +2,9 @@ package net.rec0de.android.watchwitch.servicehandlers
 
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.decoders.bplist.NSDict
-import net.rec0de.android.watchwitch.utun.DataMessage
-import net.rec0de.android.watchwitch.utun.AlloyHandler
-import net.rec0de.android.watchwitch.utun.AlloyMessage
+import net.rec0de.android.watchwitch.alloy.DataMessage
+import net.rec0de.android.watchwitch.alloy.AlloyHandler
+import net.rec0de.android.watchwitch.alloy.AlloyMessage
 
 object CoreDuet : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.coreduet")

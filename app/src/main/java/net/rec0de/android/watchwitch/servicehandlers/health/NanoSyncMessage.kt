@@ -1,5 +1,6 @@
 package net.rec0de.android.watchwitch.servicehandlers.health
 
+import net.rec0de.android.watchwitch.PBParsable
 import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
@@ -42,7 +43,7 @@ class NanoSyncMessage(
 
     fun renderProtobuf(): ByteArray {
         val fields = mutableMapOf<Int,List<ProtoValue>>()
-        fields[2] = listOf(ProtoVarInt(version.toLong()))
+        fields[2] = listOf(ProtoVarInt(version))
         fields[3] = listOf(ProtoLen(Utils.uuidToBytes(persistentPairingUUID)))
         fields[4] = listOf(ProtoLen(Utils.uuidToBytes(healthPairingUUID)))
 
@@ -174,7 +175,7 @@ class NanoSyncStatus(
     fun renderProtobuf(): ByteArray {
         val fields = mutableMapOf<Int,List<ProtoValue>>()
         if(statusCode != null)
-            fields[1] = listOf(ProtoVarInt(statusCode.toLong()))
+            fields[1] = listOf(ProtoVarInt(statusCode))
         fields[2] = syncAnchors.map { ProtoLen(it.renderProtobuf()) }
         return ProtoBuf(fields).renderStandalone()
     }
@@ -203,7 +204,7 @@ class NanoSyncError(
         if(domain != null)
             fields[1] = listOf(ProtoString(domain))
         if(code != null)
-            fields[2] = listOf(ProtoVarInt(code.toLong()))
+            fields[2] = listOf(ProtoVarInt(code))
         if(localizedDescription != null)
             fields[3] = listOf(ProtoString(localizedDescription))
         return ProtoBuf(fields).renderStandalone()
@@ -231,7 +232,7 @@ class NanoSyncAnchor(
     fun renderProtobuf(): ByteArray {
         val fields = mutableMapOf<Int,List<ProtoValue>>()
         if(objectType != null)
-            fields[1] = listOf(ProtoVarInt(objectType.toLong()))
+            fields[1] = listOf(ProtoVarInt(objectType))
         if(anchor != null)
             fields[2] = listOf(ProtoVarInt(anchor))
         if(entityIdentifier != null)
@@ -295,7 +296,7 @@ class EntityIdentifier(
         val fields = mutableMapOf<Int,List<ProtoValue>>()
         if(schema != null)
             fields[1] = listOf(ProtoString(schema))
-        fields[2] = listOf(ProtoVarInt(identifier.toLong()))
+        fields[2] = listOf(ProtoVarInt(identifier))
         return ProtoBuf(fields).renderStandalone()
     }
 }
@@ -329,14 +330,5 @@ class Provenance(
 
     override fun toString(): String {
         return "Provenance($originProductType version $sourceVersion, build $originBuild, timezone $timeZoneName source $sourceUUID, device $deviceUUID)"
-    }
-}
-
-abstract class PBParsable<TargetClass> {
-    abstract fun fromSafePB(pb: ProtoBuf): TargetClass
-    fun fromPB(pb: ProtoBuf?): TargetClass? {
-        if(pb == null)
-            return null
-        return fromSafePB(pb)
     }
 }

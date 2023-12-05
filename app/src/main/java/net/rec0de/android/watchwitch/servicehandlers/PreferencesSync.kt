@@ -1,6 +1,7 @@
 package net.rec0de.android.watchwitch.servicehandlers
 
 import net.rec0de.android.watchwitch.Logger
+import net.rec0de.android.watchwitch.PBParsable
 import net.rec0de.android.watchwitch.WatchState
 import net.rec0de.android.watchwitch.decoders.bplist.BPArray
 import net.rec0de.android.watchwitch.decoders.bplist.BPAsciiString
@@ -13,10 +14,9 @@ import net.rec0de.android.watchwitch.decoders.bplist.BPTrue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBPList
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
-import net.rec0de.android.watchwitch.servicehandlers.health.PBParsable
-import net.rec0de.android.watchwitch.utun.ProtobufMessage
-import net.rec0de.android.watchwitch.utun.AlloyHandler
-import net.rec0de.android.watchwitch.utun.AlloyMessage
+import net.rec0de.android.watchwitch.alloy.ProtobufMessage
+import net.rec0de.android.watchwitch.alloy.AlloyHandler
+import net.rec0de.android.watchwitch.alloy.AlloyMessage
 import java.util.Date
 
 object PreferencesSync : AlloyService {

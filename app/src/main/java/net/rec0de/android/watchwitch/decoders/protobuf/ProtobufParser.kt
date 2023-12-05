@@ -1,13 +1,16 @@
 package net.rec0de.android.watchwitch.decoders.protobuf
 
+import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.doubleFromLongBytes
 import net.rec0de.android.watchwitch.floatFromIntBytes
 import net.rec0de.android.watchwitch.fromBytesLittle
 import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.longBytesFromDouble
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Date
+import java.util.UUID
 
 class ProtobufParser {
 
@@ -187,8 +190,8 @@ data class ProtoBuf(val objs: Map<Int, List<ProtoValue>>, val bytes: ByteArray =
         return (v as ProtoLen?)?.asString()
     }
 
-    fun readOptDate(field: Int) : Date? {
-        return (readOptionalSinglet(field) as ProtoI64?)?.asDate()
+    fun readOptDate(field: Int, appleEpoch: Boolean = true) : Date? {
+        return (readOptionalSinglet(field) as ProtoI64?)?.asDate(appleEpoch)
     }
 
     fun readOptDouble(field: Int) : Double? {
@@ -244,6 +247,8 @@ data class ProtoI32(val value: Int) : ProtoValue {
 }
 
 data class ProtoI64(val value: Long) : ProtoValue {
+    constructor(value: Double) : this(value.longBytesFromDouble())
+
     override val wireType = 1
     override fun toString() = "I64($value)"
 
@@ -258,15 +263,19 @@ data class ProtoI64(val value: Long) : ProtoValue {
      * Assume this I64 value represents a double containing an NSDate timestamp (seconds since Jan 01 2001)
      * and turn it into a Date object
      */
-    fun asDate(): Date {
+    fun asDate(appleEpoch: Boolean = true): Date {
         val timestamp = asDouble()
-        return Date((timestamp*1000).toLong() + 978307200000)
+        val offset = if(appleEpoch) 978307200000L else 0L
+        return Date((timestamp*1000).toLong() + offset)
     }
 
     fun asDouble(): Double = value.doubleFromLongBytes()
 }
 
 data class ProtoVarInt(val value: Long) : ProtoValue {
+    constructor(value: Boolean) : this(if(value) 1 else 0)
+    constructor(value: Int) : this(value.toLong())
+
     override val wireType = 0
     override fun toString() = "VarInt($value)"
 

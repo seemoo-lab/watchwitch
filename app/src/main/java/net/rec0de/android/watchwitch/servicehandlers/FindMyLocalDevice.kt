@@ -5,9 +5,9 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
-import net.rec0de.android.watchwitch.utun.ProtobufMessage
-import net.rec0de.android.watchwitch.utun.AlloyHandler
-import net.rec0de.android.watchwitch.utun.AlloyMessage
+import net.rec0de.android.watchwitch.alloy.ProtobufMessage
+import net.rec0de.android.watchwitch.alloy.AlloyHandler
+import net.rec0de.android.watchwitch.alloy.AlloyMessage
 import java.util.UUID
 
 object FindMyLocalDevice : AlloyService {

@@ -1,4 +1,4 @@
-package net.rec0de.android.watchwitch.utun
+package net.rec0de.android.watchwitch.alloy
 
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -21,10 +21,13 @@ object AlloyController {
     private val instanceID = UUID.randomUUID()
 
     private val remoteAnnouncedChannels = mutableSetOf<String>()
-    private val establishedChannels = mutableSetOf<String>()
     private val requestingChannels = mutableSetOf<String>()
+    private val establishedChannels = mutableSetOf<String>()
+    private val handlers = mutableMapOf<String,AlloyHandler>()
 
     private val serviceNameToLocalUUID = mutableMapOf<String, UUID>()
+    private val streamIdAssociations = mutableMapOf<Int, String>()
+    private val reverseStreamIdAssociations = mutableMapOf<String, Int>()
 
     val nextSenderSequence: AtomicInteger = AtomicInteger(0)
 
@@ -133,20 +136,51 @@ object AlloyController {
         registerChannelClose(fullService)
     }
 
-    fun registerChannelClose(serviceName: String) {
-        remoteAnnouncedChannels.remove(serviceName)
-        serviceNameToLocalUUID.remove(serviceName)
-        establishedChannels.remove(serviceName)
+    fun registerChannelClose(channel: String) {
+        remoteAnnouncedChannels.remove(channel)
+        serviceNameToLocalUUID.remove(channel)
+        establishedChannels.remove(channel)
+        handlers.remove(channel)
     }
 
-    fun registerChannelCreation(service: String) {
-        establishedChannels.add(service)
+    fun registerChannelCreation(channel: String, handler: AlloyHandler) {
+        handlers[channel] = handler
+        establishedChannels.add(channel)
     }
 
     fun shouldAcceptConnection(service: String): Boolean {
         // technically there is some mechanism for which side should accept simultaneous connection requests
         // based on the connection UUIDs, but we'll just accept everything we can for now
         return remoteAnnouncedChannels.contains(service) && !establishedChannels.contains(service)
+    }
+
+    fun getHandlerForChannel(channel: String): AlloyHandler? {
+        println(handlers)
+        return handlers[channel]
+    }
+
+    fun getFreshStream(topic: String): Int {
+        val id = (streamIdAssociations.keys.maxOrNull() ?: 0) + 1
+        streamIdAssociations[id] = topic
+        reverseStreamIdAssociations[topic] = id
+        return id
+    }
+
+    fun associateStreamWithTopic(streamID: Int, topic: String, allowOverride: Boolean = false) {
+        if(streamIdAssociations.containsKey(streamID)) {
+            if(streamIdAssociations[streamID] != topic && !allowOverride)
+                throw Exception("Stream ID $streamID is associated with topic ${streamIdAssociations[streamID]} but trying to rebind with $topic")
+        }
+        streamIdAssociations[streamID] = topic
+        reverseStreamIdAssociations[topic] = streamID
+    }
+
+    fun resolveStream(streamID: Int): String? {
+        return streamIdAssociations[streamID]
+    }
+
+    fun resolveTopic(topic: String): Int? {
+        return reverseStreamIdAssociations[topic]
     }
 
     private fun send(message: ByteArray) {

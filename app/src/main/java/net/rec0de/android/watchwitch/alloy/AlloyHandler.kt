@@ -1,12 +1,14 @@
-package net.rec0de.android.watchwitch.utun
+package net.rec0de.android.watchwitch.alloy
 
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
+import net.rec0de.android.watchwitch.decoders.compression.GzipDecoder
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.fromIndex
 import net.rec0de.android.watchwitch.hex
 import java.io.DataOutputStream
 import java.time.Instant
+import java.util.UUID
 
 open class AlloyHandler(private val channel: String, var output: DataOutputStream?) {
 
@@ -16,10 +18,8 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
 
     private val shortName = channel.split("/").last().replace("UTunDelivery-", "")
 
-    private val streamIdAssociations = mutableMapOf<Int, String>()
-
     open fun init(weInitiated: Boolean) {
-        AlloyController.registerChannelCreation(channel)
+        AlloyController.registerChannelCreation(channel, this)
         Logger.logUTUN("[$shortName] Creating handler for $channel", 1)
 
         // the accepting side initiates the handshake
@@ -46,6 +46,7 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
             is Handshake -> if(!handshakeSent) send(Handshake(4))
             is FragmentedMessage -> handleFragment(parsed)
             is AckMessage -> {}
+            is ServiceMapMessage -> AlloyController.associateStreamWithTopic(parsed.streamID, parsed.serviceName, true)
             else -> Logger.logUTUN("[$shortName] Unhandled UTUN rcv for $channel: $parsed", 0)
         }
     }
@@ -64,9 +65,9 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
             send(AppAckMessage(message.sequence, message.streamID, message.messageUUID.toString(), message.topic))
 
         if(message.hasTopic)
-            associateStreamWithTopic(message.streamID, message.topic!!)
+            AlloyController.associateStreamWithTopic(message.streamID, message.topic!!)
         else {
-            message.topic = streamIdAssociations[message.streamID]
+            message.topic = AlloyController.resolveStream(message.streamID)
             Logger.logUTUN("[$shortName] topic from stream map: ${message.topic}", 1)
         }
 
@@ -119,14 +120,6 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
         }
     }
 
-    private fun associateStreamWithTopic(streamID: Int, topic: String) {
-        if(streamIdAssociations.containsKey(streamID)) {
-            if(streamIdAssociations[streamID] != topic)
-                throw Exception("[[$shortName]] Stream ID $streamID is associated with topic ${streamIdAssociations[streamID]} but trying to rebind with $topic")
-        }
-        streamIdAssociations[streamID] = topic
-    }
-
     private fun handleFragment(msg: FragmentedMessage) {
         when (msg.fragmentIndex) {
             0 -> fragmentBuffer = msg.payload // first fragment
@@ -138,6 +131,31 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
     open fun close() {
         AlloyController.registerChannelClose(channel)
         Logger.logUTUN("[$shortName] Handler closed for $channel", 1)
+    }
+
+    fun sendProtobuf(payload: ByteArray, topic: String, type: Int, isResponse: Boolean, compress: Boolean = false) {
+        val seq = AlloyController.nextSenderSequence.incrementAndGet()
+        var stream = AlloyController.resolveTopic(topic)
+        val uuid = UUID.randomUUID()
+        var flags = 0
+
+        // we don't have a stream of this type yet, so we need a fresh one (and include the topic)
+        val msgTopic = if(stream == null) {
+            stream = AlloyController.getFreshStream(topic)
+            flags = flags or 0x10 // set hasTopic flag
+            topic
+        }
+        else
+            null
+
+        val effectivePayload = if(compress) {
+            GzipDecoder.compress(payload)
+        } else {
+            payload
+        }
+
+        val msg = ProtobufMessage(seq, stream, flags, null, uuid, topic, null, type, if(isResponse) 1 else 0, effectivePayload)
+        send(msg)
     }
 
     fun send(message: AlloyMessage) {

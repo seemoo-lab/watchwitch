@@ -34,7 +34,15 @@ class KeyedArchiveEncoder {
     }
 
     private fun encodeArray(obj: NSArray): BPUid {
-        TODO()
+        val classUid = classesToUid("NSArray", listOf("NSObject"))
+        val objUids = obj.values.map { encodeToUid(it) }
+
+        val map = mapOf<CodableBPListObject,CodableBPListObject>(
+            BPAsciiString("\$class") to classUid,
+            BPAsciiString("NS.objects") to BPArray(objUids),
+        )
+        objects.add(BPDict(map))
+        return BPUid.fromInt(objects.size-1)
     }
 
     private fun encodeDate(obj: NSDate): BPUid {
@@ -78,6 +86,7 @@ class KeyedArchiveEncoder {
             }
             is NSDict -> encodeDict(obj)
             is NSDate -> encodeDate(obj)
+            is NSArray -> encodeArray(obj)
             else -> throw Exception("Unsupported object to encode: $obj")
         }
     }
