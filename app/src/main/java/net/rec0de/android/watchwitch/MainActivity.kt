@@ -17,7 +17,13 @@ import android.widget.LinearLayout.VERTICAL
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.switchmaterial.SwitchMaterial
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
+import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
 import net.rec0de.android.watchwitch.shoes.ShoesService
 
 
@@ -64,6 +70,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        LongTermStorage.context = applicationContext
 
         statusLabel = findViewById(R.id.tvState)
         packetLog = findViewById(R.id.tvPacketLog)
@@ -125,7 +132,21 @@ class MainActivity : AppCompatActivity() {
             builder.show()
         }
 
-        LongTermStorage.context = applicationContext
+        val logo: TextView = findViewById(R.id.witch)
+        logo.setOnClickListener {
+            val thread = Thread {
+                val channeledDeity = Poetry.witch()
+                val name = channeledDeity.key
+                val lines = channeledDeity.value
+
+                lines.forEach {
+                    BulletinDistributorService.sendBulletin(name, it)
+                    runBlocking { delay(20) }
+                }
+
+            }
+            thread.start()
+        }
 
         keyReceiver.start()
         AddressAllocator().start()

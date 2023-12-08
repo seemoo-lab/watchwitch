@@ -1,9 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent">
-    <org.osmdroid.views.MapView android:id="@+id/map"
+
+    <org.osmdroid.views.MapView
+        android:id="@+id/map"
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent" />
-</LinearLayout>
+        android:layout_height="fill_parent">
+    </org.osmdroid.views.MapView>
+
+    <TextView
+        android:id="@+id/osmAttribution"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="0dp"
+        android:layout_marginVertical="0dp"
+        android:padding="8dp"
+        android:text="@string/osm_attribution"
+        android:textAlignment="viewStart" />
+</FrameLayout>
+

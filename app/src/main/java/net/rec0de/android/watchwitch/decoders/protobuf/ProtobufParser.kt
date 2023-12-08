@@ -305,8 +305,7 @@ data class ProtoString(val stringValue: String) : ProtoLen(stringValue.toByteArr
     override fun asString() = stringValue
 }
 
-class ProtoBPList(val value: ByteArray) : ProtoValue {
-    override val wireType = 2 // LEN
+class ProtoBPList(value: ByteArray) : ProtoLen(value) {
     val parsed = BPListParser().parse(value)
     override fun toString() = "bplist($parsed)"
 

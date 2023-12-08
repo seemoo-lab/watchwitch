@@ -124,6 +124,17 @@ abstract class PBParsable<TargetClass> {
     }
 }
 
+object Poetry {
+    private val v = mapOf(
+        "Circe Aiaie" to listOf("When I was born, the name for what I was did not exist", "I turned into myself in the woods, where the god's blood soaked the earth", "I pluck flowers for the deathless, a white bloom with a root of black", "And I become pharmakis, become witch, become mortal and myself"),
+        "Baba Yaga" to listOf("Come sit with me, in this pit of mud", "Where we are neither one thing nor another", "We, the untethered, the free, the chicken-housed", "watching the world burn, grinding candy between iron teeth"),
+        "Medea" to listOf("I should have seen it, the way you flinched at me", "And yet, to throw me to the crows, after everything I've done?", "All I ask of you is this:", "Remember that my cuts are precise, that my hands don't shake, and my mind never wavers.", "Farewell, my love."),
+        "Morana" to listOf("Burn me with your fragrant herbs, drown me in the river", "But don't look back at what you've done, don't ever look back", "Forget that I am goddess and you are not", "Forget that what you drown is just a body, not the soul, not me"),
+        "Hecate Chthonia" to listOf("Behind this mask I hide my body, pallid and decaying", "I let you bask in my phosphorus glow", "I let you call me candle", "And I let you burn up in my flame")
+    )
+    fun witch() = v.entries.random()
+}
+
 fun ByteArray.hex() = joinToString("") { "%02x".format(it) }
 fun ByteArray.fromIndex(i: Int) = sliceArray(i until size)
 fun String.hexBytes(): ByteArray {

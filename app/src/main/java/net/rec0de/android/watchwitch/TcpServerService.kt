@@ -69,7 +69,7 @@ class TcpServerService : Service() {
         manager.createNotificationChannel(chan)
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
         val notification = notificationBuilder.setOngoing(false)
-            .setSmallIcon(R.drawable.ic_launcher_monochrome)
+            .setSmallIcon(R.drawable.witch_monochrome_lowdpi)
             .setContentTitle("WatchWitch is running in the background")
             .setPriority(NotificationManager.IMPORTANCE_MIN)
             .setCategory(Notification.CATEGORY_SERVICE)

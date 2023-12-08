@@ -25,7 +25,7 @@ object LongTermStorage {
     const val REMOTE_ADDRESS_CLASS_C = "remote.c.address"
     const val REMOTE_ADDRESS_CLASS_D = "remote.d.address"
 
-    const val KEY_TRANSIT_SECRET = "keyreceiver.sharedsecret"
+    private const val KEY_TRANSIT_SECRET = "keyreceiver.sharedsecret"
 
     private const val MP_KEY_PREFIX = "mp."
 

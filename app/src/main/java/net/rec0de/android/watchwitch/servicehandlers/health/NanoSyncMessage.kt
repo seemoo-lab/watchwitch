@@ -13,7 +13,7 @@ import java.util.Date
 import java.util.UUID
 
 class NanoSyncMessage(
-    val version: Int,
+    val version: Int?,
     val persistentPairingUUID: UUID,
     val healthPairingUUID: UUID,
     val status: NanoSyncStatus?,
@@ -27,7 +27,7 @@ class NanoSyncMessage(
     companion object : PBParsable<NanoSyncMessage>() {
         // based on _HDCodableNanoSyncMessageReadFrom in HealthDaemon binary
         override fun fromSafePB(pb: ProtoBuf): NanoSyncMessage {
-            val version = pb.readShortVarInt(2)
+            val version = pb.readOptShortVarInt(2)
             val persistentUUID = Utils.uuidFromBytes((pb.readAssertedSinglet(3) as ProtoLen).value)
             val healthUUID = Utils.uuidFromBytes((pb.readAssertedSinglet(4) as ProtoLen).value)
 
@@ -43,7 +43,8 @@ class NanoSyncMessage(
 
     fun renderProtobuf(): ByteArray {
         val fields = mutableMapOf<Int,List<ProtoValue>>()
-        fields[2] = listOf(ProtoVarInt(version))
+        if(version != null)
+            fields[2] = listOf(ProtoVarInt(version))
         fields[3] = listOf(ProtoLen(Utils.uuidToBytes(persistentPairingUUID)))
         fields[4] = listOf(ProtoLen(Utils.uuidToBytes(healthPairingUUID)))
 

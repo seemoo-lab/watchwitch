@@ -21,9 +21,11 @@ class KeyedArchiveEncoder {
 
         val uid = when(obj) {
             is NSArray -> encodeArray(obj)
+            is NSSet -> encodeSet(obj)
             is NSUUID -> encodeUUID(obj)
             is NSDate -> encodeDate(obj)
             is NSDict -> encodeDict(obj)
+            is NSData -> encodeData(obj)
             else -> throw Exception("unreachable")
         }
 
@@ -45,11 +47,33 @@ class KeyedArchiveEncoder {
         return BPUid.fromInt(objects.size-1)
     }
 
+    private fun encodeSet(obj: NSSet): BPUid {
+        val classUid = classesToUid("NSSet", listOf("NSObject"))
+        val objUids = obj.values.map { encodeToUid(it) }
+
+        val map = mapOf<CodableBPListObject,CodableBPListObject>(
+            BPAsciiString("\$class") to classUid,
+            BPAsciiString("NS.objects") to BPArray(objUids),
+        )
+        objects.add(BPDict(map))
+        return BPUid.fromInt(objects.size-1)
+    }
+
     private fun encodeDate(obj: NSDate): BPUid {
         val classUid = classesToUid("NSDate", listOf("NSObject"))
         val map = mapOf<CodableBPListObject,CodableBPListObject>(
             BPAsciiString("\$class") to classUid,
             BPAsciiString("NS.time") to BPReal(obj.value.toAppleTimestamp()),
+        )
+        objects.add(BPDict(map))
+        return BPUid.fromInt(objects.size-1)
+    }
+
+    private fun encodeData(obj: NSData): BPUid {
+        val classUid = classesToUid("NSData", listOf("NSObject"))
+        val map = mapOf<CodableBPListObject,CodableBPListObject>(
+            BPAsciiString("\$class") to classUid,
+            BPAsciiString("NS.data") to BPData(obj.value),
         )
         objects.add(BPDict(map))
         return BPUid.fromInt(objects.size-1)

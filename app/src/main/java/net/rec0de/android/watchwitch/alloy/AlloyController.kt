@@ -10,6 +10,7 @@ import net.rec0de.android.watchwitch.servicehandlers.FindMyLocalDevice
 import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
 import net.rec0de.android.watchwitch.servicehandlers.PreferencesSync
 import net.rec0de.android.watchwitch.servicehandlers.AlloyService
+import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
 import java.io.DataOutputStream
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -31,7 +32,7 @@ object AlloyController {
 
     val nextSenderSequence: AtomicInteger = AtomicInteger(0)
 
-    val services: Map<String, AlloyService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
+    val services: Map<String, AlloyService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice, BulletinDistributorService).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
 
     fun usingOutput(out: DataOutputStream): AlloyController {
         output = out
@@ -155,8 +156,13 @@ object AlloyController {
     }
 
     fun getHandlerForChannel(channel: String): AlloyHandler? {
+        return handlers["idstest/localdelivery/$channel"]
+    }
+
+    // get handlers for any one of the listed channels in descending order of preference
+    fun getHandlerForChannel(channels: List<String>): AlloyHandler? {
         println(handlers)
-        return handlers[channel]
+        return channels.map { handlers["idstest/localdelivery/$it"] }.firstOrNull { it != null }
     }
 
     fun getFreshStream(topic: String): Int {

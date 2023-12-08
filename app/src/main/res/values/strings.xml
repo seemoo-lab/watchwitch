@@ -38,4 +38,5 @@
     <string name="set_key">Set Key</string>
     <string name="watch_state_label">Watch</string>
     <string name="transit_key_explanation">This secret will be used to decrypt key material sent from the iPhone</string>
+    <string name="osm_attribution">© OpenStreetMap contributors</string>
 </resources>

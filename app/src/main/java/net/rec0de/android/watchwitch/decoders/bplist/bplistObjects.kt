@@ -282,3 +282,12 @@ data class NSDate(val value: Date) : BPListObject(), KeyedArchiveCodable {
 data class NSUUID(val value: ByteArray) : BPListObject(), KeyedArchiveCodable {
     override fun toString() = Utils.uuidFromBytes(value).toString()
 }
+
+
+data class NSSet(val values: Set<BPListObject>): BPListObject(), KeyedArchiveCodable {
+    override fun toString() = values.toString()
+}
+
+data class NSData(val value: ByteArray) : BPListObject(), KeyedArchiveCodable {
+    override fun toString() = "NSData(${value.hex()})"
+}
