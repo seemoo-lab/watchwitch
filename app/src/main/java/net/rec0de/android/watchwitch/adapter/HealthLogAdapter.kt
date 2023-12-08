@@ -15,8 +15,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.color.MaterialColors
 import com.patrykandpatrick.vico.core.chart.edges.FadingEdges
 import com.patrykandpatrick.vico.core.chart.line.LineChart
-import com.patrykandpatrick.vico.core.chart.values.AxisValuesOverrider
-import com.patrykandpatrick.vico.core.component.shape.shader.DynamicShader
 import com.patrykandpatrick.vico.core.component.shape.shader.DynamicShaders
 import com.patrykandpatrick.vico.core.entry.entryModelOf
 import com.patrykandpatrick.vico.core.entry.entryOf
@@ -38,7 +36,7 @@ class HealthLogAdapter(
 ) : RecyclerView.Adapter<HealthLogAdapter.ItemViewHolder>() {
 
     class ItemViewHolder(val view: View) : RecyclerView.ViewHolder(view) {
-        val title: TextView = view.findViewById(R.id.labelTitle)
+        val title: TextView = view.findViewById(R.id.labelFilename)
         val time: TextView = view.findViewById(R.id.labelTime)
         val stats: TextView = view.findViewById(R.id.labelStats)
         val metadata: TextView = view.findViewById(R.id.labelMetadata)

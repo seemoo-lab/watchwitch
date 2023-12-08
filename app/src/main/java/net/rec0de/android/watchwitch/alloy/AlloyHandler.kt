@@ -9,6 +9,9 @@ import net.rec0de.android.watchwitch.hex
 import java.io.DataOutputStream
 import java.time.Instant
 import java.util.UUID
+import kotlin.math.ceil
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 open class AlloyHandler(private val channel: String, var output: DataOutputStream?) {
 
@@ -158,15 +161,35 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
         send(msg)
     }
 
+    // note: messages fragment at 7983b
     fun send(message: AlloyMessage) {
         Logger.logUTUN("[$shortName] UTUN snd for $channel: $message", 1)
         send(message.toBytes())
     }
 
     protected open fun send(message: ByteArray) {
-        Logger.logUTUN("[$shortName] UTUN snd raw ${message.hex()}", 3)
-        val toWatch = output!!
-        toWatch.write(message)
-        toWatch.flush()
+        // messages typically fragment beyond 7983 bytes, we copy that behaviour
+        if(message.size > 7983) {
+            var buf = message
+            val fragmentCount = ceil(message.size.toDouble() / 7983).roundToInt()
+            var fragmentIndex = 0
+
+            while(buf.isNotEmpty()) {
+                val endIndex = min(7983, buf.size)
+                val chunk = buf.sliceArray(0 until endIndex)
+                buf = buf.fromIndex(endIndex)
+                val fragment = FragmentedMessage(0, fragmentIndex, fragmentCount, chunk)
+                Logger.logUTUN("[$shortName] UTUN snd fragment $fragment", 3)
+                output!!.write(fragment.toBytes())
+                fragmentIndex += 1
+            }
+            output!!.flush()
+        }
+        else {
+            Logger.logUTUN("[$shortName] UTUN snd raw ${message.hex()}", 3)
+            val toWatch = output!!
+            toWatch.write(message)
+            toWatch.flush()
+        }
     }
 }

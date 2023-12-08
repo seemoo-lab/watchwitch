@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -20,6 +21,7 @@ import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.EOFException
+import java.net.NoRouteToHostException
 import java.net.Socket
 import java.nio.ByteBuffer
 import java.security.SecureRandom
@@ -189,13 +191,22 @@ object NWSCManager {
         queueLock.unlock()
     }
 
-    private fun requestIdsChannel() {
+    private suspend fun requestIdsChannel() {
         Logger.logIDS("initiating control channel", 1)
         val port = 61315
-        val socket = Socket(
-            LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_C),
-            port
-        )
+
+        val socket = try {
+            Socket(
+                LongTermStorage.getAddress(LongTermStorage.REMOTE_ADDRESS_CLASS_C),
+                port
+            )
+        }
+        // tunnel not ready, retry in a bit
+        catch (e: NoRouteToHostException) {
+            delay(1000)
+            requestIdsChannel()
+            return
+        }
 
         val toWatch = DataOutputStream(socket.getOutputStream())
         val fromWatch = DataInputStream(socket.getInputStream())

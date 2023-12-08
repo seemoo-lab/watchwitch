@@ -189,7 +189,7 @@ class FragmentedMessage(sequence: Int, val fragmentIndex: Int, val fragmentCount
         return header.array() + payload
     }
 
-    override fun toString() = "FragmentedMessage(${fragmentIndex+1}/$fragmentCount)"
+    override fun toString() = "FragmentedMessage(${fragmentIndex+1}/$fragmentCount size ${payload.size}b)"
 }
 
 class ResourceTransferMessage(sequence: Int, streamID: Int, flags: Int, responseIdentifier: String?, messageUUID: UUID, topic: String?, expiryDate: Long?, payload: ByteArray): DataMessage(sequence, streamID, flags, responseIdentifier, messageUUID, topic, expiryDate, payload) {

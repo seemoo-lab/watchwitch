@@ -13,6 +13,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
+import net.rec0de.android.watchwitch.servicehandlers.Screenshotter
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncHelper
 import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncSecureHelper
@@ -38,6 +39,7 @@ class TcpServerService : Service() {
         idsB.start()
 
         idsA.join()
+
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -45,6 +47,7 @@ class TcpServerService : Service() {
     }
 
     override fun onCreate() {
+        Screenshotter.initContext(baseContext)
         startMeForeground()
         Thread(runnable).start()
         DatabaseWrangler.initDbHelper(HealthSyncSecureHelper(baseContext), HealthSyncHelper(baseContext))

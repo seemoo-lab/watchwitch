@@ -60,7 +60,7 @@
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/labelAlarmsEmpty"
+            android:id="@+id/labelFilesEmpty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingVertical="16dp"
@@ -70,7 +70,7 @@
             android:textStyle="italic" />
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/listAlarms"
+            android:id="@+id/listFiles"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"

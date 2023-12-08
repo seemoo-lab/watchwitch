@@ -6,17 +6,20 @@
     <string name="next">Next</string>
     <string name="previous">Previous</string>
 
-
     <string name="watchwitch">WatchWitch</string>
     <string name="witchEmoji">🧙‍♀️</string>
     <string name="listen_for_connections">listen for connections</string>
-    <string name="health_log">Health Log</string>
+    <string name="health_log">Health</string>
     <string name="log_network_stats">Network Stats</string>
     <string name="packet_log">Debug Log</string>
+    <string name="set_key">Set Key</string>
+    <string name="watch_state_label">Watch</string>
+    <string name="transit_key_explanation">This secret will be used to decrypt key material sent from the iPhone</string>
 
     <string name="healthlog_locationseries">GPS Track</string>
     <string name="healthlog_gps_points">%1$d points, tap to view</string>
     <string name="healthlog_min_max">min: %1$s max: %2$s</string>
+    <string name="osm_attribution">© OpenStreetMap contributors</string>
 
     <string name="status_not_running">not running</string>
     <string name="status_stopping">stopping…</string>
@@ -35,8 +38,16 @@
     <string name="service_alloy_desc">Alloy message handling for Apple Watch</string>
     <string name="service_shoes_label">WatchWitch SHOES Server</string>
     <string name="service_alloy_label">WatchWitch Alloy Server</string>
-    <string name="set_key">Set Key</string>
-    <string name="watch_state_label">Watch</string>
-    <string name="transit_key_explanation">This secret will be used to decrypt key material sent from the iPhone</string>
-    <string name="osm_attribution">© OpenStreetMap contributors</string>
+
+    <string name="chat_title">Chitchat</string>
+    <string name="chat_message_input_placeholder">Message</string>
+    <string name="chat_send_button">Send</string>
+    <string name="chat_send_failed">Failed to send, no channel</string>
+
+    <string name="files_title">Received Files</string>
+    <string name="files_no_files">No files yet 🦗</string>
+    <string name="files_delete">delete file</string>
+    <string name="files_save">save file</string>
+    <string name="files_image_preview_alttext">preview of image file</string>
+    <string name="files_store_failed">Failed to save file</string>
 </resources>

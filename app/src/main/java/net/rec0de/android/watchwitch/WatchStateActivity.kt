@@ -9,7 +9,6 @@ import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
 import net.rec0de.android.watchwitch.adapter.AlarmsAdapter
-import net.rec0de.android.watchwitch.adapter.HealthLogAdapter
 import net.rec0de.android.watchwitch.adapter.OpenAppsAdapter
 
 class WatchStateActivity : AppCompatActivity() {
@@ -17,8 +16,8 @@ class WatchStateActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_watch_state)
 
-        val alarmList = findViewById<RecyclerView>(R.id.listAlarms)
-        val alarmListEmpty = findViewById<TextView>(R.id.labelAlarmsEmpty)
+        val alarmList = findViewById<RecyclerView>(R.id.listFiles)
+        val alarmListEmpty = findViewById<TextView>(R.id.labelFilesEmpty)
         alarmList.setHasFixedSize(true)
         WatchState.alarms.observe(this) { alarms ->
             alarmList.swapAdapter(AlarmsAdapter(alarms), true)

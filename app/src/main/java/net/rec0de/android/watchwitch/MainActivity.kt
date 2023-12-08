@@ -109,6 +109,18 @@ class MainActivity : AppCompatActivity() {
             this@MainActivity.startActivity(healthLog)
         }
 
+        val fileViewButton: Button = findViewById(R.id.btnFiles)
+        fileViewButton.setOnClickListener {
+            val healthLog = Intent(this@MainActivity, FilesActivity::class.java)
+            this@MainActivity.startActivity(healthLog)
+        }
+
+        val chatButton: Button = findViewById(R.id.btnChitchat)
+        chatButton.setOnClickListener {
+            val healthLog = Intent(this@MainActivity, ChatActivity::class.java)
+            this@MainActivity.startActivity(healthLog)
+        }
+
         val transitKeyButton: Button = findViewById(R.id.btnSetTransitKey)
         transitKeyButton.setOnClickListener {
             val builder: AlertDialog.Builder = AlertDialog.Builder(this)

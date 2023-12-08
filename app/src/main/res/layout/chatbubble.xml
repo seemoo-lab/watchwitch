@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="right"
+    android:layout_marginVertical="4dp"
+    android:gravity="right">
+
+    <TextView
+        android:id="@+id/msgContent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/chatbubble_outgoing"
+        android:maxWidth="300dp"
+        android:padding="12dp"
+        android:textColor="?attr/colorOnPrimary"
+        tools:text="When I was born, the name for what I was did not exist. I turned into myself in the woods, where the god's blood soaked the earth." />
+
+</LinearLayout>

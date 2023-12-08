@@ -6,18 +6,13 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import net.rec0de.android.watchwitch.R
-import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
-import net.rec0de.android.watchwitch.shoes.NetworkStats
 import net.rec0de.android.watchwitch.shoes.StatsEntry
-import java.text.DateFormat
-import java.text.SimpleDateFormat
-import java.util.Locale
 import kotlin.math.roundToInt
 
 class NetworkStatsAdapter(private val stats: List<Pair<String, StatsEntry>>) : RecyclerView.Adapter<NetworkStatsAdapter.ItemViewHolder>() {
 
     class ItemViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val host: TextView = view.findViewById(R.id.labelTitle)
+        val host: TextView = view.findViewById(R.id.labelFilename)
         val bundle: TextView = view.findViewById(R.id.labelBundle)
         val packets: TextView = view.findViewById(R.id.labelPackets)
         val upload: TextView = view.findViewById(R.id.labelUpload)

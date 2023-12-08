@@ -17,6 +17,12 @@
         android:theme="@style/Theme.WatchWitch"
         tools:targetApi="31">
         <activity
+            android:name=".FilesActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ChatActivity"
+            android:exported="false" />
+        <activity
             android:name=".WatchStateActivity"
             android:exported="false" />
         <activity

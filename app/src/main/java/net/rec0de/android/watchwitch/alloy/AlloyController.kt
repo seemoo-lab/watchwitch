@@ -10,6 +10,7 @@ import net.rec0de.android.watchwitch.servicehandlers.FindMyLocalDevice
 import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
 import net.rec0de.android.watchwitch.servicehandlers.PreferencesSync
 import net.rec0de.android.watchwitch.servicehandlers.AlloyService
+import net.rec0de.android.watchwitch.servicehandlers.Screenshotter
 import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
 import java.io.DataOutputStream
 import java.util.UUID
@@ -32,7 +33,7 @@ object AlloyController {
 
     val nextSenderSequence: AtomicInteger = AtomicInteger(0)
 
-    val services: Map<String, AlloyService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice, BulletinDistributorService).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
+    val services: Map<String, AlloyService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice, BulletinDistributorService, Screenshotter).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
 
     fun usingOutput(out: DataOutputStream): AlloyController {
         output = out
