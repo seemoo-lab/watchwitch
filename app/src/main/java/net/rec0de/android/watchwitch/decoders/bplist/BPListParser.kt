@@ -7,7 +7,7 @@ import java.math.BigInteger
 import java.nio.ByteBuffer
 
 // based on https://medium.com/@karaiskc/understanding-apples-binary-property-list-format-281e6da00dbd
-class BPListParser {
+class BPListParser(val nestedDecode: Boolean = true) {
     private val objectMap = mutableMapOf<Int, CodableBPListObject>()
     private var objectRefSize = 0
     private var offsetTableOffsetSize = 0
@@ -114,7 +114,7 @@ class BPListParser {
                 val data = bytes.sliceArray(effectiveOffset until effectiveOffset+byteLen)
 
                 // decode nested bplists
-                return if(bufferIsBPList(data))
+                return if(nestedDecode && bufferIsBPList(data))
                     BPListParser().parseCodable(data)
                 else
                     BPData(data)

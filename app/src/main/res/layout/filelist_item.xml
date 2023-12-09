@@ -30,6 +30,15 @@
                 android:textSize="16sp"
                 tools:text="Sample Title" />
 
+            <TextView
+                android:id="@+id/labelFileSize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="TextView"
+                android:textColor="?attr/colorOnPrimary"
+                tools:text="42 kB" />
+
             <ImageView
                 android:id="@+id/imgPreview"
                 android:layout_width="wrap_content"

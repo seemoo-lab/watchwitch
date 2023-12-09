@@ -6,6 +6,7 @@ import net.rec0de.android.watchwitch.decoders.compression.GzipDecoder
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.fromIndex
 import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.servicehandlers.GenericResourceTransferReceiver
 import java.io.DataOutputStream
 import java.time.Instant
 import java.util.UUID
@@ -89,6 +90,7 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
         Logger.logUTUN("[$shortName] Unhandled UTUN rcv for $channel: $message", 1)
 
         when(message) {
+            is ResourceTransferMessage -> GenericResourceTransferReceiver.handleMessage(message)
             is DataMessage -> {
                 if(BPListParser.bufferIsBPList(message.payload))
                     Logger.logUTUN(parser.parse(message.payload).toString(), 2)

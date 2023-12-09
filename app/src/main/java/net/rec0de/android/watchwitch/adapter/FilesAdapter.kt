@@ -24,12 +24,15 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.math.round
+import kotlin.math.roundToInt
 
 
 class FilesAdapter(private val activity: FilesActivity, private val paths: MutableList<FilesActivity.FileItem>) : RecyclerView.Adapter<FilesAdapter.ItemViewHolder>() {
 
     class ItemViewHolder(val view: View) : RecyclerView.ViewHolder(view) {
         val filename: TextView = view.findViewById(R.id.labelFilename)
+        val filesize: TextView = view.findViewById(R.id.labelFileSize)
         val time: TextView = view.findViewById(R.id.labelTime)
         val preview: ImageView = view.findViewById(R.id.imgPreview)
         val btnDelete: ImageButton = view.findViewById(R.id.btnDeleteFile)
@@ -48,6 +51,7 @@ class FilesAdapter(private val activity: FilesActivity, private val paths: Mutab
     override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
         val item = paths[position]
         holder.filename.text = item.filename
+        holder.filesize.text = renderFileSize(item.size)
         holder.time.text = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(item.timestamp)
 
         holder.btnDelete.setOnClickListener {
@@ -67,5 +71,13 @@ class FilesAdapter(private val activity: FilesActivity, private val paths: Mutab
         }
         else
             holder.preview.visibility = GONE
+    }
+
+    private fun renderFileSize(bytes: Long): String {
+        return when {
+            bytes < 1000 -> "$bytes B"
+            bytes < 1000000 -> "${round(bytes.toDouble()/100)/10} kB"
+            else -> "${round(bytes.toDouble()/100000)/10} MB"
+        }
     }
 }

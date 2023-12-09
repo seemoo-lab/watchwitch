@@ -13,6 +13,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
+import net.rec0de.android.watchwitch.servicehandlers.GenericResourceTransferReceiver
 import net.rec0de.android.watchwitch.servicehandlers.Screenshotter
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncHelper
@@ -47,7 +48,11 @@ class TcpServerService : Service() {
     }
 
     override fun onCreate() {
+        // Android is annoying in that it requires context objects for file operations
+        // as these services are called by code in the TcpServerService, we'll initialize them with that context
         Screenshotter.initContext(baseContext)
+        GenericResourceTransferReceiver.initContext(baseContext)
+
         startMeForeground()
         Thread(runnable).start()
         DatabaseWrangler.initDbHelper(HealthSyncSecureHelper(baseContext), HealthSyncHelper(baseContext))

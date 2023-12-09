@@ -56,7 +56,7 @@ class FilesActivity : AppCompatActivity() {
         val storedFiles = filesDir.listFiles()!!.toList().filter { it.name != "osmdroid" && !it.name.startsWith("ww-internal") }
         val items = storedFiles.map {file ->
             val bitmap = if(file.extension in imgExtensions) BitmapFactory.decodeFile(file.absolutePath) else null
-            FileItem(file.name, Date(file.lastModified()), bitmap, file.absolutePath)
+            FileItem(file.name, Date(file.lastModified()), bitmap, file.absolutePath, file.length())
         }.sortedByDescending { it.timestamp }
 
         if(storedFiles.isEmpty()) {
@@ -74,5 +74,5 @@ class FilesActivity : AppCompatActivity() {
         msgList.setHasFixedSize(false)
     }
 
-    class FileItem(val filename: String, val timestamp: Date, val bitmap: Bitmap?, val fullPath: String)
+    class FileItem(val filename: String, val timestamp: Date, val bitmap: Bitmap?, val fullPath: String, val size: Long)
 }
