@@ -1,19 +1,13 @@
-package net.rec0de.android.watchwitch
+package net.rec0de.android.watchwitch.activities
 
 import android.os.Bundle
-import android.provider.ContactsContract.Data
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
+import net.rec0de.android.watchwitch.R
 import net.rec0de.android.watchwitch.adapter.HealthLogAdapter
 import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
-import net.rec0de.android.watchwitch.servicehandlers.health.QuantitySample
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.ZoneId
-import java.util.Date
 
 
 class HealthLogActivity : AppCompatActivity() {

@@ -35,7 +35,7 @@ object GenericResourceTransferReceiver {
 
     fun handleMessage(msg: ResourceTransferMessage) {
         val stream = msg.streamID
-        
+
         // first message of transfer contains metadata
         if(msg.payload[0].toInt() == 1) {
             val body = msg.payload.fromIndex(1)

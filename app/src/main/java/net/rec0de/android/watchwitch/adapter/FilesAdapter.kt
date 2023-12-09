@@ -1,9 +1,5 @@
 package net.rec0de.android.watchwitch.adapter
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.service.voice.VoiceInteractionSession.VisibleActivityCallback
 import android.view.LayoutInflater
 import android.view.View
 import android.view.View.GONE
@@ -12,20 +8,13 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.activity.result.contract.ActivityResultContract
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.recyclerview.widget.RecyclerView
-import net.rec0de.android.watchwitch.FilesActivity
+import net.rec0de.android.watchwitch.activities.FilesActivity
 import net.rec0de.android.watchwitch.R
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileNotFoundException
-import java.io.FileOutputStream
-import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.round
-import kotlin.math.roundToInt
 
 
 class FilesAdapter(private val activity: FilesActivity, private val paths: MutableList<FilesActivity.FileItem>) : RecyclerView.Adapter<FilesAdapter.ItemViewHolder>() {

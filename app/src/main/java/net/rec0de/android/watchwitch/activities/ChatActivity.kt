@@ -1,18 +1,13 @@
-package net.rec0de.android.watchwitch
+package net.rec0de.android.watchwitch.activities
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Looper
 import android.widget.EditText
 import android.widget.ImageButton
-import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
+import net.rec0de.android.watchwitch.R
 import net.rec0de.android.watchwitch.adapter.ChatbubbleAdapter
-import net.rec0de.android.watchwitch.adapter.HealthLogAdapter
-import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
 
 class ChatActivity : AppCompatActivity() {

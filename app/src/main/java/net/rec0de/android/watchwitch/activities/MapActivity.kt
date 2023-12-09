@@ -1,14 +1,14 @@
-package net.rec0de.android.watchwitch
+package net.rec0de.android.watchwitch.activities
 
 import android.graphics.Color
 import android.graphics.Paint
 import android.os.Bundle
 import android.preference.PreferenceManager
-import android.util.DisplayMetrics
 import android.util.TypedValue
 import android.view.ViewTreeObserver.OnGlobalLayoutListener
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import net.rec0de.android.watchwitch.R
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import org.osmdroid.config.Configuration
 import org.osmdroid.config.Configuration.getInstance

@@ -1,4 +1,4 @@
-package net.rec0de.android.watchwitch
+package net.rec0de.android.watchwitch.activities
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -8,6 +8,8 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
+import net.rec0de.android.watchwitch.R
+import net.rec0de.android.watchwitch.WatchState
 import net.rec0de.android.watchwitch.adapter.AlarmsAdapter
 import net.rec0de.android.watchwitch.adapter.OpenAppsAdapter
 

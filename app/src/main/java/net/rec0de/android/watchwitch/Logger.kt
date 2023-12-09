@@ -1,6 +1,7 @@
 package net.rec0de.android.watchwitch
 
 import android.annotation.SuppressLint
+import net.rec0de.android.watchwitch.activities.MainActivity
 
 object Logger {
 

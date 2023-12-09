@@ -1,4 +1,4 @@
-package net.rec0de.android.watchwitch
+package net.rec0de.android.watchwitch.activities
 
 import android.app.AlertDialog
 import android.content.ComponentName
@@ -17,11 +17,18 @@ import android.widget.LinearLayout.VERTICAL
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.switchmaterial.SwitchMaterial
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import net.rec0de.android.watchwitch.AddressAllocator
+import net.rec0de.android.watchwitch.KeyReceiver
+import net.rec0de.android.watchwitch.Logger
+import net.rec0de.android.watchwitch.LongTermStorage
+import net.rec0de.android.watchwitch.Poetry
+import net.rec0de.android.watchwitch.R
+import net.rec0de.android.watchwitch.RoutingManager
+import net.rec0de.android.watchwitch.TcpServerService
+import net.rec0de.android.watchwitch.UDPHandler
+import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
 import net.rec0de.android.watchwitch.shoes.ShoesService
@@ -162,7 +169,7 @@ class MainActivity : AppCompatActivity() {
 
         keyReceiver.start()
         AddressAllocator().start()
-        RoutingManager.startup(this.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager)
+        RoutingManager.startup(this.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager)
 
         startForegroundService(Intent(applicationContext, TcpServerService::class.java))
         startForegroundService(Intent(applicationContext, ShoesService::class.java))

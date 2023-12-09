@@ -1,4 +1,4 @@
-package net.rec0de.android.watchwitch
+package net.rec0de.android.watchwitch.activities
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -11,11 +11,10 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.recyclerview.widget.RecyclerView
+import net.rec0de.android.watchwitch.R
 import net.rec0de.android.watchwitch.adapter.FilesAdapter
 import java.io.FileInputStream
-import java.io.FileNotFoundException
 import java.io.FileOutputStream
-import java.io.IOException
 import java.util.Date
 
 class FilesActivity : AppCompatActivity() {

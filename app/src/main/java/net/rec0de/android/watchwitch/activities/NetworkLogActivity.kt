@@ -1,4 +1,4 @@
-package net.rec0de.android.watchwitch
+package net.rec0de.android.watchwitch.activities
 
 import android.content.ComponentName
 import android.content.Context
@@ -19,9 +19,9 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import net.rec0de.android.watchwitch.Logger
+import net.rec0de.android.watchwitch.R
 import net.rec0de.android.watchwitch.adapter.NetworkStatsAdapter
-import net.rec0de.android.watchwitch.adapter.OpenAppsAdapter
-import net.rec0de.android.watchwitch.shoes.NetworkStats
 import net.rec0de.android.watchwitch.shoes.SHOES_MSG_STATS
 import net.rec0de.android.watchwitch.shoes.ShoesService
 import net.rec0de.android.watchwitch.shoes.StatsEntry

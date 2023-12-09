@@ -20,7 +20,7 @@ import com.patrykandpatrick.vico.core.entry.entryModelOf
 import com.patrykandpatrick.vico.core.entry.entryOf
 import com.patrykandpatrick.vico.views.chart.ChartView
 import com.patrykandpatrick.vico.views.component.shape.shader.verticalGradient
-import net.rec0de.android.watchwitch.MapActivity
+import net.rec0de.android.watchwitch.activities.MapActivity
 import net.rec0de.android.watchwitch.R
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import java.text.DateFormat
