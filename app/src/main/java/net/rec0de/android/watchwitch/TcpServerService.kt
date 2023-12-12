@@ -18,6 +18,7 @@ import net.rec0de.android.watchwitch.servicehandlers.Screenshotter
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncHelper
 import net.rec0de.android.watchwitch.servicehandlers.health.db.HealthSyncSecureHelper
+import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
 import net.rec0de.android.watchwitch.shoes.ShoesProxyHandler
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -51,7 +52,9 @@ class TcpServerService : Service() {
         // Android is annoying in that it requires context objects for file operations
         // as these services are called by code in the TcpServerService, we'll initialize them with that context
         Screenshotter.initContext(baseContext)
+        BulletinDistributorService.initContext(baseContext)
         GenericResourceTransferReceiver.initContext(baseContext)
+        IdsLogger.init(baseContext)
 
         startMeForeground()
         Thread(runnable).start()
@@ -61,6 +64,7 @@ class TcpServerService : Service() {
     override fun onDestroy() {
         idsA.kill()
         idsB.kill()
+        IdsLogger.flush()
     }
 
     private fun startMeForeground() {

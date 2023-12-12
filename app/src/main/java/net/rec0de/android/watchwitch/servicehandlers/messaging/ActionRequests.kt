@@ -13,7 +13,7 @@ abstract class AbstractActionRequest(
     val sectionID: String?,
     val actionInfo: ActionInfo?
 ) {
-    protected abstract val name: String
+    abstract val name: String
 
     override fun toString(): String {
         return "$name(pubID $publisherBulletinID, recID $recordID, secID $sectionID, actionInfo $actionInfo)"

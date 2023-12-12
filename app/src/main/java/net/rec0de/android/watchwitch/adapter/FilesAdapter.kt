@@ -45,8 +45,9 @@ class FilesAdapter(private val activity: FilesActivity, private val paths: Mutab
 
         holder.btnDelete.setOnClickListener {
             File(item.fullPath).delete()
-            paths.removeAt(position)
-            notifyItemRemoved(position)
+            val pos = paths.indexOf(item)
+            paths.removeAt(pos)
+            notifyItemRemoved(pos)
         }
 
         holder.btnSave.setOnClickListener {

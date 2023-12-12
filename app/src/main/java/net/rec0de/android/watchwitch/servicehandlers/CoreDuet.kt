@@ -5,6 +5,7 @@ import net.rec0de.android.watchwitch.decoders.bplist.NSDict
 import net.rec0de.android.watchwitch.alloy.DataMessage
 import net.rec0de.android.watchwitch.alloy.AlloyHandler
 import net.rec0de.android.watchwitch.alloy.AlloyMessage
+import net.rec0de.android.watchwitch.alloy.AlloyService
 
 object CoreDuet : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.coreduet")

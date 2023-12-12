@@ -10,6 +10,7 @@ import java.nio.ByteBuffer
 import java.util.Date
 import kotlin.math.ceil
 import kotlin.math.log2
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 abstract class BPListObject
@@ -22,7 +23,7 @@ abstract class CodableBPListObject : BPListObject() {
         val header = "bplist00".encodeToByteArray()
 
         val objects = collectObjects()
-        val refSize = ceil(log2(objects.size.toDouble()) / 8).toInt()
+        val refSize = max(ceil(log2(objects.size.toDouble()) / 8).toInt(), 1)
         val objMap = objects.mapIndexed { index, obj -> Pair(obj, index) }.toMap()
 
         val renderedObjects = objects.map { it.renderWithObjectMapping(objMap, refSize) }

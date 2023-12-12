@@ -1,7 +1,9 @@
 package net.rec0de.android.watchwitch.servicehandlers.messaging
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
 import net.rec0de.android.watchwitch.Logger
-import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
@@ -10,16 +12,17 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.fromBytesLittle
 import net.rec0de.android.watchwitch.fromIndex
 import net.rec0de.android.watchwitch.hex
-import net.rec0de.android.watchwitch.hexBytes
-import net.rec0de.android.watchwitch.servicehandlers.AlloyService
+import net.rec0de.android.watchwitch.alloy.AlloyService
 import net.rec0de.android.watchwitch.alloy.AlloyController
 import net.rec0de.android.watchwitch.alloy.AlloyHandler
 import net.rec0de.android.watchwitch.alloy.AlloyMessage
 import net.rec0de.android.watchwitch.alloy.ProtobufMessage
+import net.rec0de.android.watchwitch.servicehandlers.Screenshotter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
 
+@SuppressLint("StaticFieldLeak")
 object BulletinDistributorService : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.bulletindistributor", "com.apple.private.alloy.bulletindistributor.settings")
     override fun acceptsMessageType(msg: AlloyMessage) = msg is ProtobufMessage
@@ -31,26 +34,22 @@ object BulletinDistributorService : AlloyService {
     private var sessionInitialized = false
     private var sendingSequence = 1
 
-    /*
-    Alright, hi, hello - I'll just put this here:
-    The watch doesn't engage in a proper session handshake with us, but from what i can tell the handshake *should* look like this:
-    1. send any message with a Trailer(phoneUUID, sequence = 1, flag = true, state = 1)
-    2. receive AckInitialSequenceNumberRequest(phoneUUID, state=1) with Trailer(watchUUID, sequence = 1, flag = true, state = 1)
-    3. send AckInitialSequenceNumberRequest(watchUUID, state=1) with Trailer(phoneUUID, sequence = 2, flag = true, state = 1)
-    4. receive AckInitialSequenceNumberRequest(phoneUUID, state=1) with Trailer(watchUUID, sequence = 2, flag = true, state = 1)
-    5. send AckInitialSequenceNumberRequest(watchUUID, state=1) with Trailer(phoneUUID, sequence = 3, state = 2)
-    6. receive AckInitialSequenceNumberRequest(phoneUUID, state=2) with Trailer(watchUUID, sequence = 3, state = 2)
-    7. send AckInitialSequenceNumberRequest(watchUUID, state=2) with Trailer(phoneUUID, sequence = 4, state = 2)
-    8. receive AckInitialSequenceNumberRequest(phoneUUID, state=2) with Trailer(watchUUID, sequence = 4, state = 2)
-    9. send AckInitialSequenceNumberRequest(watchUUID, state=2) with Trailer(phoneUUID, sequence = 4)
-     */
+    private var remoteState = 0
+    private var remoteSequence = 0
+    private var remoteUUID: UUID? = null
+
+    private lateinit var context: Context
+
+    fun initContext(ctx: Context) {
+        context = ctx
+    }
 
     override fun receiveMessage(msg: AlloyMessage, handler: AlloyHandler) {
         msg as ProtobufMessage
 
         // trailer handling
         val trailerLen = UInt.fromBytesLittle(msg.payload.fromIndex(msg.payload.size-2)).toInt()
-        if(trailerLen < msg.payload.size - 2 && trailerLen < 100) {
+        if(trailerLen > msg.payload.size - 2 || trailerLen > 100) {
             Logger.logIDS("[bulletin] got message without expected trailer: ${msg.payload.hex()}", 0)
             return
         }
@@ -69,6 +68,8 @@ object BulletinDistributorService : AlloyService {
             return
         }
 
+        handleTrailer(trailer)
+
         val payload = msg.payload.sliceArray(0 until startIndex)
         val pb = try {
             ProtobufParser().parse(payload)
@@ -86,13 +87,13 @@ object BulletinDistributorService : AlloyService {
             2 -> Logger.logIDS("[bulletin] got ${RemoveBulletinRequest.fromSafePB(pb)}", 0) // for some reason remove bulletin requests use type 2 and 10?
             3 -> Logger.logIDS("[bulletin] got ${AddBulletinSummaryRequest.fromSafePB(pb)}", 0)
             4 -> Logger.logIDS("[bulletin] got ${CancelBulletinRequest.fromSafePB(pb)}", 0)
-            5 -> Logger.logIDS("[bulletin] got ${AcknowledgeActionRequest.fromSafePB(pb)}", 0)
-            6 -> Logger.logIDS("[bulletin] got ${SnoozeActionRequest.fromSafePB(pb)}", 0)
-            7 -> Logger.logIDS("[bulletin] got ${SupplementaryActionRequest.fromSafePB(pb)}", 0)
-            8 -> Logger.logIDS("[bulletin] got ${DismissActionRequest.fromSafePB(pb)}", 0)
-            9 -> Logger.logIDS("[bulletin] got ${DidPlayLightsAndSirens.fromSafePB(pb)}", 0)
+            5 -> handleActionRequest(AcknowledgeActionRequest.fromSafePB(pb))
+            6 -> handleActionRequest(SnoozeActionRequest.fromSafePB(pb))
+            7 -> handleActionRequest(SupplementaryActionRequest.fromSafePB(pb))
+            8 -> handleActionRequest(DismissActionRequest.fromSafePB(pb))
+            9 -> handleDidPlayLightsAndSirens(DidPlayLightsAndSirens.fromSafePB(pb))
             10 -> Logger.logIDS("[bulletin] got ${RemoveBulletinRequest.fromSafePB(pb)}", 0)
-            12 -> Logger.logIDS("[bulletin] got ${AckInitialSequenceNumberRequest.fromSafePB(pb)}", 0)
+            12 -> handleAckInitialSequence(AckInitialSequenceNumberRequest.fromSafePB(pb))
             13 -> if(msg.isResponse == 1)
                 Logger.logIDS("[bulletin] got SetSectionInfoResponse $pb", 0)
             else
@@ -115,12 +116,67 @@ object BulletinDistributorService : AlloyService {
         }
     }
 
+    private fun handleActionRequest(msg: AbstractActionRequest) {
+        Logger.logIDS("[bulletin] got $msg", 0)
+        Intent().also { intent ->
+            intent.action = "net.rec0de.android.watchwitch.chitchat"
+            intent.putExtra("data", "action:${msg.name}")
+            context.sendBroadcast(intent)
+        }
+    }
+
+    private fun handleDidPlayLightsAndSirens(msg: DidPlayLightsAndSirens) {
+        Logger.logIDS("[bulletin] got $msg", 0)
+        Intent().also { intent ->
+            intent.action = "net.rec0de.android.watchwitch.chitchat"
+            intent.putExtra("data", "lightsandsirens:${msg.didPlayLightsAndSirens}")
+            context.sendBroadcast(intent)
+        }
+    }
+
+
+    /*
+    Alright, hi, hello - I'll just put this here:
+    The watch doesn't engage in a proper session handshake with us, but from what i can tell the handshake *should* look like this:
+    1. send any message with a Trailer(phoneUUID, sequence = 1, flag = true, state = 1)
+    2. receive AckInitialSequenceNumberRequest(phoneUUID, state=1) with Trailer(watchUUID, sequence = 1, flag = true, state = 1)
+    3. send AckInitialSequenceNumberRequest(watchUUID, state=1) with Trailer(phoneUUID, sequence = 2, flag = true, state = 1)
+    4. receive AckInitialSequenceNumberRequest(phoneUUID, state=1) with Trailer(watchUUID, sequence = 2, flag = true, state = 1)
+    5. send AckInitialSequenceNumberRequest(watchUUID, state=1) with Trailer(phoneUUID, sequence = 3, state = 2)
+    6. receive AckInitialSequenceNumberRequest(phoneUUID, state=2) with Trailer(watchUUID, sequence = 3, state = 2)
+    7. send AckInitialSequenceNumberRequest(watchUUID, state=2) with Trailer(phoneUUID, sequence = 4, state = 2)
+    8. receive AckInitialSequenceNumberRequest(phoneUUID, state=2) with Trailer(watchUUID, sequence = 4, state = 2)
+    9. send AckInitialSequenceNumberRequest(watchUUID, state=2) with Trailer(phoneUUID, sequence = 4)
+     */
+    private fun handleAckInitialSequence(msg: AckInitialSequenceNumberRequest) {
+        Logger.logIDS("[bulletin] got $msg", 0)
+        if(msg.sessionState == 1) {
+            val trailer = genTrailer(setFieldTwo = false, state = 2)
+            val ack = AckInitialSequenceNumberRequest(null, Utils.uuidToBytes(localSessionId), 1)
+            sendMsg(ack.renderProtobuf() + trailer, 12, false)
+        }
+    }
+
+    private fun handleTrailer(trailer: Trailer) {
+        if(trailer.state != null)
+            remoteState = trailer.state
+        remoteUUID = trailer.uuid
+        remoteSequence = trailer.sequence
+    }
+
     fun sendBulletin(from: String, text: String): Boolean {
         val msg = BulletinRequest.mimicIMessage(from, text, "$from@example.com")
 
         val trailer = if(sessionInitialized) genTrailer() else genTrailer(setFieldTwo = true, state = 1)
         val payload = msg.renderProtobuf() + trailer
 
+        val success = sendMsg(payload, 1, false)
+        if(success)
+            sessionInitialized = true
+        return success
+    }
+
+    private fun sendMsg(msg: ByteArray, type: Int, isResponse: Boolean): Boolean {
         // prefer Urgent and Non-Cloud channels, but we don't really care that much
         val channelPrefs = listOf("UTunDelivery-Default-Urgent-C", "UTunDelivery-Default-Urgent-D", "UTunDelivery-Default-UrgentCloud-C", "UTunDelivery-Default-UrgentCloud-D", "UTunDelivery-Default-Default-C", "UTunDelivery-Default-Default-D")
         val handler = AlloyController.getHandlerForChannel(channelPrefs)
@@ -129,8 +185,8 @@ object BulletinDistributorService : AlloyService {
             false
         }
         else {
-            Logger.logIDS("[bulletin] sending payload: ${payload.hex()}", 0)
-            handler.sendProtobuf(payload, "com.apple.private.alloy.bulletindistributor", 1, false)
+            Logger.logIDS("[bulletin] sending payload: ${msg.hex()}", 0)
+            handler.sendProtobuf(msg, "com.apple.private.alloy.bulletindistributor", type, isResponse)
             sessionInitialized = true
             true
         }

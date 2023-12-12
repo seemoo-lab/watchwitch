@@ -3,6 +3,7 @@ package net.rec0de.android.watchwitch.servicehandlers
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.PBParsable
 import net.rec0de.android.watchwitch.WatchState
+import net.rec0de.android.watchwitch.alloy.AlloyController
 import net.rec0de.android.watchwitch.decoders.bplist.BPArray
 import net.rec0de.android.watchwitch.decoders.bplist.BPAsciiString
 import net.rec0de.android.watchwitch.decoders.bplist.BPDate
@@ -17,6 +18,15 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.alloy.ProtobufMessage
 import net.rec0de.android.watchwitch.alloy.AlloyHandler
 import net.rec0de.android.watchwitch.alloy.AlloyMessage
+import net.rec0de.android.watchwitch.alloy.AlloyService
+import net.rec0de.android.watchwitch.decoders.bplist.BPFalse
+import net.rec0de.android.watchwitch.decoders.bplist.CodableBPListObject
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
+import net.rec0de.android.watchwitch.toAppleTimestamp
 import java.util.Date
 
 object PreferencesSync : AlloyService {
@@ -37,6 +47,24 @@ object PreferencesSync : AlloyService {
             3 -> handleFileBackupMessage(parsed, handler)
             else -> Logger.logIDS("[nps] unknown pref sync message type ${msg.type}", 0)
         }
+    }
+
+    override fun onWatchConnect() {
+        super.onWatchConnect()
+        enableScreenshots()
+    }
+
+    private fun enableScreenshots() {
+        // try to force-enable screenshots when the watch connects
+        val enableScreenshotsMsg = UserDefaultsMessage(
+            Date(),
+            "com.apple.Carousel",
+            listOf(UserDefaultsMsgKey("CSLScreenshotEnabled", BPTrue, true, Date()))
+        )
+
+        Logger.logIDS("[nps] trying to enable screenshots: $enableScreenshotsMsg", 0)
+        val handler = AlloyController.getHandlerForChannel(listOf("UTunDelivery-Default-Sync-C", "UTunDelivery-Default-Sync-D", "UTunDelivery-Default-Default-C", "UTunDelivery-Default-Default-D", "UTunDelivery-Default-Urgent-C", "UTunDelivery-Default-Urgent-D", "UTunDelivery-Default-DefaultCloud-C", "UTunDelivery-Default-DefaultCloud-D", "UTunDelivery-Default-UrgentCloud-C", "UTunDelivery-Default-UrgentCloud-D"))
+        handler?.sendProtobuf(enableScreenshotsMsg.renderProtobuf(), "com.apple.private.alloy.preferencessync", 0, isResponse = false)
     }
 
     private fun handleUserDefaultMessage(pb: ProtoBuf, handler: AlloyHandler) {
@@ -139,6 +167,19 @@ object PreferencesSync : AlloyService {
             }
         }
 
+        fun renderProtobuf(): ByteArray {
+            val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+            if(container != null)
+                fields[1] = listOf(ProtoString(container))
+
+            fields[2] = listOf(ProtoString(key))
+
+            fields[3] = value.map { ProtoLen(it.renderProtobuf()) }
+
+            return ProtoBuf(fields).renderStandalone()
+        }
+
         override fun toString() = "UserDefaultsBackupMsg(container: $container, $key: $value)"
     }
 
@@ -156,6 +197,16 @@ object PreferencesSync : AlloyService {
 
                 return UserDefaultsMessage(timestamp, domain, keys)
             }
+        }
+
+        fun renderProtobuf(): ByteArray {
+            val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+            fields[1] = listOf(ProtoI64(timestamp.toAppleTimestamp()))
+            fields[2] = listOf(ProtoString(domain))
+            fields[3] = keys.map { ProtoLen(it.renderProtobuf()) }
+
+            return ProtoBuf(fields).renderStandalone()
         }
 
         override fun toString() = "UserDefaultsMsg($timestamp $domain: $keys)"
@@ -177,6 +228,21 @@ object PreferencesSync : AlloyService {
             }
         }
 
+        fun renderProtobuf(): ByteArray {
+            val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+            fields[1] = listOf(ProtoString(key))
+
+            if(value != null)
+                fields[2] = listOf(ProtoLen((value as CodableBPListObject).renderAsTopLevelObject()))
+            if(twoWaySync != null)
+                fields[3] = listOf(ProtoVarInt(twoWaySync))
+            if(timestamp != null)
+                fields[4] = listOf(ProtoI64(timestamp.toAppleTimestamp()))
+
+            return ProtoBuf(fields).renderStandalone()
+        }
+
         override fun toString() = "Key($timestamp, tws? $twoWaySync, $key: $value)"
     }
 
@@ -190,6 +256,17 @@ object PreferencesSync : AlloyService {
                 val value = (pb.readOptionalSinglet(2) as ProtoBPList?)?.parsed
                 return UserDefaultsBackupMsgKey(key, value)
             }
+        }
+
+        fun renderProtobuf(): ByteArray {
+            val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+            fields[1] = listOf(ProtoString(key))
+
+            if(value != null)
+                fields[2] = listOf(ProtoLen((value as CodableBPListObject).renderAsTopLevelObject()))
+
+            return ProtoBuf(fields).renderStandalone()
         }
 
         override fun toString() = "BKey($key: $value)"

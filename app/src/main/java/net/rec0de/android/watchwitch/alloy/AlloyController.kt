@@ -3,17 +3,19 @@ package net.rec0de.android.watchwitch.alloy
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import net.rec0de.android.watchwitch.IdsLogger
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import net.rec0de.android.watchwitch.servicehandlers.FindMyLocalDevice
 import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
 import net.rec0de.android.watchwitch.servicehandlers.PreferencesSync
-import net.rec0de.android.watchwitch.servicehandlers.AlloyService
 import net.rec0de.android.watchwitch.servicehandlers.Screenshotter
 import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
 import java.io.DataOutputStream
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 
@@ -34,6 +36,7 @@ object AlloyController {
     val nextSenderSequence: AtomicInteger = AtomicInteger(0)
 
     val services: Map<String, AlloyService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice, BulletinDistributorService, Screenshotter).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
+    private var watchConnected = AtomicBoolean(false)
 
     fun usingOutput(out: DataOutputStream): AlloyController {
         output = out
@@ -45,6 +48,7 @@ object AlloyController {
      * Then both parties attempt to open actual connections for (a subset of??) the requested channels
      */
     fun init() {
+        watchConnected.set(false)
         val hello = Hello("5", "iPhone OS", "14.8", "18H17", "iPhone10,4", 0)
         hello.compatMinProtocolVersion = 15
         hello.compatMaxProtocolVersion = 16
@@ -87,6 +91,7 @@ object AlloyController {
     }
 
     fun receive(message: ByteArray) {
+        IdsLogger.logControl(false, message)
         val msg = UTunControlMessage.parse(message)
 
         NWSCManager.markControlChannelInitialized()
@@ -148,6 +153,15 @@ object AlloyController {
     fun registerChannelCreation(channel: String, handler: AlloyHandler) {
         handlers[channel] = handler
         establishedChannels.add(channel)
+
+        // we'll somewhat arbitrarily say that we consider the watch to be connected when we have 3 channels open
+        if(establishedChannels.size >= 3 && !watchConnected.getAndSet(true)) {
+            // notify service handlers that watch connected
+            Thread {
+                runBlocking { delay(4000) }
+                services.values.toSet().forEach { it.onWatchConnect() }
+            }.start()
+        }
     }
 
     fun shouldAcceptConnection(service: String): Boolean {
@@ -162,8 +176,11 @@ object AlloyController {
 
     // get handlers for any one of the listed channels in descending order of preference
     fun getHandlerForChannel(channels: List<String>): AlloyHandler? {
-        println(handlers)
         return channels.map { handlers["idstest/localdelivery/$it"] }.firstOrNull { it != null }
+    }
+
+    fun getAnyHandler(): AlloyHandler? {
+        return handlers.values.firstOrNull()
     }
 
     fun getFreshStream(topic: String): Int {
@@ -191,7 +208,7 @@ object AlloyController {
     }
 
     private fun send(message: ByteArray) {
-        //Logger.logUTUN("snd raw ${message.hex()}", 3)
+        IdsLogger.logControl(true, message)
         val toWatch = output!!
         toWatch.writeShort(message.size)
         toWatch.write(message)

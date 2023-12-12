@@ -1,5 +1,6 @@
 package net.rec0de.android.watchwitch.alloy
 
+import net.rec0de.android.watchwitch.IdsLogger
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.decoders.compression.GzipDecoder
@@ -23,7 +24,6 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
     private val shortName = channel.split("/").last().replace("UTunDelivery-", "")
 
     open fun init(weInitiated: Boolean) {
-        AlloyController.registerChannelCreation(channel, this)
         Logger.logUTUN("[$shortName] Creating handler for $channel", 1)
 
         // the accepting side initiates the handshake
@@ -41,13 +41,18 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
     }
 
     open fun receive(message: ByteArray) {
+        IdsLogger.logAlloy(false, message)
         Logger.logUTUN("[$shortName] UTUN rcv raw for $channel: ${message.hex()}", 5)
         val parsed = AlloyMessage.parse(message)
         Logger.logUTUN("[$shortName] seq ${parsed.sequence} UTUN rcv for $channel: $parsed", 3)
         
         when(parsed) {
             is AlloyCommonMessage -> handleCommonMessage(parsed)
-            is Handshake -> if(!handshakeSent) send(Handshake(4))
+            is Handshake -> {
+                if (!handshakeSent) send(Handshake(4))
+                handshakeSent = true
+                AlloyController.registerChannelCreation(channel, this)
+            }
             is FragmentedMessage -> handleFragment(parsed)
             is AckMessage -> {}
             is ServiceMapMessage -> AlloyController.associateStreamWithTopic(parsed.streamID, parsed.serviceName, true)
@@ -159,7 +164,7 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
             payload
         }
 
-        val msg = ProtobufMessage(seq, stream, flags, null, uuid, topic, null, type, if(isResponse) 1 else 0, effectivePayload)
+        val msg = ProtobufMessage(seq, stream, flags, null, uuid, msgTopic, null, type, if(isResponse) 1 else 0, effectivePayload)
         send(msg)
     }
 
@@ -170,6 +175,7 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
     }
 
     protected open fun send(message: ByteArray) {
+        IdsLogger.logAlloy(true, message)
         // messages typically fragment beyond 7983 bytes, we copy that behaviour
         if(message.size > 7983) {
             var buf = message
