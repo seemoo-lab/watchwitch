@@ -78,6 +78,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         LongTermStorage.context = applicationContext
+        System.loadLibrary("sqlcipher")
 
         statusLabel = findViewById(R.id.tvState)
         packetLog = findViewById(R.id.tvPacketLog)

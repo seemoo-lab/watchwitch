@@ -26,6 +26,7 @@ object LongTermStorage {
     const val REMOTE_ADDRESS_CLASS_D = "remote.d.address"
 
     private const val KEY_TRANSIT_SECRET = "keyreceiver.sharedsecret"
+    private const val KEY_ENC_DB_SECRET = "database.encryptedsecret"
 
     private const val MP_KEY_PREFIX = "mp."
 
@@ -111,6 +112,14 @@ object LongTermStorage {
             remove(KEY_TRANSIT_SECRET)
             apply()
         }
+    }
+
+    fun getEncryptedDatabaseSecret(): ByteArray? {
+        return getKey(KEY_ENC_DB_SECRET)
+    }
+
+    fun setEncryptedDatabaseSecret(secret: ByteArray) {
+        setKey(KEY_ENC_DB_SECRET, secret)
     }
 
     private fun getKey(type: String): ByteArray? {

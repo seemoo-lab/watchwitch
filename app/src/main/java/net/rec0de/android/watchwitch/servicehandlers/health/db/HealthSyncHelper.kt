@@ -1,11 +1,10 @@
 package net.rec0de.android.watchwitch.servicehandlers.health.db
 
-import android.content.ContentValues
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
+import net.zetetic.database.sqlcipher.SQLiteDatabase
+import net.zetetic.database.sqlcipher.SQLiteOpenHelper
 
-class HealthSyncHelper (context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+class HealthSyncHelper (context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, DatabaseSecretProvider.getOrCreateDatabaseSecret(context).asString(),null, DATABASE_VERSION, 0, null, null, true) {
     override fun onCreate(db: SQLiteDatabase) {
         // create all the tables
         db.execSQL(HealthSyncContract.SQL_CREATE_SOURCES)
