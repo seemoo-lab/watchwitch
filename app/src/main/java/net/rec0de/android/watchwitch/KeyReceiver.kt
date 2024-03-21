@@ -47,12 +47,13 @@ class KeyReceiver : Thread() {
                 val map = Json.decodeFromString<Map<String, String>>(json)
 
                 // store local private keys
+                // (we cannot properly import them into the keystore since the keymaster does not support ed25519 signatures, but we'll at least seal them to be protected at rest)
                 if(map.containsKey("al"))
-                    LongTermStorage.setKey(LongTermStorage.PRIVATE_CLASS_A, Base64.decode(map["al"]!!, Base64.DEFAULT))
+                    LongTermStorage.setKey(LongTermStorage.PRIVATE_CLASS_A, KeyStoreHelper.seal(Base64.decode(map["al"]!!, Base64.DEFAULT)).toBytes())
                 if(map.containsKey("cl"))
-                    LongTermStorage.setKey(LongTermStorage.PRIVATE_CLASS_C, Base64.decode(map["cl"]!!, Base64.DEFAULT))
+                    LongTermStorage.setKey(LongTermStorage.PRIVATE_CLASS_C, KeyStoreHelper.seal(Base64.decode(map["cl"]!!, Base64.DEFAULT)).toBytes())
                 if(map.containsKey("dl"))
-                    LongTermStorage.setKey(LongTermStorage.PRIVATE_CLASS_D, Base64.decode(map["dl"]!!, Base64.DEFAULT))
+                    LongTermStorage.setKey(LongTermStorage.PRIVATE_CLASS_D, KeyStoreHelper.seal(Base64.decode(map["dl"]!!, Base64.DEFAULT)).toBytes())
 
                 // store remote public keys
                 if(map.containsKey("ar"))

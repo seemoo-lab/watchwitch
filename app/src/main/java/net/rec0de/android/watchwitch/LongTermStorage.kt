@@ -36,9 +36,9 @@ object LongTermStorage {
 
     fun getMPKeysForClass(protectionClass: String): MPKeys? {
         // private keys are stored separately in keystore
-        val ecdsaRemotePub = getKey("$MP_KEY_PREFIX$protectionClass.ecdsa.remote.public")
         //val rsaLocalPriv = getKey("$MP_KEY_PREFIX$protectionClass.rsa.local.private")
         //val ecdsaLocalPriv = getKey("$MP_KEY_PREFIX$protectionClass.ecdsa.local.private")
+        val ecdsaRemotePub = getKey("$MP_KEY_PREFIX$protectionClass.ecdsa.remote.public")
         val rsaRemotePub = getKey("$MP_KEY_PREFIX$protectionClass.rsa.remote.public")
         return if(ecdsaRemotePub != null && rsaRemotePub != null)
                 MPKeys(ecdsaRemotePub, null, null, rsaRemotePub)
@@ -85,7 +85,8 @@ object LongTermStorage {
             Logger.setError("uninitialized keys")
             throw Exception("Trying to get uninitialized key: $type")
         }
-        return Ed25519PrivateKeyParameters(bytes)
+        val unsealed = KeyStoreHelper.unseal(KeyStoreHelper.SealedData.fromBytes(bytes))
+        return Ed25519PrivateKeyParameters(unsealed)
     }
 
     fun getAddress(type: String): String? {

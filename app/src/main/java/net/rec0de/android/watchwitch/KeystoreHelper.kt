@@ -1,37 +1,19 @@
 package net.rec0de.android.watchwitch
 
 import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
-import android.security.keystore.KeyProtection
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
-import org.bouncycastle.cert.X509v3CertificateBuilder
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.jce.ECNamedCurveTable
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.ECNamedCurveSpec
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.security.KeyFactory
 import java.security.KeyStore
-import java.security.KeyStore.PrivateKeyEntry
 import java.security.PrivateKey
-import java.security.PublicKey
-import java.security.SecureRandom
 import java.security.Signature
-import java.security.cert.X509Certificate
 import java.security.interfaces.ECPrivateKey
-import java.security.spec.ECPoint
 import java.security.spec.ECPrivateKeySpec
-import java.security.spec.ECPublicKeySpec
-import java.security.spec.InvalidKeySpecException
 import java.security.spec.MGF1ParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.RSAPrivateKeySpec
-import java.security.spec.RSAPublicKeySpec
-import java.util.Date
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -45,7 +27,6 @@ import javax.crypto.spec.PSource
 object KeyStoreHelper {
     private const val ANDROID_KEY_STORE = "AndroidKeyStore"
     private const val INTERNAL_KEY_ALIAS = "WatchWitchSecret"
-    private const val AOVERC_ECDSA_ALIAS = "WW.aoverc.ecdsa.private"
 
     fun seal(input: ByteArray): SealedData {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -110,6 +91,8 @@ object KeyStoreHelper {
 
     // leaving this here because it WOULD work nicely if only Apple would use SHA256 instead of SHA1 for their signatures...
     /*
+    private const val AOVERC_ECDSA_ALIAS = "WW.aoverc.ecdsa.private"
+
     private val aovercEcdsaPrivateKey: PrivateKeyEntry
         get() = keyStore.getEntry(AOVERC_ECDSA_ALIAS, null) as PrivateKeyEntry
 
