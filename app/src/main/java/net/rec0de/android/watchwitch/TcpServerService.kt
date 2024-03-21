@@ -35,13 +35,10 @@ class TcpServerService : Service() {
     private val idsB = TcpServer(61315)
 
     private val runnable = Runnable {
-        //val terminus = TcpServer(62742)
-        //terminus.start()
         idsA.start()
         idsB.start()
 
         idsA.join()
-
     }
 
     override fun onBind(intent: Intent): IBinder? {

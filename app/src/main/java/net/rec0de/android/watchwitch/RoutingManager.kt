@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Message
 import android.os.Messenger
 import android.os.RemoteException
+import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import net.rec0de.android.watchwitch.shoes.SHOES_MSG_CONNECTIVITY
 import java.io.DataOutputStream
 import java.io.IOException
@@ -29,6 +30,8 @@ object RoutingManager {
     private var error = false
 
     fun startup(conMan: ConnectivityManager) {
+        WatchState.networkPlumbingDone.set(false)
+
         Logger.logCmd("Clearing ip xfrm states & policies", 0)
         exec(listOf("ip xfrm state flush", "ip xfrm policy flush"))
         connectivityManager = conMan
@@ -69,7 +72,7 @@ object RoutingManager {
         return ips.first() as Inet4Address
     }
 
-    fun allocateIPv6AddressIfNotPresent(addr: Inet6Address) {
+    private fun allocateIPv6AddressIfNotPresent(addr: Inet6Address) {
         if(error) {
             Logger.log("Skipping IPv6 allocation due to network error", 0)
             return
@@ -163,6 +166,12 @@ object RoutingManager {
         exec(listOf(receiveState, sendState, policyOut, policyIn, policyOutD, policyInD))
         addRoutes()
         activeSpiForRemote[remoteV6] = Pair(initSpi, respSpi)
+
+        // since we typically only open a classC tunnel in our scenario, we'll only consider network setup complete
+        // once we have that tunnel and can send classC data safely
+        WatchState.networkPlumbingDone.set(true)
+        // trigger NWSC init if not done already
+        NWSCManager.tryRequestIdscc()
     }
 
     fun createTunnelClassD(remoteV4: String, initSpi: ByteArray, respSpi: ByteArray, initKey: ByteArray, respKey: ByteArray) {
@@ -218,7 +227,7 @@ object RoutingManager {
             exec("ip -6 route del $remoteD/112")
     }
 
-    fun addRoutes() {
+    private fun addRoutes() {
         if(error) {
             Logger.log("Skipping routing setup due to network error", 0)
             return
@@ -284,9 +293,9 @@ object RoutingManager {
 
     private fun exec(cmd: String) = exec(listOf(cmd))
 
-    fun isConnectionExpensive(): Boolean = connectivityManager.isActiveNetworkMetered
-    fun isConnectionWifi(): Boolean = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ?: false
-    fun isConnectionCellular(): Boolean = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ?: false
+    private fun isConnectionExpensive(): Boolean = connectivityManager.isActiveNetworkMetered
+    private fun isConnectionWifi(): Boolean = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ?: false
+    private fun isConnectionCellular(): Boolean = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ?: false
 }
 
 class AddressAllocator : Thread() {

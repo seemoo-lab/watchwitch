@@ -29,7 +29,7 @@ class KeyReceiver : Thread() {
 
                 val trimmed = packet.data.sliceArray(0 until packet.length)
 
-                val plainKey = LongTermStorage.getKeyTransitSecret()
+                val plainKey = LongTermStorage.keyTransitSecret
                 val md = MessageDigest.getInstance("SHA-256");
                 md.update(plainKey)
                 val keyBytes = md.digest()
@@ -82,6 +82,8 @@ class KeyReceiver : Thread() {
 
                     val keys = MPKeys.fromSentKeys(publicDerBytes, privateEcdsaBytes, privateRsaBytes)
                     LongTermStorage.storeMPKeysForClass("A", keys)
+                    KeyStoreHelper.enrollAovercEcdsaPrivateKey(keys.friendlyEcdsaPrivateKey())
+                    KeyStoreHelper.enrollAovercRsaPrivateKey(keys.friendlyRsaPrivateKey())
                 }
 
                 RoutingManager.registerAddresses()

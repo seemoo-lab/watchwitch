@@ -8,7 +8,6 @@ import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.ECPointUtil
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.ECNamedCurveSpec
-import java.lang.Exception
 import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.PrivateKey
@@ -23,8 +22,8 @@ import java.security.spec.RSAPublicKeySpec
 
 data class MPKeys(
     val ecdsaRemotePublic: ByteArray,
-    val rsaLocalPrivate: ByteArray,
-    val ecdsaLocalPrivate: ByteArray,
+    val rsaLocalPrivate: ByteArray?,
+    val ecdsaLocalPrivate: ByteArray?,
     val rsaRemotePublic: ByteArray
     ) {
 
@@ -91,13 +90,16 @@ data class MPKeys(
     }
 
     fun friendlyRsaPrivateKey(): PrivateKey {
+        if(rsaLocalPrivate == null)
+            throw Exception("MPKeys object does not have RSA private key")
+
         // technically the key bytes we get are (should be?) PKCS#1 encoded, but apparently the PKCS#8 decoder reads them just fine
         return KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(rsaLocalPrivate))
     }
 
     fun friendlyEcdsaPublicKey(): ECPublicKey {
         val spec = ECNamedCurveTable.getParameterSpec("secp256r1")
-        val kf = KeyFactory.getInstance("ECDSA", BouncyCastleProvider())
+        val kf = KeyFactory.getInstance("EC", BouncyCastleProvider())
         val params = ECNamedCurveSpec("secp256r1", spec.curve, spec.g, spec.n)
 
         val point: ECPoint = ECPointUtil.decodePoint(params.curve, ecdsaRemotePublic)
@@ -106,13 +108,17 @@ data class MPKeys(
     }
 
     fun friendlyEcdsaPrivateKey(): ECPrivateKey {
+        if(ecdsaLocalPrivate == null)
+            throw Exception("MPKeys object does not have ECDSA private key")
+
         val spec = ECNamedCurveTable.getParameterSpec("secp256r1")
-        val kf = KeyFactory.getInstance("ECDSA", BouncyCastleProvider())
+        val kf = KeyFactory.getInstance("EC", BouncyCastleProvider())
         val params = ECNamedCurveSpec("secp256r1", spec.curve, spec.g, spec.n)
 
         // the private key we get is actually the public key (65B) followed by the private key (32B)
         val bigInt = BigInteger(1, ecdsaLocalPrivate.fromIndex(65))
         val privKeySpec = ECPrivateKeySpec(bigInt, params)
+
         return kf.generatePrivate(privKeySpec) as ECPrivateKey
     }
 }

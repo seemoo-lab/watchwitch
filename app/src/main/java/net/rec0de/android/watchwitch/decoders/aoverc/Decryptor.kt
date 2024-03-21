@@ -36,27 +36,33 @@ import javax.crypto.spec.PSource
 import javax.crypto.spec.SecretKeySpec
 
 
-class Decryptor(keys: MPKeys) {
+open class Decryptor(keys: MPKeys) {
 
     companion object {
         fun isEncryptedMessage(msg: BPListObject) = msg is BPDict && msg.values.containsKey(BPAsciiString("ekd")) && msg.values.containsKey(BPAsciiString("sed"))
     }
 
-    private val rsaRemotePublicKey: PublicKey
-    private val ecdsaRemotePublicKey: ECPublicKey
+    protected val rsaRemotePublicKey: PublicKey
+    protected val ecdsaRemotePublicKey: ECPublicKey
 
-    private val rsaLocalPrivateKey: PrivateKey
-    private val ecdsaLocalPrivateKey: ECPrivateKey
+    private val rsaLocalPrivateKey: PrivateKey?
+    private val ecdsaLocalPrivateKey: ECPrivateKey?
 
     private val random = SecureRandom()
 
     init {
         Security.addProvider(BouncyCastleProvider())
 
-        rsaLocalPrivateKey = keys.friendlyRsaPrivateKey()
+        rsaLocalPrivateKey = if(keys.rsaLocalPrivate != null)
+                keys.friendlyRsaPrivateKey()
+            else
+                null
         rsaRemotePublicKey = keys.friendlyRsaPublicKey()
 
-        ecdsaLocalPrivateKey = keys.friendlyEcdsaPrivateKey()
+        ecdsaLocalPrivateKey = if(keys.ecdsaLocalPrivate != null)
+                keys.friendlyEcdsaPrivateKey()
+            else
+                null
         ecdsaRemotePublicKey = keys.friendlyEcdsaPublicKey()
     }
 
@@ -143,14 +149,14 @@ class Decryptor(keys: MPKeys) {
         return ecdsaVerify.verify(signature)
     }
 
-    private fun signEkd(message: ByteArray): ByteArray {
+    protected open fun signEkd(message: ByteArray): ByteArray {
         val ecdsaSign: Signature = Signature.getInstance("SHA1withECDSA", BouncyCastleProvider())
         ecdsaSign.initSign(ecdsaLocalPrivateKey)
         ecdsaSign.update(message)
         return ecdsaSign.sign()
     }
 
-    private fun decryptEkd(ciphertext: ByteArray): ByteArray {
+    protected open fun decryptEkd(ciphertext: ByteArray): ByteArray {
         // EKD is RSA-OAEP encrypted 32-byte payload
         val decryptCipher = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-1ANDMGF1PADDING")
         val oaepParams = OAEPParameterSpec("SHA1", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT)

@@ -18,6 +18,7 @@ import net.rec0de.android.watchwitch.alloy.DataMessage
 import net.rec0de.android.watchwitch.alloy.AlloyController
 import net.rec0de.android.watchwitch.alloy.AlloyHandler
 import net.rec0de.android.watchwitch.alloy.AlloyMessage
+import net.rec0de.android.watchwitch.decoders.aoverc.KeystoreBackedDecryptor
 import java.util.Date
 import java.util.UUID
 
@@ -25,7 +26,7 @@ object HealthSync : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.health.sync.classc")
 
     private val keys = LongTermStorage.getMPKeysForClass("A")
-    private val decryptor = if(keys != null) Decryptor(keys) else null
+    private val decryptor = if(keys != null) KeystoreBackedDecryptor(keys) else null
 
     private val syncStatus = DatabaseWrangler.loadSyncAnchors().toMutableMap()
 

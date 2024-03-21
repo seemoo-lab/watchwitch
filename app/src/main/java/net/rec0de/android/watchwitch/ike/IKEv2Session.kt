@@ -114,9 +114,6 @@ class IKEv2Session(
                 socket.send(packet)
                 Logger.logIKE("snd: HEARTBEAT", 0)
                 Logger.logIKE(reply.hex(), 3)
-
-                // trigger NWSC init if not done already
-                NWSCManager.tryRequestIdscc()
             }
         }
     }

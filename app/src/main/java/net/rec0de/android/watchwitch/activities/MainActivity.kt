@@ -29,6 +29,7 @@ import net.rec0de.android.watchwitch.RoutingManager
 import net.rec0de.android.watchwitch.TcpServerService
 import net.rec0de.android.watchwitch.UDPHandler
 import net.rec0de.android.watchwitch.Utils
+import net.rec0de.android.watchwitch.WatchState
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
 import net.rec0de.android.watchwitch.shoes.ShoesService
@@ -96,6 +97,7 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.text = getString(R.string.status_stopping)
                 udpHandler?.kill()
                 NWSCManager.reset()
+                WatchState.resetConnectionState()
             }
         }
 
@@ -147,7 +149,7 @@ class MainActivity : AppCompatActivity() {
             container.addView(input)
 
             builder.setView(container)
-            builder.setPositiveButton("Save") { _, _ -> LongTermStorage.setKeyTransitSecret(input.text.toString()) }
+            builder.setPositiveButton("Save") { _, _ -> LongTermStorage.keyTransitSecret = input.text.toString().encodeToByteArray() }
             builder.setNegativeButton("Reset") { _, _ -> LongTermStorage.resetKeyTransitSecret() }
             builder.show()
         }

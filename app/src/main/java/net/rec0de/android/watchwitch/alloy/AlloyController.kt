@@ -7,6 +7,7 @@ import kotlinx.coroutines.runBlocking
 import net.rec0de.android.watchwitch.IdsLogger
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
+import net.rec0de.android.watchwitch.WatchState
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import net.rec0de.android.watchwitch.servicehandlers.FindMyLocalDevice
 import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
@@ -36,7 +37,6 @@ object AlloyController {
     val nextSenderSequence: AtomicInteger = AtomicInteger(0)
 
     val services: Map<String, AlloyService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice, BulletinDistributorService, Screenshotter).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
-    private var watchConnected = AtomicBoolean(false)
 
     fun usingOutput(out: DataOutputStream): AlloyController {
         output = out
@@ -48,7 +48,7 @@ object AlloyController {
      * Then both parties attempt to open actual connections for (a subset of??) the requested channels
      */
     fun init() {
-        watchConnected.set(false)
+        WatchState.alloyConnected.set(false)
         val hello = Hello("5", "iPhone OS", "14.8", "18H17", "iPhone10,4", 0)
         hello.compatMinProtocolVersion = 15
         hello.compatMaxProtocolVersion = 16
@@ -155,7 +155,7 @@ object AlloyController {
         establishedChannels.add(channel)
 
         // we'll somewhat arbitrarily say that we consider the watch to be connected when we have 3 channels open
-        if(establishedChannels.size >= 3 && !watchConnected.getAndSet(true)) {
+        if(establishedChannels.size >= 3 && !WatchState.alloyConnected.getAndSet(true)) {
             // notify service handlers that watch connected
             Thread {
                 runBlocking { delay(4000) }

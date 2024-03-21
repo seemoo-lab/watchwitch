@@ -26,19 +26,22 @@ object LongTermStorage {
     const val REMOTE_ADDRESS_CLASS_D = "remote.d.address"
 
     private const val KEY_TRANSIT_SECRET = "keyreceiver.sharedsecret"
-    private const val KEY_ENC_DB_SECRET = "database.encryptedsecret"
+    private const val ENCRYPTED_DB_SECRET = "database.encryptedsecret"
+    private const val ENCRYPTED_RSA_KEY = "sealed.local.a.rsa.private"
+    private const val ENCRYPTED_ECDSA_KEY = "sealed.local.a.ecdsa.private"
 
     private const val MP_KEY_PREFIX = "mp."
 
     private val addresstypes = listOf(LOCAL_ADDRESS_CLASS_C, LOCAL_ADDRESS_CLASS_D, REMOTE_ADDRESS_CLASS_C, REMOTE_ADDRESS_CLASS_D)
 
     fun getMPKeysForClass(protectionClass: String): MPKeys? {
+        // private keys are stored separately in keystore
         val ecdsaRemotePub = getKey("$MP_KEY_PREFIX$protectionClass.ecdsa.remote.public")
-        val rsaLocalPriv = getKey("$MP_KEY_PREFIX$protectionClass.rsa.local.private")
-        val ecdsaLocalPriv = getKey("$MP_KEY_PREFIX$protectionClass.ecdsa.local.private")
+        //val rsaLocalPriv = getKey("$MP_KEY_PREFIX$protectionClass.rsa.local.private")
+        //val ecdsaLocalPriv = getKey("$MP_KEY_PREFIX$protectionClass.ecdsa.local.private")
         val rsaRemotePub = getKey("$MP_KEY_PREFIX$protectionClass.rsa.remote.public")
-        return if(ecdsaRemotePub != null && rsaLocalPriv != null && ecdsaLocalPriv != null && rsaRemotePub != null)
-                MPKeys(ecdsaRemotePub, rsaLocalPriv, ecdsaLocalPriv, rsaRemotePub)
+        return if(ecdsaRemotePub != null && rsaRemotePub != null)
+                MPKeys(ecdsaRemotePub, null, null, rsaRemotePub)
             else
                 null
     }
@@ -46,8 +49,9 @@ object LongTermStorage {
     fun storeMPKeysForClass(dataProtectionClass: String, keys: MPKeys) {
         setKey("$MP_KEY_PREFIX$dataProtectionClass.ecdsa.remote.public", keys.ecdsaRemotePublic)
         setKey("$MP_KEY_PREFIX$dataProtectionClass.rsa.remote.public", keys.rsaRemotePublic)
-        setKey("$MP_KEY_PREFIX$dataProtectionClass.ecdsa.local.private", keys.ecdsaLocalPrivate)
-        setKey("$MP_KEY_PREFIX$dataProtectionClass.rsa.local.private", keys.rsaLocalPrivate)
+        // we no longer store private keys here, they are imported into the secure keystore instead
+        //setKey("$MP_KEY_PREFIX$dataProtectionClass.ecdsa.local.private", keys.ecdsaLocalPrivate)
+        //setKey("$MP_KEY_PREFIX$dataProtectionClass.rsa.local.private", keys.rsaLocalPrivate)
     }
 
     fun getUTUNDeviceID(): UUID? {
@@ -99,13 +103,9 @@ object LongTermStorage {
         }
     }
 
-    fun getKeyTransitSecret(): ByteArray {
-        return getKey(KEY_TRANSIT_SECRET) ?: "witchinthewatch-'#s[MZu!Xv*UZjbt".encodeToByteArray()
-    }
-
-    fun setKeyTransitSecret(secret: String) {
-        setKey(KEY_TRANSIT_SECRET, secret.encodeToByteArray())
-    }
+    var keyTransitSecret: ByteArray
+        get() = getKey(KEY_TRANSIT_SECRET) ?: "witchinthewatch-'#s[MZu!Xv*UZjbt".encodeToByteArray()
+        set(value) = setKey(KEY_TRANSIT_SECRET, value)
 
     fun resetKeyTransitSecret() {
         with (context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).edit()) {
@@ -114,13 +114,17 @@ object LongTermStorage {
         }
     }
 
-    fun getEncryptedDatabaseSecret(): ByteArray? {
-        return getKey(KEY_ENC_DB_SECRET)
-    }
+    var encryptedDatabaseSecret: ByteArray?
+        get() = getKey(ENCRYPTED_DB_SECRET)
+        set(value) = setKey(ENCRYPTED_DB_SECRET, value!!)
 
-    fun setEncryptedDatabaseSecret(secret: ByteArray) {
-        setKey(KEY_ENC_DB_SECRET, secret)
-    }
+    var encryptedRsaPrivate: ByteArray?
+        get() = getKey(ENCRYPTED_RSA_KEY)
+        set(value) = setKey(ENCRYPTED_RSA_KEY, value!!)
+
+    var encryptedEcdsaPrivate: ByteArray?
+        get() = getKey(ENCRYPTED_ECDSA_KEY)
+        set(value) = setKey(ENCRYPTED_ECDSA_KEY, value!!)
 
     private fun getKey(type: String): ByteArray? {
         return context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).getString(type, null)?.hexBytes()

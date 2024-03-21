@@ -36,7 +36,9 @@ class HealthLogActivity : AppCompatActivity() {
 
         val resetButton = findViewById<Button>(R.id.btnResetSyncStatus)
         resetButton.setOnClickListener {
-            HealthSync.resetSyncStatus()
+            Thread {
+                HealthSync.resetSyncStatus()
+            }.start()
         }
     }
 }

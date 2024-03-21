@@ -26,15 +26,15 @@ object DatabaseSecretProvider {
         if (!DatabaseSecretProvider::instance.isInitialized) {
             synchronized(DatabaseSecretProvider::class.java) {
                 if (!DatabaseSecretProvider::instance.isInitialized) {
-                    instance = getOrCreate(context)
+                    instance = getOrCreate()
                 }
             }
         }
         return instance
     }
 
-    private fun getOrCreate(context: Context): DatabaseSecret {
-        val encryptedSecret = LongTermStorage.getEncryptedDatabaseSecret()
+    private fun getOrCreate(): DatabaseSecret {
+        val encryptedSecret = LongTermStorage.encryptedDatabaseSecret
         return if (encryptedSecret != null)
                 getEncryptedDatabaseSecret(encryptedSecret)
             else
@@ -52,7 +52,7 @@ object DatabaseSecretProvider {
         random.nextBytes(secret)
         val databaseSecret = DatabaseSecret(secret)
         val encryptedSecret = seal(databaseSecret.asBytes())
-        LongTermStorage.setEncryptedDatabaseSecret(encryptedSecret.toBytes())
+        LongTermStorage.encryptedDatabaseSecret = encryptedSecret.toBytes()
         return databaseSecret
     }
 }

@@ -1,11 +1,23 @@
 package net.rec0de.android.watchwitch
 
 import androidx.lifecycle.MutableLiveData
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.Volatile
 
 /*
  * A place to gather information about the current state of the connected watch, mostly sourced from NanoPreferencesSync
  */
 object WatchState {
+
+    @Volatile
+    var networkPlumbingDone = AtomicBoolean(false)
+    @Volatile
+    var alloyConnected = AtomicBoolean(false)
+
+    fun resetConnectionState() {
+        alloyConnected.set(false)
+        networkPlumbingDone.set(false)
+    }
 
     val alarms: MutableLiveData<Map<String, Alarm>> by lazy {
         MutableLiveData<Map<String, Alarm>>(mapOf())

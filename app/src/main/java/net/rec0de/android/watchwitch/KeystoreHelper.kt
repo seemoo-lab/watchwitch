@@ -1,22 +1,43 @@
 package net.rec0de.android.watchwitch
 
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import android.security.keystore.KeyProtection
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.bouncycastle.cert.X509v3CertificateBuilder
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.jce.ECNamedCurveTable
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.jce.spec.ECNamedCurveSpec
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
+import java.math.BigInteger
 import java.nio.ByteBuffer
+import java.security.KeyFactory
 import java.security.KeyStore
 import java.security.KeyStore.PrivateKeyEntry
+import java.security.PrivateKey
+import java.security.PublicKey
+import java.security.SecureRandom
 import java.security.Signature
+import java.security.cert.X509Certificate
 import java.security.interfaces.ECPrivateKey
+import java.security.spec.ECPoint
 import java.security.spec.ECPrivateKeySpec
+import java.security.spec.ECPublicKeySpec
+import java.security.spec.InvalidKeySpecException
 import java.security.spec.MGF1ParameterSpec
+import java.security.spec.PKCS8EncodedKeySpec
+import java.security.spec.RSAPrivateKeySpec
+import java.security.spec.RSAPublicKeySpec
+import java.util.Date
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.OAEPParameterSpec
 import javax.crypto.spec.PSource
-import javax.crypto.spec.SecretKeySpec
 
 
 // adapted from https://github.com/signalapp/Signal-Android/blob/main/app/src/main/java/org/thoughtcrime/securesms/crypto/KeyStoreHelper.java
@@ -25,7 +46,6 @@ object KeyStoreHelper {
     private const val ANDROID_KEY_STORE = "AndroidKeyStore"
     private const val INTERNAL_KEY_ALIAS = "WatchWitchSecret"
     private const val AOVERC_ECDSA_ALIAS = "WW.aoverc.ecdsa.private"
-    private const val AOVERC_RSA_ALIAS = "WW.aoverc.rsa.private"
 
     fun seal(input: ByteArray): SealedData {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -42,6 +62,58 @@ object KeyStoreHelper {
     }
 
     fun aovercEcdsaSign(message: ByteArray): ByteArray {
+        // i hear that keystore operations can be slow, but we'll just try it
+        // perhaps it makes sense to cache the unsealed private key on app start
+        val keyBytes = unseal(SealedData.fromBytes(LongTermStorage.encryptedEcdsaPrivate!!))
+        val spec = ECNamedCurveTable.getParameterSpec("secp256r1")
+        val params = ECNamedCurveSpec("secp256r1", spec.curve, spec.g, spec.n)
+        val key = KeyFactory.getInstance("EC").generatePrivate(ECPrivateKeySpec(BigInteger(keyBytes), params))
+
+        return Signature.getInstance("SHA1withECDSA").run {
+            initSign(key)
+            update(message)
+            sign()
+        }
+    }
+
+    fun aovercRsaDecrypt(ciphertext: ByteArray): ByteArray {
+        // i hear that keystore operations can be slow, but we'll just try it
+        // perhaps it makes sense to cache the unsealed private key on app start
+        val keyBytes = unseal(SealedData.fromBytes(LongTermStorage.encryptedRsaPrivate!!))
+        val key = KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(keyBytes))
+
+        val decryptCipher = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-1ANDMGF1PADDING")
+        val oaepParams = OAEPParameterSpec("SHA1", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT)
+        decryptCipher.init(Cipher.DECRYPT_MODE, key, oaepParams)
+        return decryptCipher.doFinal(ciphertext)
+    }
+
+    private val sealingSecretKey: SecretKey
+        get() = if (hasKeyStoreEntry()) (keyStore.getEntry(INTERNAL_KEY_ALIAS, null) as KeyStore.SecretKeyEntry).secretKey else createKeyStoreEntry()
+
+
+    fun enrollAovercRsaPrivateKey(key: PrivateKey) {
+        // Apple uses severely nonstandard RSA key sizes which are not supported by the Android keystore 🙄
+        // we'll do our best by storing them client side as sealed data the same way we store health data
+        val sealed = seal(key.encoded)
+        LongTermStorage.encryptedRsaPrivate = sealed.toBytes()
+        Logger.log("Enrolled RSA private key (sealed-at-rest)", 1)
+    }
+
+    fun enrollAovercEcdsaPrivateKey(key: ECPrivateKey) {
+        // same here: we can't quite use the nice keystore interface to generate signatures in the secure hardware
+        // because Apple uses SHA1 for their signatures and the keystore only supports SHA256
+        val sealed = seal(key.s.toByteArray())
+        LongTermStorage.encryptedEcdsaPrivate = sealed.toBytes()
+        Logger.log("Enrolled ECDSA private key (sealed-at-rest)", 1)
+    }
+
+    // leaving this here because it WOULD work nicely if only Apple would use SHA256 instead of SHA1 for their signatures...
+    /*
+    private val aovercEcdsaPrivateKey: PrivateKeyEntry
+        get() = keyStore.getEntry(AOVERC_ECDSA_ALIAS, null) as PrivateKeyEntry
+
+    fun aovercEcdsaSign(message: ByteArray): ByteArray {
         return Signature.getInstance("SHA1withECDSA").run {
             initSign(aovercEcdsaPrivateKey.privateKey)
             update(message)
@@ -49,29 +121,48 @@ object KeyStoreHelper {
         }
     }
 
-    fun aovercRsaDecrypt(ciphertext: ByteArray): ByteArray {
-        val decryptCipher = Cipher.getInstance("RSA/ECB/OAEPWITHSHA-1ANDMGF1PADDING")
-        val oaepParams = OAEPParameterSpec("SHA1", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT)
-        decryptCipher.init(Cipher.DECRYPT_MODE, aovercRsaPrivateKey.privateKey, oaepParams)
-        return decryptCipher.doFinal(ciphertext)
-    }
-
-    private val sealingSecretKey: SecretKey
-        get() = if (hasKeyStoreEntry()) (keyStore.getEntry(INTERNAL_KEY_ALIAS, null) as KeyStore.SecretKeyEntry).secretKey else createKeyStoreEntry()
-
-    private val aovercEcdsaPrivateKey: PrivateKeyEntry
-        get() = keyStore.getEntry(AOVERC_ECDSA_ALIAS, null) as PrivateKeyEntry
-
-    fun enrollAovercEcdsaPrivateKey(key: ECPrivateKeySpec) {
-        val entry = KeyStore.SecretKeyEntry(key as SecretKeySpec)
+    fun enrollAovercEcdsaPrivateKey(key: ECPrivateKey) {
+        val entry = PrivateKeyEntry(key, arrayOf(certificateForEcdsaKey(key)))
         keyStore.setEntry(
             AOVERC_ECDSA_ALIAS, entry,
             KeyProtection.Builder(KeyProperties.PURPOSE_SIGN).build()
         )
     }
 
-    private val aovercRsaPrivateKey: PrivateKeyEntry
-        get() = keyStore.getEntry(AOVERC_RSA_ALIAS, null) as PrivateKeyEntry
+    // for some reason, we need a certificate accompanying the private key to store it in the keystore
+    // ... so we'll just make something up
+    private fun certificateForEcdsaKey(key: ECPrivateKey): X509Certificate {
+        val spec = ECNamedCurveTable.getParameterSpec("secp256r1")
+        val kf = KeyFactory.getInstance("EC", BouncyCastleProvider())
+        val params = ECNamedCurveSpec("secp256r1", spec.curve, spec.g, spec.n)
+
+        // we need the public key for the certificate we don't need
+        // so we have to reconstruct it from the private key
+        val q = spec.g.multiply(key.s)
+        // i have no idea what i am doing here and it scares me
+        // (but q should be public so....)
+        val qn = q.normalize()
+        val qs = ECPoint(qn.affineXCoord.toBigInteger(), qn.affineYCoord.toBigInteger())
+        val pubSpec = ECPublicKeySpec(qs, params)
+        val pub = kf.generatePublic(pubSpec) as PublicKey
+
+        val x500Name =
+            X500Name("CN=WatchWitch, OU=AoverC, O=WatchWitch")
+        val pubKeyInfo = SubjectPublicKeyInfo.getInstance(pub.encoded)
+
+        val start = Date()
+        val until = Date()
+        val certificateBuilder = X509v3CertificateBuilder(
+            x500Name,
+            BigInteger(10, SecureRandom()), start, until, x500Name, pubKeyInfo
+        )
+        val contentSigner = JcaContentSignerBuilder("SHA256WithECDSA").build(key)
+
+        return JcaX509CertificateConverter().setProvider(BouncyCastleProvider())
+            .getCertificate(certificateBuilder.build(contentSigner))
+    }
+
+     */
 
     private fun createKeyStoreEntry(): SecretKey {
         val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEY_STORE)
