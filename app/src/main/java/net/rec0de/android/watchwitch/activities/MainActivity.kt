@@ -196,6 +196,11 @@ class MainActivity : AppCompatActivity() {
 
     fun statusIdle() {
         statusLabel.text = getString(R.string.status_not_running)
+        NWSCManager.reset()
+        WatchState.resetConnectionState()
+        val serverToggle: SwitchMaterial = findViewById(R.id.swToggleServer)
+        serverToggle.isChecked = false
+
     }
 
     fun setError(msg: String) {

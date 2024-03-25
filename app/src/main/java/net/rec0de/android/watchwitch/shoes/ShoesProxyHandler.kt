@@ -52,7 +52,9 @@ object ShoesProxyHandler {
                     networkFlags = networkFlags or if(connectionWiFi) 0x20 else 0x00
 
                     // I'm not 100% sure this is how it works but I think the request flags specify under which conditions the phone should reject the connection
-                    if(request.flags and networkFlags != 0) {
+                    // we'll also reject connection attempts explicitly blocked by the user based on hostname & requesting process
+                    if(request.flags and networkFlags != 0 || !NetworkStats.shouldAllowConnection(host)) {
+                        Logger.logShoes("Firewall: Host $host blocked connection", 0)
                         val reply = ShoesReply.reject()
                         withContext(Dispatchers.IO) {
                             toWatch.write(reply.render())
@@ -80,7 +82,7 @@ object ShoesProxyHandler {
 
                     GlobalScope.launch { forwardForever(fromRemote, toWatch, host) }
 
-                    while(true) {
+                    while(NetworkStats.shouldAllowConnection(host)) {
                         // we expect a TLS record header here, which is 1 byte record type, 2 bytes TLS version, 2 bytes length
                         val recordHeader = ByteArray(5)
                         withContext(Dispatchers.IO) {
@@ -98,6 +100,17 @@ object ShoesProxyHandler {
 
                         //Logger.logShoes("TLS to remote: ${packet.hex()}", 10)
                         NetworkStats.packetSent(host, len)
+                    }
+
+                    Logger.logShoes("Firewall: Host $host terminated existing connection", 0)
+
+                    // if users block a connection that's already been established, we'll hit this on the next packet & close streams
+                    // not exactly a graceful shutdown, but it should work?
+                    withContext(Dispatchers.IO) {
+                        fromWatch.close()
+                        toWatch.close()
+                        fromRemote?.close()
+                        toRemote?.close()
                     }
                 }
                 else -> {

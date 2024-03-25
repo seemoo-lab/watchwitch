@@ -17,17 +17,22 @@ import android.view.View.VISIBLE
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.R
 import net.rec0de.android.watchwitch.adapter.NetworkStatsAdapter
+import net.rec0de.android.watchwitch.shoes.SHOES_MSG_CONNECTIVITY
+import net.rec0de.android.watchwitch.shoes.SHOES_MSG_FIREWALL_DEFAULT
+import net.rec0de.android.watchwitch.shoes.SHOES_MSG_FIREWALL_RULE
 import net.rec0de.android.watchwitch.shoes.SHOES_MSG_STATS
 import net.rec0de.android.watchwitch.shoes.ShoesService
 import net.rec0de.android.watchwitch.shoes.StatsEntry
 
 class NetworkLogActivity : AppCompatActivity(), ServiceConnection {
 
+    var firewallIsDefaultAllow: Boolean = true
     private var isBound = false
     private var serverMessenger: Messenger? = null
     private var clientMessenger: Messenger? = null
@@ -36,15 +41,32 @@ class NetworkLogActivity : AppCompatActivity(), ServiceConnection {
             // receive reply with networks stats from SHOES process
             val bundle = msg.data
             val json = bundle.getString("statsJson")!!
-            val stats = Json.decodeFromString<Map<String, StatsEntry>>(json)
+
+            // received stats contain synthetic default entry
+            val statsWithDefault = Json.decodeFromString<Map<String, StatsEntry>>(json)
+            val stats = statsWithDefault.filterKeys { it != "default" }
+            firewallIsDefaultAllow = statsWithDefault["default"]!!.allow!!
+
             val recyclerView = findViewById<RecyclerView>(R.id.hostList)
+
+            val adapter = recyclerView.adapter as NetworkStatsAdapter
+            adapter.stats.clear()
+            adapter.stats.addAll(stats.toList().sortedBy { it.second.packets }.reversed())
+            adapter.notifyDataSetChanged()
 
             val listEmptyLabel = findViewById<TextView>(R.id.emptyLabel)
             listEmptyLabel.visibility = if(stats.isEmpty()) VISIBLE else GONE
 
-            recyclerView.adapter = NetworkStatsAdapter(stats.toList().sortedBy { it.second.packets }.reversed())
-            Logger.logShoes("NetworkLog view refreshed", 0)
-            recyclerView.setHasFixedSize(true)
+            val defaultSwitch = findViewById<SwitchMaterial>(R.id.swFirewallDefault)
+            defaultSwitch.setOnCheckedChangeListener(null)
+            defaultSwitch.isChecked = firewallIsDefaultAllow
+            defaultSwitch.setOnCheckedChangeListener { _, allowed ->
+                firewallIsDefaultAllow = allowed
+                setFirewallDefault(allowed)
+                recyclerView.adapter?.notifyDataSetChanged()
+            }
+
+            Logger.logShoes("NetworkLog view refreshed", 2)
         }
     }
 
@@ -53,7 +75,7 @@ class NetworkLogActivity : AppCompatActivity(), ServiceConnection {
         setContentView(R.layout.activity_network_log)
 
         val recyclerView = findViewById<RecyclerView>(R.id.hostList)
-        recyclerView.adapter = NetworkStatsAdapter(listOf())
+        recyclerView.adapter = NetworkStatsAdapter(mutableListOf(), this)
         recyclerView.setHasFixedSize(true)
 
         val refreshBtn = findViewById<ImageButton>(R.id.btnRefresh)
@@ -94,6 +116,42 @@ class NetworkLogActivity : AppCompatActivity(), ServiceConnection {
         if (isBound) {
             applicationContext.unbindService(this)
             isBound = false
+        }
+    }
+
+    private fun setFirewallDefault(value: Boolean) {
+        if (!isBound) return
+
+        val bundle = Bundle()
+        bundle.putBoolean("allowByDefault", value)
+        val message = Message.obtain(null, SHOES_MSG_FIREWALL_DEFAULT)
+        message.data = bundle
+
+        try {
+            serverMessenger?.send(message)
+        } catch (e: RemoteException) {
+            e.printStackTrace()
+        } finally {
+            message.recycle()
+        }
+    }
+
+    fun setFirewallRule(host: String, allow: Boolean) {
+        if (!isBound) return
+
+        val bundle = Bundle()
+        bundle.putString("host", host)
+        bundle.putBoolean("allow", allow)
+
+        val message = Message.obtain(null, SHOES_MSG_FIREWALL_RULE)
+        message.data = bundle
+
+        try {
+            serverMessenger?.send(message)
+        } catch (e: RemoteException) {
+            e.printStackTrace()
+        } finally {
+            message.recycle()
         }
     }
 

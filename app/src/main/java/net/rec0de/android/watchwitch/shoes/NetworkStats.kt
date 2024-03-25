@@ -6,7 +6,24 @@ import kotlinx.serialization.json.Json
 import net.rec0de.android.watchwitch.Logger
 
 object NetworkStats {
-    private val stats = mutableMapOf<String, StatsEntry>()
+    private val stats = mutableMapOf("default" to StatsEntry(0, 0, 0, 0, mutableSetOf(), true))
+
+    // this is a little cursed but we'd like to include the default firewall behaviour in the JSON we send to the UI
+    // so we'll put it in as a synthetic entry and use custom accessors for prettier access
+    var allowByDefault: Boolean
+        get() = stats["default"]!!.allow!!
+        set(value) {
+            stats["default"]!!.allow = value
+        }
+
+    fun shouldAllowConnection(host: String) = stats[host]?.allow ?: allowByDefault
+
+    fun setRule(host: String, allow: Boolean) {
+        if(!stats.containsKey(host))
+            return
+        stats[host]!!.allow = allow
+        Logger.logShoes("Firewall: Host $host allowed? $allow", 0)
+    }
 
     fun connect(host: String, bundle: String?) {
         if(stats.containsKey(host)) {
@@ -34,10 +51,8 @@ object NetworkStats {
         entry.bytesSent += bytes
     }
 
-    fun json(): String {
-        return Json.encodeToString(stats)
-    }
+    fun json() = Json.encodeToString(stats)
 }
 
 @Serializable
-data class StatsEntry(var packets: Int = 0, var bytesSent: Int = 0, var bytesReceived: Int = 0, var connects: Int = 0, val bundleIDs: MutableSet<String> = mutableSetOf())
+data class StatsEntry(var packets: Int = 0, var bytesSent: Int = 0, var bytesReceived: Int = 0, var connects: Int = 0, val bundleIDs: MutableSet<String> = mutableSetOf(), var allow: Boolean? = null)

@@ -18,7 +18,6 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.R
-import net.rec0de.android.watchwitch.TcpServer
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
@@ -29,6 +28,8 @@ import java.net.Socket
 const val SHOES_MSG_CONNECTIVITY = 1
 const val SHOES_MSG_STATS = 2
 const val SHOES_MSG_STATS_RESPONSE = 3
+const val SHOES_MSG_FIREWALL_DEFAULT = 4
+const val SHOES_MSG_FIREWALL_RULE = 5
 
 class ShoesService : Service() {
 
@@ -37,10 +38,7 @@ class ShoesService : Service() {
 
     // Running this in a separate process helps with keeping network performance snappy on the watch
     // but comes at the cost of some annoying IPC
-    internal class IncomingHandler(
-        context: Context,
-        private val applicationContext: Context = context.applicationContext
-    ) : Handler(Looper.myLooper()!!) {
+    internal class IncomingHandler : Handler(Looper.myLooper()!!) {
         override fun handleMessage(msg: Message) {
             when (msg.what) {
                 // update our connection flags based on info from the main thread
@@ -60,13 +58,24 @@ class ShoesService : Service() {
                     message.data = bundle
                     msg.replyTo.send(message)
                 }
+                SHOES_MSG_FIREWALL_DEFAULT -> {
+                    val bundle = msg.data
+                    NetworkStats.allowByDefault = bundle.getBoolean("allowByDefault")
+                    Logger.logShoes("SHOES Firewall set default: allow? ${NetworkStats.allowByDefault}", 1)
+                }
+                SHOES_MSG_FIREWALL_RULE -> {
+                    val bundle = msg.data
+                    val host = bundle.getString("host")!!
+                    val allow = bundle.getBoolean("allow")
+                    NetworkStats.setRule(host, allow)
+                }
                 else -> super.handleMessage(msg)
             }
         }
     }
 
     override fun onBind(intent: Intent): IBinder? {
-        mMessenger = Messenger(IncomingHandler(this))
+        mMessenger = Messenger(IncomingHandler())
         return mMessenger.binder
     }
 
