@@ -691,8 +691,9 @@ object DatabaseWrangler {
         val objs = HealthSyncSecureContract.OBJECTS
         val units = HealthSyncSecureContract.UNIT_STRINGS
         val stats = HealthSyncSecureContract.QUANTITY_SAMPLE_STATISTICS
+        val series = HealthSyncSecureContract.QUANTITY_SERIES
         val list = mutableListOf<DisplaySample>()
-        val cursor = secure.readableDatabase.rawQuery("SELECT start_date, end_date, data_type, quantity, original_quantity, unit_string, min, max, $objs.data_id FROM $qua INNER JOIN $sam ON $qua.data_id=$sam.data_id LEFT JOIN $units ON $units.ROWID=$qua.original_unit LEFT JOIN $stats ON $stats.owner_id=$qua.data_id INNER JOIN $objs ON $sam.data_id=$objs.data_id WHERE $objs.type != 2;", null)
+        val cursor = secure.readableDatabase.rawQuery("SELECT start_date, end_date, data_type, quantity, original_quantity, unit_string, min, max, $objs.data_id, count, series_id FROM $qua INNER JOIN $sam ON $qua.data_id=$sam.data_id LEFT JOIN $units ON $units.ROWID=$qua.original_unit LEFT JOIN $stats ON $stats.owner_id=$qua.data_id LEFT JOIN $series ON $series.data_id=$qua.data_id INNER JOIN $objs ON $sam.data_id=$objs.data_id WHERE $objs.type != 2;", null)
         while (cursor.moveToNext()) {
             val start = Utils.dateFromAppleTimestamp(cursor.getDouble(0))
             val end = Utils.dateFromAppleTimestamp(cursor.getDouble(1))
@@ -714,7 +715,30 @@ object DatabaseWrangler {
 
             val metadata = getMetadataOfSample(cursor.getInt(8))
 
-            list.add(DisplaySample(start, end, type, quantity, unit, min, max, metadata))
+            val count = if(cursor.isNull(9)) null else cursor.getInt(9)
+            val seriesId = if(cursor.isNull(10)) null else cursor.getInt(10)
+
+            // load associated data series
+            val seriesData = if(count != null && seriesId != null) {
+                val projection = arrayOf(HealthSyncSecureContract.QuantitySeriesData.DATUM_ID, HealthSyncSecureContract.QuantitySeriesData.START_DATE, HealthSyncSecureContract.QuantitySeriesData.END_DATE, HealthSyncSecureContract.QuantitySeriesData.VALUE)
+                val selection = "${HealthSyncSecureContract.QuantitySeriesData.SERIES_ID} = ?"
+                val selectionArgs = arrayOf(seriesId.toString())
+                val seriesCursor = secure.readableDatabase.query(HealthSyncSecureContract.QUANTITY_SERIES_DATA, projection, selection, selectionArgs, null, null, "${HealthSyncSecureContract.QuantitySeriesData.DATUM_ID} ASC")
+                val data = mutableListOf<Triple<Date, Date, Double>>()
+                while (seriesCursor.moveToNext()) {
+                    val datumId = seriesCursor.getInt(0)
+                    val datumStart = Utils.dateFromAppleTimestamp(seriesCursor.getDouble(1))
+                    val datumEnd = Utils.dateFromAppleTimestamp(seriesCursor.getDouble(2))
+                    val datumValue = seriesCursor.getDouble(3)
+                    data.add(Triple(datumStart, datumEnd, datumValue))
+                }
+                seriesCursor.close()
+                data
+            }
+            else
+                listOf()
+
+            list.add(DisplaySample(start, end, type, quantity, unit, min, max, metadata, seriesData))
         }
         cursor.close()
         return list
@@ -853,7 +877,8 @@ object DatabaseWrangler {
         val unit: String,
         val min: Double? = null,
         val max: Double? = null,
-        val metadata: Map<String, String> = mapOf()
+        val metadata: Map<String, String> = mapOf(),
+        val series: List<Triple<Date,Date,Double>> = listOf()
     ) : HealthLogDisplayItem()
 
     data class DisplayLocationSeries(

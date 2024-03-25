@@ -77,9 +77,10 @@
                 android:padding="4dp"
                 app:chart="line"
                 app:showBottomAxis="true"
-                app:showStartAxis="false"
+                app:showStartAxis="true"
                 card_view:chartHorizontalScrollingEnabled="true"
-                card_view:endContentPadding="0dp" />
+                card_view:endContentPadding="0dp"
+            />
 
             <TextView
                 android:id="@+id/labelMetadata"

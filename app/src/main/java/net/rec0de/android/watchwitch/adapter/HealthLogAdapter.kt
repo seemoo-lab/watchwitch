@@ -86,6 +86,29 @@ class HealthLogAdapter(
                     holder.stats.visibility = GONE
                 }
 
+                if(item.series.isNotEmpty()) {
+                    holder.chart.visibility = VISIBLE
+                    // we're using the midpoint of the sampled interval as the x coordinate, starting at 0 = series start time, in minutes
+                    val points = item.series.map{ v -> entryOf(((v.first.time/2 + v.second.time/2) - item.startDate.time).toDouble()/(1000*60), v.third)}
+                    println(points)
+                    val chartEntryModel = entryModelOf(points)
+
+                    holder.chart.getXStep = { _ -> 0.5f }
+                    holder.chart.setModel(chartEntryModel)
+                    holder.chart.runInitialAnimation = false
+                    holder.chart.fadingEdges = FadingEdges()
+
+                    holder.chart.bottomAxis
+
+                    val lineChart = holder.chart.chart!! as LineChart
+                    //lineChart.axisValuesOverrider = AxisValuesOverrider.adaptiveYValues(2f, false)
+                    val color = MaterialColors.getColor(holder.view.context, androidx.appcompat.R.attr.colorPrimary, Color.BLACK)
+                    lineChart.lines = listOf(LineChart.LineSpec(
+                        color,
+                        lineBackgroundShader = DynamicShaders.verticalGradient(color, Color.TRANSPARENT)
+                    ))
+                }
+
                 // Associated metadata entries
                 setMetadata(item.metadata, holder)
             }
