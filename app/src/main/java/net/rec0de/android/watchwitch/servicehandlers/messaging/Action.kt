@@ -27,10 +27,10 @@ class Action(
             val activationMode = pb.readOptShortVarInt(3)
             val launchURL = pb.readOptString(4)
             val behavior = pb.readOptShortVarInt(5)
-            val behaviorParameters = pb.readOptionalSinglet(6) as ProtoLen
-            val behaviorParametersNulls = pb.readOptionalSinglet(7) as ProtoLen
+            val behaviorParameters = pb.readOptionalSinglet(6) as ProtoLen?
+            val behaviorParametersNulls = pb.readOptionalSinglet(7) as ProtoLen?
 
-            return Action(identifier, activationMode, launchURL, behavior, behaviorParameters.value, behaviorParametersNulls.value)
+            return Action(identifier, activationMode, launchURL, behavior, behaviorParameters?.value, behaviorParametersNulls?.value)
         }
     }
 

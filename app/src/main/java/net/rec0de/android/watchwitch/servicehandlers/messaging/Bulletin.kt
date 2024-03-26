@@ -11,7 +11,6 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
 import net.rec0de.android.watchwitch.hex
-import net.rec0de.android.watchwitch.longBytesFromDouble
 import net.rec0de.android.watchwitch.toCanonicalTimestamp
 import java.util.Date
 
@@ -24,7 +23,7 @@ class Bulletin(
     val messageTitle: String? = null,
     val date: Date? = null,
     val attachment: ByteArray? = null,
-    val action: Action? = null,
+    val actions: List<Action> = listOf(),
     val feed: Int? = null,
     val snoozeAction: Action? = null,
     val recordID: String? = null,
@@ -157,8 +156,8 @@ class Bulletin(
         if(containsUpdateIcon != null)
             str += " containsUpdateIcon: $containsUpdateIcon"
 
-        if(action != null)
-            str += " action: $action"
+        if(actions.isNotEmpty())
+            str += " actions: $actions"
         if(dismissAction != null)
             str += " dismissAction: $dismissAction"
         if(snoozeAction != null)
@@ -200,7 +199,7 @@ class Bulletin(
             val messageTitle = pb.readOptString(6)
             val date = pb.readOptDate(7, appleEpoch = false)
             val attachment = pb.readOptionalSinglet(8) as ProtoLen?
-            val action = Action.fromPB(pb.readOptPB(9))
+            val actions = pb.readMulti(9).map { Action.fromSafePB(it as ProtoBuf) }
             val feed = pb.readOptShortVarInt(0x0a)
             val snoozeAction = Action.fromPB(pb.readOptPB(0x0b))
             val recordID = pb.readOptString(0x0c)
@@ -249,7 +248,7 @@ class Bulletin(
             // oh dear
             return Bulletin(
                 bulletinID, sectionID, sectionDisplayName, title, subtitle, messageTitle, date,
-                attachment?.value, action, feed, snoozeAction, recordID, publisherBulletinId,
+                attachment?.value, actions, feed, snoozeAction, recordID, publisherBulletinId,
                 dismissAction, sectionSubtype, sockPuppetAppBundleID, category, publicationDate,
                 includesSound, teamID, context, universalSectionID, alertSuppressionContexts,
                 soundAlertType, soundAccountIdentifier, soundToneIdentifier, attachmentType,
@@ -282,8 +281,8 @@ class Bulletin(
             fields[0x07] = listOf(ProtoI64(date.toCanonicalTimestamp()))
         if(attachment != null)
             fields[0x08] = listOf(ProtoLen(attachment))
-        if(action != null)
-            fields[0x09] = listOf(ProtoLen(action.renderProtobuf()))
+        if(actions.isNotEmpty())
+            fields[0x09] = actions.map { ProtoLen(it.renderProtobuf()) }
         if(feed != null)
             fields[0x0a] = listOf(ProtoVarInt(feed))
         if(snoozeAction != null)
