@@ -1,9 +1,11 @@
 package net.rec0de.android.watchwitch.shoes
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.rec0de.android.watchwitch.Logger
+import net.rec0de.android.watchwitch.LongTermStorage
 
 object NetworkStats {
     private val stats = mutableMapOf("default" to StatsEntry(0, 0, 0, 0, mutableSetOf(), true))
@@ -52,6 +54,12 @@ object NetworkStats {
     }
 
     fun json() = Json.encodeToString(stats)
+
+    fun fromJson(json: String) {
+        val imported = Json.decodeFromString<Map<String,StatsEntry>>(json)
+        stats.clear()
+        stats.putAll(imported)
+    }
 }
 
 @Serializable

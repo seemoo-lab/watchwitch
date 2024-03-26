@@ -1,5 +1,6 @@
 package net.rec0de.android.watchwitch.shoes
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -17,6 +18,7 @@ import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.rec0de.android.watchwitch.Logger
+import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.R
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -38,7 +40,7 @@ class ShoesService : Service() {
 
     // Running this in a separate process helps with keeping network performance snappy on the watch
     // but comes at the cost of some annoying IPC
-    internal class IncomingHandler : Handler(Looper.myLooper()!!) {
+    internal inner class IncomingHandler : Handler(Looper.myLooper()!!) {
         override fun handleMessage(msg: Message) {
             when (msg.what) {
                 // update our connection flags based on info from the main thread
@@ -62,12 +64,14 @@ class ShoesService : Service() {
                     val bundle = msg.data
                     NetworkStats.allowByDefault = bundle.getBoolean("allowByDefault")
                     Logger.logShoes("SHOES Firewall set default: allow? ${NetworkStats.allowByDefault}", 1)
+                    this@ShoesService.firewallStateJson = NetworkStats.json()
                 }
                 SHOES_MSG_FIREWALL_RULE -> {
                     val bundle = msg.data
                     val host = bundle.getString("host")!!
                     val allow = bundle.getBoolean("allow")
                     NetworkStats.setRule(host, allow)
+                    this@ShoesService.firewallStateJson = NetworkStats.json()
                 }
                 else -> super.handleMessage(msg)
             }
@@ -79,6 +83,13 @@ class ShoesService : Service() {
         return mMessenger.binder
     }
 
+    var firewallStateJson: String?
+        get() = baseContext.getSharedPreferences("${LongTermStorage.appID}.prefs", Context.MODE_PRIVATE).getString(
+            "netstats.state", null)
+        set(value) = with (baseContext.getSharedPreferences("${LongTermStorage.appID}.prefs", Context.MODE_PRIVATE).edit()) {
+            putString("netstats.state", value)
+            apply()
+        }
 
     private val runnable = Runnable {
         var socket: Socket? = null
@@ -106,6 +117,9 @@ class ShoesService : Service() {
 
     override fun onCreate() {
         startMeForeground()
+        val firewallState = firewallStateJson
+        if(firewallState != null)
+            NetworkStats.fromJson(firewallState)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

@@ -1,20 +1,31 @@
 package net.rec0de.android.watchwitch.activities
 
+import android.app.AlertDialog
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.provider.Settings
+import android.text.InputType
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.widget.PopupWindow
+import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.R
 import net.rec0de.android.watchwitch.adapter.ChatbubbleAdapter
-import net.rec0de.android.watchwitch.servicehandlers.PreferencesSync
 import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
+
 
 class ChatActivity : AppCompatActivity() {
 
@@ -34,6 +45,14 @@ class ChatActivity : AppCompatActivity() {
         val filter = IntentFilter(chatTopic)
         ContextCompat.registerReceiver(baseContext, br, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
+        // little secret: tapping the headline will show the notification consent dialog
+        // useful for when you denied access forever and wanna change that, or you want to revoke access
+        val heading = findViewById<TextView>(R.id.chitchatHeading)
+        heading.setOnClickListener {
+            LongTermStorage.notificationAccessDeniedForever = false
+            askForNotificationPermission()
+        }
+
         val textInput = findViewById<EditText>(R.id.editMessage)
 
         val sendBtn = findViewById<ImageButton>(R.id.btnSend)
@@ -43,6 +62,9 @@ class ChatActivity : AppCompatActivity() {
             textInput.text.clear()
         }
 
+
+        if(!isNotificationServiceEnabled() && !LongTermStorage.notificationAccessDeniedForever)
+            askForNotificationPermission()
     }
 
     override fun onDestroy() {
@@ -96,5 +118,22 @@ class ChatActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+
+    // from: https://github.com/kpbird/NotificationListenerService-Example/blob/master/NLSExample/src/main/java/com/kpbird/nlsexample/NLService.java
+    private fun isNotificationServiceEnabled(): Boolean {
+        val flat: String = Settings.Secure.getString(
+            contentResolver,
+            "enabled_notification_listeners"
+        )
+        return if(flat.isEmpty())
+                false
+            else
+                flat.split(":").any{ ComponentName.unflattenFromString(it)?.packageName == packageName }
+    }
+
+    private fun askForNotificationPermission() {
+        NotificationConsentDialog().show(supportFragmentManager, "CONSENT_DIALOG")
     }
 }

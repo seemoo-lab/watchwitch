@@ -10,7 +10,7 @@ import java.util.UUID
 @SuppressLint("StaticFieldLeak")
 object LongTermStorage {
     lateinit var context: Context
-    private const val appID = "net.rec0de.android.watchwitch"
+    const val appID = "net.rec0de.android.watchwitch"
 
     const val PUBLIC_CLASS_A = "remote.a.public"
     const val PUBLIC_CLASS_C = "remote.c.public"
@@ -31,6 +31,7 @@ object LongTermStorage {
     private const val ENCRYPTED_ECDSA_KEY = "sealed.local.a.ecdsa.private"
 
     private const val MP_KEY_PREFIX = "mp."
+    private const val NOTIFICATION_ACCESS_CONSENT = "notification.consent"
 
     private val addresstypes = listOf(LOCAL_ADDRESS_CLASS_C, LOCAL_ADDRESS_CLASS_D, REMOTE_ADDRESS_CLASS_C, REMOTE_ADDRESS_CLASS_D)
 
@@ -126,6 +127,13 @@ object LongTermStorage {
     var encryptedEcdsaPrivate: ByteArray?
         get() = getKey(ENCRYPTED_ECDSA_KEY)
         set(value) = setKey(ENCRYPTED_ECDSA_KEY, value!!)
+
+    var notificationAccessDeniedForever: Boolean
+        get() = context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).getString(NOTIFICATION_ACCESS_CONSENT, null) == "true"
+        set(value) = with (context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).edit()) {
+            putString(NOTIFICATION_ACCESS_CONSENT, if(value) "true" else "false")
+            apply()
+        }
 
     private fun getKey(type: String): ByteArray? {
         return context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).getString(type, null)?.hexBytes()

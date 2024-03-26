@@ -65,8 +65,6 @@ class NetworkLogActivity : AppCompatActivity(), ServiceConnection {
                 setFirewallDefault(allowed)
                 recyclerView.adapter?.notifyDataSetChanged()
             }
-
-            Logger.logShoes("NetworkLog view refreshed", 2)
         }
     }
 

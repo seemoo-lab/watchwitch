@@ -36,8 +36,10 @@
 
     <string name="service_shoes_desc">SHOES internet sharing for Apple Watch</string>
     <string name="service_alloy_desc">Alloy message handling for Apple Watch</string>
+    <string name="service_notify_desc">Push notification forwarding for Apple Watch</string>
     <string name="service_shoes_label">WatchWitch SHOES Server</string>
     <string name="service_alloy_label">WatchWitch Alloy Server</string>
+    <string name="service_notify_label">WatchWitch Notification Listener</string>
 
     <string name="chat_title">Chitchat</string>
     <string name="chat_message_input_placeholder">Message</string>
@@ -59,4 +61,10 @@
     <string name="watchstate_open_apps">Open Apps</string>
     <string name="watch_state">Watch State</string>
     <string name="watchstate_no_alarms">No Alarms 💤</string>
+    <string name="notify_permission_allow">Allow</string>
+    <string name="notify_permission_never">Never</string>
+    <string name="notify_permission_not_now">Not now</string>
+    <string name="allow_notification_access">Allow Notification Access</string>
+    <string name="notify_permission_capability">WatchWitch can forward notifications you receive on your phone to your watch.</string>
+    <string name="notify_permission_need_permission">To do so, we need your permission to read incoming notifications in the settings.</string>
 </resources>

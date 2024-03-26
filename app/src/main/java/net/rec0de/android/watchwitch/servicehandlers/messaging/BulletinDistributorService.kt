@@ -185,7 +185,7 @@ object BulletinDistributorService : AlloyService {
             false
         }
         else {
-            Logger.logIDS("[bulletin] sending payload: ${msg.hex()}", 0)
+            //Logger.logIDS("[bulletin] sending payload: ${msg.hex()}", 0)
             handler.sendProtobuf(msg, "com.apple.private.alloy.bulletindistributor", type, isResponse)
             sessionInitialized = true
             true
