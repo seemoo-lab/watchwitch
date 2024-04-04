@@ -170,6 +170,8 @@ data class ProtoBuf(val objs: Map<Int, List<ProtoValue>>, val bytes: ByteArray =
     }
 
     fun readAssertedSinglet(field: Int) : ProtoValue {
+        if(objs[field] == null)
+            throw Exception("asserted read of null protobuf field $field")
         return objs[field]!![0]
     }
 

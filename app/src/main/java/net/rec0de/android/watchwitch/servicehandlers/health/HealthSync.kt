@@ -196,7 +196,7 @@ object HealthSync : AlloyService {
             TimestampedKeyValuePair("HKElectrocardiogramFirstOnboardingCompleted", timestamp, null, timestamp.toAppleTimestamp(), null, null)
         )
         val objectData = CategoryDomainDictionary("com.apple.private.health.heart-rhythm", 105, protectedUserDefaultEntries)
-        val change = NanoSyncChange(17, startAnchor, endAnchor, listOf(objectData), null, null,0, true, EntityIdentifier(17, null))
+        val change = NanoSyncChange(17, startAnchor, endAnchor, listOf(objectData), emptyList(), null,0, true, EntityIdentifier(17, null))
 
         val changeSet = NanoSyncChangeSet(sessionUUID, sessionStart, 1, listOf(change), null)
         return NanoSyncMessage(12, persistentUUID, healthPairingUUID, null, changeSet, null)

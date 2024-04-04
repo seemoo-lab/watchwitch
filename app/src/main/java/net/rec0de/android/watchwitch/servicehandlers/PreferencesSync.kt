@@ -136,19 +136,33 @@ object PreferencesSync : AlloyService {
 
     // from NPSFileBackupMsg::readFrom: in nanoprefsyncd
     class FileBackupMessage(
-        val fileUrl: BPListObject,
-        val fileData: BPListObject
+        val domain: String?, // this is a guess
+        val entries: List<FileBackupEntry>
     ) {
         companion object : PBParsable<FileBackupMessage>() {
             override fun fromSafePB(pb: ProtoBuf): FileBackupMessage {
-                val fileUrl = (pb.readAssertedSinglet(1) as ProtoBPList).parsed // NSSet of NSUrl
-                val fileData = (pb.readAssertedSinglet(2) as ProtoBPList).parsed
-
-                return FileBackupMessage(fileUrl, fileData)
+                val domain = pb.readOptString(2)
+                val entries = pb.readMulti(3).map { FileBackupEntry.fromSafePB(it as ProtoBuf) }
+                return FileBackupMessage(domain, entries)
             }
         }
 
-        override fun toString() = "FileBackupMsg(urls: $fileUrl, data: $fileData)"
+        override fun toString() = "FileBackupMessage(domain: $domain, $entries)"
+    }
+    class FileBackupEntry(
+        val fileUrl: String,
+        val fileData: BPListObject?
+    ) {
+        companion object : PBParsable<FileBackupEntry>() {
+            override fun fromSafePB(pb: ProtoBuf): FileBackupEntry {
+                val fileUrl = pb.readOptString(1)!!
+                val fileData = (pb.readOptionalSinglet(2) as ProtoBPList?)?.parsed
+
+                return FileBackupEntry(fileUrl, fileData)
+            }
+        }
+
+        override fun toString() = "FileBackupEntry(url: $fileUrl, data: $fileData)"
     }
 
     // from NPSServer::handleUserDefaultsBackupMsgData:backupFile:idsGuid: in nanoprefsyncd

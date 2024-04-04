@@ -103,7 +103,7 @@ class NanoSyncChange(
     val startAnchor: Int,
     val endAnchor: Int,
     val objectData: List<NanoSyncEntity>,
-    val syncAnchor: NanoSyncAnchor?,
+    val syncAnchors: List<NanoSyncAnchor>,
     val speculative: Boolean?,
     val sequence: Int?,
     val complete: Boolean?,
@@ -122,13 +122,13 @@ class NanoSyncChange(
             else
                 emptyList()
 
-            val syncAnchor = NanoSyncAnchor.fromPB(pb.readOptionalSinglet(5) as ProtoBuf?)
+            val syncAnchors = pb.readMulti(5).map { NanoSyncAnchor.fromSafePB(it as ProtoBuf) }
             val speculative = pb.readOptBool(6)
             val sequence = pb.readOptShortVarInt(7)
             val complete = pb.readOptBool(8)
             val entityIdentifier = EntityIdentifier.fromSafePB(pb.readOptionalSinglet(9) as ProtoBuf)
 
-            return NanoSyncChange(objectType, startAnchor, endAnchor, objectData, syncAnchor, speculative, sequence, complete, entityIdentifier)
+            return NanoSyncChange(objectType, startAnchor, endAnchor, objectData, syncAnchors, speculative, sequence, complete, entityIdentifier)
         }
     }
 
@@ -136,7 +136,7 @@ class NanoSyncChange(
         get() = if(objectType == null) "unknown(null)" else NanoSyncEntity.objTypeToString(objectType)
 
     override fun toString(): String {
-        return "Change(obj $objectTypeString, seq $sequence, startAnchor $startAnchor, endAnchor $endAnchor, syncAnchor $syncAnchor, spec? $speculative, comp? $complete, entID $entityIdentifier, data: $objectData)"
+        return "Change(obj $objectTypeString, seq $sequence, startAnchor $startAnchor, endAnchor $endAnchor, syncAnchors $syncAnchors, spec? $speculative, comp? $complete, entID $entityIdentifier, data: $objectData)"
     }
 }
 
