@@ -13,7 +13,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.recyclerview.widget.RecyclerView
 import net.rec0de.android.watchwitch.R
 import net.rec0de.android.watchwitch.adapter.FilesAdapter
-import net.rec0de.android.watchwitch.hex
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.Date

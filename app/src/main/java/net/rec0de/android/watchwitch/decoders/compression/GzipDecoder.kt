@@ -1,6 +1,6 @@
 package net.rec0de.android.watchwitch.decoders.compression
 
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.hex
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream

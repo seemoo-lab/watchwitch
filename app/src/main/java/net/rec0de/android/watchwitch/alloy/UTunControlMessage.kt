@@ -2,9 +2,10 @@ package net.rec0de.android.watchwitch.alloy
 
 import net.rec0de.android.watchwitch.ParseCompanion
 import net.rec0de.android.watchwitch.Utils
-import net.rec0de.android.watchwitch.fromBytesBig
-import net.rec0de.android.watchwitch.fromIndex
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
 import java.nio.ByteBuffer
 import java.util.UUID
 
@@ -99,7 +100,7 @@ class Hello(
                         // bit 0x100: support IPSec Link
                         // bit 0x400: tinker flag
 
-                        msg.capabilityFlags = ULong.fromBytesBig(bytes.sliceArray(parseOffset until parseOffset+length)).toLong()
+                        msg.capabilityFlags = Long.fromBytes(bytes.sliceArray(parseOffset until parseOffset+length), ByteOrder.BIG)
                         parseOffset += length
                     }
                     4 -> {

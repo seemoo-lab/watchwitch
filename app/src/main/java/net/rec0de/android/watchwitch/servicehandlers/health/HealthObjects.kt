@@ -6,7 +6,7 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI32
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.hex
 import java.util.Date
 import java.util.UUID
 import kotlin.math.roundToInt

@@ -1,6 +1,9 @@
 package net.rec0de.android.watchwitch
 
 import net.rec0de.android.watchwitch.activities.MainActivity
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.ike.DeletePayload
 import net.rec0de.android.watchwitch.ike.IKEMessage
 import net.rec0de.android.watchwitch.ike.IKEv2Session
@@ -21,7 +24,7 @@ object IKEDispatcher {
         if(ikeSessions.containsKey(hexspi))
             ikeSessions[hexspi]!!.ingestPacket(payload)
         // fresh session
-        else if(ULong.fromBytesBig(responderSPI) == 0uL) {
+        else if(Long.fromBytes(responderSPI, ByteOrder.BIG) == 0L) {
             val session = IKEv2Session(socket, packet.address, packet.port, initiatorSPI)
             session.ingestPacket(payload)
             ikeSessions[hexspi] = session

@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.Utils
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.servicehandlers.health.ActivityCache
 import net.rec0de.android.watchwitch.servicehandlers.health.BinarySample
 import net.rec0de.android.watchwitch.servicehandlers.health.CategorySample

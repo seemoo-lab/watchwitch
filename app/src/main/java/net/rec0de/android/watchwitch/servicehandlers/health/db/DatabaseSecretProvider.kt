@@ -6,8 +6,8 @@ import net.rec0de.android.watchwitch.KeyStoreHelper.SealedData
 import net.rec0de.android.watchwitch.KeyStoreHelper.seal
 import net.rec0de.android.watchwitch.KeyStoreHelper.unseal
 import net.rec0de.android.watchwitch.LongTermStorage
-import net.rec0de.android.watchwitch.hex
-import net.rec0de.android.watchwitch.hexBytes
+import net.rec0de.android.watchwitch.bitmage.fromHex
+import net.rec0de.android.watchwitch.bitmage.hex
 import java.security.SecureRandom
 import kotlin.concurrent.Volatile
 
@@ -67,7 +67,7 @@ class DatabaseSecret {
     }
 
     constructor(encoded: String) {
-        key = encoded.hexBytes()
+        key = encoded.fromHex()
         this.encoded = encoded
     }
 

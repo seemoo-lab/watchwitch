@@ -2,23 +2,24 @@ package net.rec0de.android.watchwitch.servicehandlers.health
 
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
+import net.rec0de.android.watchwitch.alloy.AlloyController
+import net.rec0de.android.watchwitch.alloy.AlloyHandler
+import net.rec0de.android.watchwitch.alloy.AlloyMessage
+import net.rec0de.android.watchwitch.alloy.AlloyService
+import net.rec0de.android.watchwitch.alloy.DataMessage
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.fromHex
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.aoverc.Decryptor
+import net.rec0de.android.watchwitch.decoders.aoverc.KeystoreBackedDecryptor
 import net.rec0de.android.watchwitch.decoders.bplist.BPAsciiString
 import net.rec0de.android.watchwitch.decoders.bplist.BPDict
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
-import net.rec0de.android.watchwitch.fromBytesLittle
-import net.rec0de.android.watchwitch.fromIndex
-import net.rec0de.android.watchwitch.hex
-import net.rec0de.android.watchwitch.hexBytes
-import net.rec0de.android.watchwitch.alloy.AlloyService
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import net.rec0de.android.watchwitch.toAppleTimestamp
-import net.rec0de.android.watchwitch.alloy.DataMessage
-import net.rec0de.android.watchwitch.alloy.AlloyController
-import net.rec0de.android.watchwitch.alloy.AlloyHandler
-import net.rec0de.android.watchwitch.alloy.AlloyMessage
-import net.rec0de.android.watchwitch.decoders.aoverc.KeystoreBackedDecryptor
 import java.util.Date
 import java.util.UUID
 
@@ -70,7 +71,7 @@ object HealthSync : AlloyService {
             val syncAnchors = syncStatus.map { it.key.toSyncAnchorWithValue(it.value.toLong()) }
             val nanoSyncStatus = NanoSyncStatus(syncAnchors, syncMsg.changeSet?.statusCode ?: 1) // status: echo incoming sync set
             val reply = NanoSyncMessage(12, syncMsg.persistentPairingUUID, syncMsg.healthPairingUUID, nanoSyncStatus, null, null)
-            val protoBytes = "0200".hexBytes() + reply.renderProtobuf() // responses are only prefixed with msgid, not priority
+            val protoBytes = "0200".fromHex() + reply.renderProtobuf() // responses are only prefixed with msgid, not priority
 
             sendEncrypted(protoBytes, msg.streamID, msg.messageUUID.toString(), handler)
         }
@@ -79,7 +80,7 @@ object HealthSync : AlloyService {
     // based on HDIDSMessageCenter::service:account:incomingData:fromID:context: in HealthDaemon binary
     private fun parseSyncMsg(msg: ByteArray, isReply: Boolean): NanoSyncMessage? {
         // first two bytes are message type (referred to message ID in apple sources)
-        val type = UInt.fromBytesLittle(msg.sliceArray(0 until 2)).toInt()
+        val type = Int.fromBytes(msg.sliceArray(0 until 2), ByteOrder.LITTLE)
         var offset = 2
 
         if(!isReply){

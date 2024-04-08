@@ -3,7 +3,7 @@ package net.rec0de.android.watchwitch.servicehandlers.messaging
 import net.rec0de.android.watchwitch.PBParsable
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.hex
 import java.util.Date
 
 class AddBulletinSummaryRequest(

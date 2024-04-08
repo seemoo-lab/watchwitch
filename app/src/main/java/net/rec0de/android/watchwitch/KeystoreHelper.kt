@@ -2,6 +2,7 @@ package net.rec0de.android.watchwitch
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import net.rec0de.android.watchwitch.bitmage.fromIndex
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.spec.ECNamedCurveSpec
 import java.math.BigInteger

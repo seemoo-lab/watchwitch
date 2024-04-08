@@ -1,8 +1,11 @@
 package net.rec0de.android.watchwitch.decoders.bplist
 
-import net.rec0de.android.watchwitch.fromBytesBig
-import net.rec0de.android.watchwitch.fromIndex
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
+import net.rec0de.android.watchwitch.bitmage.readDouble
+import net.rec0de.android.watchwitch.bitmage.readFloat
 import java.math.BigInteger
 import java.nio.ByteBuffer
 
@@ -42,9 +45,9 @@ class BPListParser(val nestedDecode: Boolean = true) {
         val trailer = bytes.fromIndex(bytes.size - 32)
         offsetTableOffsetSize = trailer[6].toInt()
         objectRefSize = trailer[7].toInt()
-        val numObjects = ULong.fromBytesBig(trailer.sliceArray(8 until 16)).toInt()
-        val topObjectOffset = ULong.fromBytesBig(trailer.sliceArray(16 until 24)).toInt()
-        val offsetTableStart = ULong.fromBytesBig(trailer.sliceArray(24 until 32)).toInt()
+        val numObjects = ULong.fromBytes(trailer.sliceArray(8 until 16), ByteOrder.BIG).toInt()
+        val topObjectOffset = ULong.fromBytes(trailer.sliceArray(16 until 24), ByteOrder.BIG).toInt()
+        val offsetTableStart = ULong.fromBytes(trailer.sliceArray(24 until 32), ByteOrder.BIG).toInt()
 
         offsetTable =
             bytes.sliceArray(offsetTableStart until (offsetTableStart + numObjects * offsetTableOffsetSize))
@@ -53,7 +56,7 @@ class BPListParser(val nestedDecode: Boolean = true) {
     }
 
     private fun readObjectFromOffsetTableEntry(bytes: ByteArray, index: Int): CodableBPListObject {
-        val offset = UInt.fromBytesBig(offsetTable.sliceArray(index*offsetTableOffsetSize until (index+1)*offsetTableOffsetSize)).toInt()
+        val offset = Int.fromBytes(offsetTable.sliceArray(index*offsetTableOffsetSize until (index+1)*offsetTableOffsetSize), ByteOrder.BIG)
         return readObjectFromOffset(bytes, offset)
     }
 
@@ -84,14 +87,10 @@ class BPListParser(val nestedDecode: Boolean = true) {
                 val byteLen = 1 shl lengthBits
                 val value = when(byteLen) {
                     4 -> {
-                        val buf = ByteBuffer.allocate(4)
-                        buf.put(bytes.sliceArray(offset+1 until offset+1+4))
-                        buf.getFloat(0).toDouble()
+                        bytes.sliceArray(offset+1 until offset+1+4).readFloat(ByteOrder.BIG).toDouble()
                     }
                     8 -> {
-                        val buf = ByteBuffer.allocate(8)
-                        buf.put(bytes.sliceArray(offset+1 until offset+1+8))
-                        buf.getDouble(0)
+                        bytes.sliceArray(offset+1 until offset+1+8).readDouble(ByteOrder.BIG)
                     }
                     else -> throw Exception("Got unexpected byte length for real: $byteLen in ${bytes.hex()}")
                 }
@@ -149,7 +148,7 @@ class BPListParser(val nestedDecode: Boolean = true) {
                 val effectiveOffset = tmp.second
 
                 val values = (0 until entries).map {i ->
-                    val objectIndex = UInt.fromBytesBig(bytes.sliceArray(effectiveOffset+i*objectRefSize until effectiveOffset+(i+1)*objectRefSize)).toInt()
+                    val objectIndex = Int.fromBytes(bytes.sliceArray(effectiveOffset+i*objectRefSize until effectiveOffset+(i+1)*objectRefSize), ByteOrder.BIG)
                     readObjectFromOffsetTableEntry(bytes, objectIndex)
                 }
 
@@ -162,7 +161,7 @@ class BPListParser(val nestedDecode: Boolean = true) {
                 val effectiveOffset = tmp.second
 
                 val values = (0 until entries).map {i ->
-                    val objectIndex = UInt.fromBytesBig(bytes.sliceArray(effectiveOffset+i*objectRefSize until effectiveOffset+(i+1)*objectRefSize)).toInt()
+                    val objectIndex = Int.fromBytes(bytes.sliceArray(effectiveOffset+i*objectRefSize until effectiveOffset+(i+1)*objectRefSize), ByteOrder.BIG)
                     readObjectFromOffsetTableEntry(bytes, objectIndex)
                 }
 
@@ -174,14 +173,14 @@ class BPListParser(val nestedDecode: Boolean = true) {
                 var effectiveOffset = tmp.second
 
                 val keys = (0 until entries).map {i ->
-                    val keyIndex = UInt.fromBytesBig(bytes.sliceArray(effectiveOffset+i*objectRefSize until effectiveOffset+(i+1)*objectRefSize)).toInt()
+                    val keyIndex = Int.fromBytes(bytes.sliceArray(effectiveOffset+i*objectRefSize until effectiveOffset+(i+1)*objectRefSize), ByteOrder.BIG)
                     readObjectFromOffsetTableEntry(bytes, keyIndex)
                 }
 
                 effectiveOffset += entries * objectRefSize
 
                 val values = (0 until entries).map {i ->
-                    val valueIndex = UInt.fromBytesBig(bytes.sliceArray(effectiveOffset+i*objectRefSize until effectiveOffset+(i+1)*objectRefSize)).toInt()
+                    val valueIndex = Int.fromBytes(bytes.sliceArray(effectiveOffset+i*objectRefSize until effectiveOffset+(i+1)*objectRefSize), ByteOrder.BIG)
                     readObjectFromOffsetTableEntry(bytes, valueIndex)
 
                 }
@@ -202,7 +201,7 @@ class BPListParser(val nestedDecode: Boolean = true) {
             return Pair(lengthBits, offset+1)
 
         val sizeFieldSize = 1 shl (bytes[offset+1].toInt() and 0x0f) // size field is 2^n bytes
-        val size = ULong.fromBytesBig(bytes.sliceArray(offset+2 until offset+2+sizeFieldSize)).toInt() // let's just hope they never get into long territory
+        val size = ULong.fromBytes(bytes.sliceArray(offset+2 until offset+2+sizeFieldSize), ByteOrder.BIG).toInt() // let's just hope they never get into long territory
 
         return Pair(size, offset+2+sizeFieldSize)
     }

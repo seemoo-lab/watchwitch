@@ -6,6 +6,7 @@ import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.alloy.AlloyHandler
 import net.rec0de.android.watchwitch.alloy.AlloyMessage
 import net.rec0de.android.watchwitch.alloy.ResourceTransferMessage
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
 import net.rec0de.android.watchwitch.decoders.bplist.BPAsciiString
 import net.rec0de.android.watchwitch.decoders.bplist.BPData
 import net.rec0de.android.watchwitch.decoders.bplist.BPDict
@@ -14,8 +15,8 @@ import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.decoders.bplist.NSData
 import net.rec0de.android.watchwitch.decoders.bplist.NSDict
 import net.rec0de.android.watchwitch.decoders.compression.GzipDecoder
-import net.rec0de.android.watchwitch.fromBytesBig
-import net.rec0de.android.watchwitch.fromIndex
+import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.fromIndex
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -53,7 +54,7 @@ object GenericResourceTransferReceiver {
         }
         // we have already received a first message for this transfer
         else if(filesizes[stream] != null) {
-            val offset = ULong.fromBytesBig(msg.payload.sliceArray(0 until 8)).toInt()
+            val offset = ULong.fromBytes(msg.payload.sliceArray(0 until 8), ByteOrder.BIG).toInt()
             val body = msg.payload.fromIndex(8)
             val content = if(GzipDecoder.bufferIsGzipCompressed(body)) GzipDecoder.inflate(body) else body
 

@@ -1,6 +1,6 @@
 package net.rec0de.android.watchwitch.ike
 
-import net.rec0de.android.watchwitch.hexBytes
+import net.rec0de.android.watchwitch.bitmage.fromHex
 import org.bouncycastle.crypto.digests.SHA1Digest
 import org.bouncycastle.crypto.params.X25519PublicKeyParameters
 import java.nio.ByteBuffer
@@ -78,7 +78,7 @@ class ESPSAPayload(espSpi: ByteArray) : SAPayload() {
         // so if we want to have any hope of speaking with the watch, we have to negotiate something else
         //buf.put(transformStruct(false, 1, 0x1f)) // Encryption Algorithm: ENCR_CHACHA20_POLY1305_IIV (note implicit IV!)
         //buf.put(transformStruct(false, 1, 0x1c)) // Encryption Algorithm: ENCR_CHACHA20_POLY1305
-        buf.put(transformStruct(false, 1, 0x14, "800e0100".hexBytes())) // ENCR_AES_GCM_16 with 256bit keys
+        buf.put(transformStruct(false, 1, 0x14, "800e0100".fromHex())) // ENCR_AES_GCM_16 with 256bit keys
 
         buf.put(transformStruct(true, 5, 0x00)) // Extended Sequence Numbers: disabled
         payload = buf.array()
@@ -165,7 +165,7 @@ class TSrPayload(override val payload: ByteArray) : IKEPayload() {
 }
 
 class DeletePayload() : IKEPayload() {
-    override val payload = "01000000".hexBytes() // protocol 1 (IKE), spi size 0, spi number 0
+    override val payload = "01000000".fromHex() // protocol 1 (IKE), spi size 0, spi number 0
     override val typeByte = 42
 }
 

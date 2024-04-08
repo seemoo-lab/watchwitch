@@ -1,17 +1,16 @@
 package net.rec0de.android.watchwitch.decoders.bplist
 
 import net.rec0de.android.watchwitch.Utils
-import net.rec0de.android.watchwitch.fromIndex
-import net.rec0de.android.watchwitch.hex
-import net.rec0de.android.watchwitch.toAppleTimestamp
-import net.rec0de.android.watchwitch.toBytesBig
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
+import net.rec0de.android.watchwitch.bitmage.toBytes
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.util.Date
 import kotlin.math.ceil
 import kotlin.math.log2
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 abstract class BPListObject
 
@@ -40,7 +39,7 @@ abstract class CodableBPListObject : BPListObject() {
         val offsetSize = ceil(log2(offsets.last().toDouble()) / 8).toInt()
 
         // render offsets to bytes and cut to appropriate size
-        val offsetTable = offsets.map { it.toBytesBig().fromIndex(4-offsetSize) }.fold(byteArrayOf()) {
+        val offsetTable = offsets.map { it.toBytes(ByteOrder.BIG).fromIndex(4-offsetSize) }.fold(byteArrayOf()) {
             gathered, offset -> gathered + offset
         }
 
@@ -172,7 +171,7 @@ data class BPUnicodeString(override val value: String) : BPString() {
 class BPUid(val value: ByteArray) : BPListImmediateObject() {
     companion object {
         fun fromInt(value: Int): BPUid {
-            val bytes = value.toBytesBig()
+            val bytes = value.toBytes(ByteOrder.BIG)
             val firstNonZero = bytes.indexOfFirst { it.toInt() != 0 }
             return BPUid(bytes.fromIndex(firstNonZero))
         }
@@ -201,7 +200,7 @@ data class BPArray(val values: List<CodableBPListObject>) : CodableBPListObject(
         // since we chose the reference size to accomodate all the references and the byte arrays
         // are in big endian order, the first 4-refSize bytes will always be zero
         // and stripping them gets us to the desired reference byte size
-        val references = values.map { mapping[it]!!.toBytesBig().fromIndex(4-refSize) }
+        val references = values.map { mapping[it]!!.toBytes(ByteOrder.BIG).fromIndex(4-refSize) }
 
         // start with the marker and length, then append all the references
         return references.fold(result){ gathered, reference -> gathered + reference}
@@ -222,7 +221,7 @@ data class BPSet(val entries: Int, val values: List<CodableBPListObject>) : Coda
             result += BPInt(values.size.toBigInteger()).renderToBytes()
         }
 
-        val references = values.map { mapping[it]!!.toBytesBig().fromIndex(4-refSize) }
+        val references = values.map { mapping[it]!!.toBytes(ByteOrder.BIG).fromIndex(4-refSize) }
 
         // start with the marker and length, then append all the references
         return references.fold(result){ gathered, reference -> gathered + reference}
@@ -251,8 +250,8 @@ data class BPDict(val values: Map<CodableBPListObject, CodableBPListObject>) : C
 
         val references = values.toList().map {
             Pair(
-                mapping[it.first]!!.toBytesBig().fromIndex(4 - refSize),
-                mapping[it.second]!!.toBytesBig().fromIndex(4 - refSize)
+                mapping[it.first]!!.toBytes(ByteOrder.BIG).fromIndex(4 - refSize),
+                mapping[it.second]!!.toBytes(ByteOrder.BIG).fromIndex(4 - refSize)
             )
         }
 

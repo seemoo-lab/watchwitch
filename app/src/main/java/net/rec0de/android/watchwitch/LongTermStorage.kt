@@ -2,6 +2,8 @@ package net.rec0de.android.watchwitch
 
 import android.annotation.SuppressLint
 import android.content.Context
+import net.rec0de.android.watchwitch.bitmage.fromHex
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.aoverc.MPKeys
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
@@ -136,7 +138,7 @@ object LongTermStorage {
         }
 
     private fun getKey(type: String): ByteArray? {
-        return context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).getString(type, null)?.hexBytes()
+        return context.getSharedPreferences("$appID.prefs", Context.MODE_PRIVATE).getString(type, null)?.fromHex()
     }
 
     fun setKey(type: String, value: ByteArray) {

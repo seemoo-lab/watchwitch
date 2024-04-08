@@ -5,7 +5,7 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.hex
 
 class SectionIcon(val variants: List<SectionIconVariant>) {
     override fun toString(): String {

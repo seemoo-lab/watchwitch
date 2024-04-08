@@ -2,10 +2,10 @@ package net.rec0de.android.watchwitch.servicehandlers.health
 
 import net.rec0de.android.watchwitch.PBParsable
 import net.rec0de.android.watchwitch.Utils
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
-import net.rec0de.android.watchwitch.hex
 import java.util.Date
 import java.util.UUID
 

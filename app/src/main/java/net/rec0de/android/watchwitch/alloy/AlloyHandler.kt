@@ -5,8 +5,8 @@ import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.decoders.compression.GzipDecoder
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
-import net.rec0de.android.watchwitch.fromIndex
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.servicehandlers.GenericResourceTransferReceiver
 import java.io.DataOutputStream
 import java.time.Instant

@@ -1,9 +1,10 @@
 package net.rec0de.android.watchwitch.decoders.aoverc
 
 import net.rec0de.android.watchwitch.ParseCompanion
-import net.rec0de.android.watchwitch.fromBytesBig
-import net.rec0de.android.watchwitch.fromIndex
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.ECPointUtil
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -69,7 +70,7 @@ data class MPKeys(
                 val lengthByteCount = der[parseOffset].toInt() and 0x7F
                 val start = parseOffset+1
                 parseOffset += 1+lengthByteCount
-                UInt.fromBytesBig(der.sliceArray(start until start+lengthByteCount)).toInt()
+                Int.fromBytes(der.sliceArray(start until start+lengthByteCount), ByteOrder.BIG)
             }
             // single byte length
             else {

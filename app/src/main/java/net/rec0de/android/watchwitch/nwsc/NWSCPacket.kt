@@ -1,9 +1,9 @@
 package net.rec0de.android.watchwitch.nwsc
 
 import net.rec0de.android.watchwitch.Utils
-import net.rec0de.android.watchwitch.fromBytesBig
-import net.rec0de.android.watchwitch.fromIndex
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.fromIndex
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
 import org.bouncycastle.crypto.signers.Ed25519Signer
@@ -19,9 +19,9 @@ abstract class NWSCPacket(val seq: Long) {
         // assuming 2 byte length prefix has already been consumed
         fun parseFeedback(bytes: ByteArray): NWSCFeedback {
             // 2 bytes accept flag
-            val acceptFlag = UInt.fromBytesBig(bytes.sliceArray(0 until 2)).toUShort()
+            val acceptFlag = UInt.fromBytes(bytes.sliceArray(0 until 2), ByteOrder.BIG).toUShort()
             // 8 byte sequence number
-            val seq = ULong.fromBytesBig(bytes.sliceArray(2 until 10)).toLong()
+            val seq = Long.fromBytes(bytes.sliceArray(2 until 10), ByteOrder.BIG)
             // 32 byte pubkey
             val pubkey = bytes.fromIndex(10)
 
@@ -31,9 +31,9 @@ abstract class NWSCPacket(val seq: Long) {
         // assuming 2 byte length prefix has already been consumed
         private fun parseServiceRequest(bytes: ByteArray): NWSCServiceRequest {
             // 2 bytes target port
-            val targetPort = UInt.fromBytesBig(bytes.sliceArray(0 until 2)).toInt()
+            val targetPort = Int.fromBytes(bytes.sliceArray(0 until 2), ByteOrder.BIG)
             // 8 byte sequence number
-            val seq = ULong.fromBytesBig(bytes.sliceArray(2 until 10)).toLong()
+            val seq = Long.fromBytes(bytes.sliceArray(2 until 10), ByteOrder.BIG)
             // 16 byte UUID
             val uuid = Utils.uuidFromBytes(bytes.sliceArray(10 until 26))
             // 1 byte service name len
@@ -49,9 +49,9 @@ abstract class NWSCPacket(val seq: Long) {
         // assuming 2 byte length prefix has already been consumed
         private fun parsePubkeyRequest(bytes: ByteArray): NWSCPubkeyRequest {
             // 2 bytes target port
-            val targetPort = UInt.fromBytesBig(bytes.sliceArray(0 until 2)).toInt()
+            val targetPort = Int.fromBytes(bytes.sliceArray(0 until 2), ByteOrder.BIG)
             // 8 byte sequence number
-            val seq = ULong.fromBytesBig(bytes.sliceArray(2 until 10)).toLong()
+            val seq = Long.fromBytes(bytes.sliceArray(2 until 10), ByteOrder.BIG)
             // 4 zero bytes
             val zero = bytes.sliceArray(10 until 14)
             // 64 byte ed25519 signature

@@ -1,14 +1,11 @@
 package net.rec0de.android.watchwitch.servicehandlers.messaging
 
 import net.rec0de.android.watchwitch.PBParsable
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
-import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
-import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
-import net.rec0de.android.watchwitch.hex
-import net.rec0de.android.watchwitch.toCanonicalTimestamp
 import java.util.Date
 
 class SetSectionInfoRequest(val sectionInfo: SectionInfo?) {

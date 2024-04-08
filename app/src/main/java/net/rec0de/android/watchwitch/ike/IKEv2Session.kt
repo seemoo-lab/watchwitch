@@ -4,10 +4,11 @@ import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.TunnelBuilder
 import net.rec0de.android.watchwitch.Utils
-import net.rec0de.android.watchwitch.fromBytesBig
-import net.rec0de.android.watchwitch.fromIndex
-import net.rec0de.android.watchwitch.hex
-import net.rec0de.android.watchwitch.hexBytes
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.fromHex
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair
 import org.bouncycastle.crypto.agreement.X25519Agreement
@@ -125,7 +126,7 @@ class IKEv2Session(
         var offset = 0
 
         while (nextPayload != 0 && remainingData.size > 3) {
-            val payloadLength = UInt.fromBytesBig(remainingData.sliceArray(2 until 4))
+            val payloadLength = UInt.fromBytes(remainingData.sliceArray(2 until 4), ByteOrder.BIG)
 
             // encrypted payload
             if(nextPayload == 46 && sessionKeysReady) {
@@ -166,7 +167,7 @@ class IKEv2Session(
                 cryptoValuesUpdated() // we might be able to compute something with this
             }
             "KEx" -> {
-                val dhGroup = UInt.fromBytesBig(data.sliceArray(0 until 2))
+                val dhGroup = UInt.fromBytes(data.sliceArray(0 until 2), ByteOrder.BIG)
 
                 // we're expecting curve25519 DH exchange and support nothing else
                 if(dhGroup != 31u) {
@@ -191,7 +192,7 @@ class IKEv2Session(
             "SA" -> {
                 var remainingData = data
                 while(remainingData.isNotEmpty()) {
-                    val proposalLen = UInt.fromBytesBig(remainingData.sliceArray(2 until 4)).toInt()
+                    val proposalLen = UInt.fromBytes(remainingData.sliceArray(2 until 4), ByteOrder.BIG).toInt()
                     val proposal = remainingData.sliceArray(0 until proposalLen)
                     val protocol =proposal[5].toInt()
                     if(protocol == 0x03) { // ESP
@@ -225,7 +226,7 @@ class IKEv2Session(
 
         when(typeStr) {
             "NOTIFY" -> {
-                val notifyType = UInt.fromBytesBig(data.sliceArray(2 until 4))
+                val notifyType = UInt.fromBytes(data.sliceArray(2 until 4), ByteOrder.BIG)
                 if(notifyType < 16384u)
                     Logger.logIKE("-> NOTIFY - error: ${IKEDefs.errorTypes[notifyType.toInt()]}", 1)
                 else if (notifyType > 40960u) {
@@ -258,7 +259,7 @@ class IKEv2Session(
                 Logger.logIKE("-> SA", 1)
                 var remainingData = data
                 while(remainingData.isNotEmpty()) {
-                    val proposalLen = UInt.fromBytesBig(remainingData.sliceArray(2 until 4)).toInt()
+                    val proposalLen = Int.fromBytes(remainingData.sliceArray(2 until 4), ByteOrder.BIG)
                     val proposal = remainingData.sliceArray(0 until proposalLen)
                     val propNum = proposal[4].toInt()
                     val protocol = listOf("IKE", "AH", "ESP")[proposal[5].toInt() - 1]
@@ -309,9 +310,9 @@ class IKEv2Session(
         val padding = NotifyPayload(16394)
         val fragments = NotifyPayload(16395)
         val sa = ESPSAPayload(cryptoValues["espSPIr"]!!)
-        val tsi = TSiPayload("02000000080000280000ffff00000000000000000000000000000000ffffffffffffffffffffffffffffffff070000100000ffff00000000ffffffff".hexBytes())
-        val tsr = TSrPayload("02000000080000280000ffff00000000000000000000000000000000ffffffffffffffffffffffffffffffff070000100000ffff00000000ffffffff".hexBytes())
-        val proxyNotify = NotifyPayload(50701, "fd7465726d6e7573000d6a146857bc23f516".hexBytes())
+        val tsi = TSiPayload("02000000080000280000ffff00000000000000000000000000000000ffffffffffffffffffffffffffffffff070000100000ffff00000000ffffffff".fromHex())
+        val tsr = TSrPayload("02000000080000280000ffff00000000000000000000000000000000ffffffffffffffffffffffffffffffff070000100000ffff00000000ffffffff".fromHex())
+        val proxyNotify = NotifyPayload(50701, "fd7465726d6e7573000d6a146857bc23f516".fromHex())
 
         val msg = IKEMessage(exchangeType = 35, nextMsgId, initiatorSPI, responderSPI)
         val payloads = listOf(initialContact, idResp, auth, padding, fragments, sa, tsi, tsr, proxyNotify)

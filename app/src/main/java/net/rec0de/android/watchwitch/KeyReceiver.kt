@@ -5,6 +5,8 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.aoverc.MPKeys
 import java.security.MessageDigest
 

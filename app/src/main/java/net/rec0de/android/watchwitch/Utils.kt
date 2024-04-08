@@ -1,5 +1,8 @@
 package net.rec0de.android.watchwitch
 
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import org.bouncycastle.crypto.digests.SHA512Digest
 import org.bouncycastle.crypto.modes.ChaCha20Poly1305
@@ -109,7 +112,7 @@ open class ParseCompanion {
     }
 
     protected fun readInt(bytes: ByteArray, size: Int): Int {
-        val int = UInt.fromBytesBig(bytes.sliceArray(parseOffset until parseOffset +size)).toInt()
+        val int = UInt.fromBytes(bytes.sliceArray(parseOffset until parseOffset +size), ByteOrder.BIG).toInt()
         parseOffset += size
         return int
     }
@@ -133,50 +136,6 @@ object Poetry {
         "Hecate Chthonia" to listOf("Behind this mask I hide my body, pallid and decaying", "I let you bask in my phosphorus glow", "I let you call me candle", "And I let you burn up in my flame")
     )
     fun witch() = v.entries.random()
-}
-
-fun ByteArray.hex() = joinToString("") { "%02x".format(it) }
-fun ByteArray.fromIndex(i: Int) = sliceArray(i until size)
-fun String.hexBytes(): ByteArray {
-    check(length % 2 == 0) { "Must have an even length" }
-    return chunked(2)
-        .map { it.toInt(16).toByte() }
-        .toByteArray()
-}
-
-fun UInt.Companion.fromBytesLittle(bytes: ByteArray): UInt {
-    return bytes.mapIndexed { index, byte ->  byte.toUByte().toUInt() shl (index * 8)}.sum()
-}
-fun UInt.Companion.fromBytesBig(bytes: ByteArray): UInt {
-    return bytes.reversed().mapIndexed { index, byte ->  byte.toUByte().toUInt() shl (index * 8)}.sum()
-}
-fun ULong.Companion.fromBytesLittle(bytes: ByteArray): ULong {
-    return bytes.mapIndexed { index, byte ->  byte.toUByte().toULong() shl (index * 8)}.sum()
-}
-fun ULong.Companion.fromBytesBig(bytes: ByteArray): ULong {
-    return bytes.reversed().mapIndexed { index, byte ->  byte.toUByte().toULong() shl (index * 8)}.sum()
-}
-
-fun Int.toBytesBig(): ByteArray {
-    return byteArrayOf((this shr 24).toByte(), (this shr 16).toByte(), (this shr 8).toByte(), (this shr 0).toByte())
-}
-
-fun Long.doubleFromLongBytes(): Double {
-    val b = ByteBuffer.allocate(8)
-    b.putLong(this)
-    return b.getDouble(0)
-}
-
-fun Double.longBytesFromDouble(): Long {
-    val b = ByteBuffer.allocate(8)
-    b.putDouble(this)
-    return b.getLong(0)
-}
-
-fun Int.floatFromIntBytes(): Float {
-    val b = ByteBuffer.allocate(4)
-    b.putInt(this)
-    return b.getFloat(0)
 }
 
 fun Date.toAppleTimestamp(): Double {

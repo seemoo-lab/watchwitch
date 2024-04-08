@@ -2,9 +2,10 @@ package net.rec0de.android.watchwitch.shoes
 
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.ParseCompanion
-import net.rec0de.android.watchwitch.fromBytesBig
-import net.rec0de.android.watchwitch.fromIndex
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
 import java.net.InetAddress
 import java.nio.ByteBuffer
 
@@ -76,13 +77,13 @@ abstract class ShoesRequest(val port: Int) {
         var remaining = bytes
         while(remaining.isNotEmpty()) {
             val type = remaining[0].toInt()
-            val length = UInt.fromBytesBig(remaining.sliceArray(1 until 3)).toInt()
+            val length = Int.fromBytes(remaining.sliceArray(1 until 3), ByteOrder.BIG)
             val value = remaining.sliceArray(3 until 3+length)
             remaining = remaining.fromIndex(3+length)
 
             when(type) {
-                1 -> trafficClass = UInt.fromBytesBig(value).toInt()
-                2 -> flags = UInt.fromBytesBig(value).toInt()
+                1 -> trafficClass = Int.fromBytes(value, ByteOrder.BIG)
+                2 -> flags = Int.fromBytes(value, ByteOrder.BIG)
                 3 -> bundleId = value.decodeToString()
                 5 -> multipath = value
                 else -> Logger.logShoes("SHOES req unknown TLV: type $type, payload ${value.hex()}", 1)

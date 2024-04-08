@@ -9,6 +9,8 @@ import android.os.Bundle
 import android.os.Message
 import android.os.Messenger
 import android.os.RemoteException
+import net.rec0de.android.watchwitch.bitmage.fromHex
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import net.rec0de.android.watchwitch.shoes.SHOES_MSG_CONNECTIVITY
 import java.io.DataOutputStream
@@ -65,7 +67,7 @@ object RoutingManager {
         if(ips.isEmpty()){
             Logger.setError("no network interface available")
             error = true
-            return Inet4Address.getByAddress("00000000".hexBytes()) as Inet4Address
+            return Inet4Address.getByAddress("00000000".fromHex()) as Inet4Address
         }
 
         primaryInterface = NetworkInterface.getByInetAddress(ips.first())

@@ -5,7 +5,8 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.rec0de.android.watchwitch.Logger
-import net.rec0de.android.watchwitch.fromBytesBig
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromBytes
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
@@ -88,7 +89,7 @@ object ShoesProxyHandler {
                         withContext(Dispatchers.IO) {
                             fromWatch.readFully(recordHeader)
                         }
-                        val len = UInt.fromBytesBig(recordHeader.sliceArray(3 until 5)).toInt()
+                        val len = Int.fromBytes(recordHeader.sliceArray(3 until 5), ByteOrder.BIG)
                         val packet = ByteArray(5+len)
                         recordHeader.copyInto(packet)
 
@@ -145,7 +146,7 @@ object ShoesProxyHandler {
                 val recordHeader = ByteArray(5)
                 val len = withContext(Dispatchers.IO) {
                     fromRemoteStream.readFully(recordHeader)
-                    UInt.fromBytesBig(recordHeader.sliceArray(3 until 5)).toInt()
+                    Int.fromBytes(recordHeader.sliceArray(3 until 5), ByteOrder.BIG)
                 }
 
                 val packet = ByteArray(5+len)

@@ -11,7 +11,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.alloy.AlloyController
 import net.rec0de.android.watchwitch.alloy.AlloyHandler
 import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator

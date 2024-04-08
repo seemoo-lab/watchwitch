@@ -1,8 +1,8 @@
 package net.rec0de.android.watchwitch.alloy
 
 import net.rec0de.android.watchwitch.decoders.compression.GzipDecoder
-import net.rec0de.android.watchwitch.fromIndex
-import net.rec0de.android.watchwitch.hex
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
 import java.nio.ByteBuffer
 import java.util.UUID
 

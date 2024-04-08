@@ -7,7 +7,6 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
-import net.rec0de.android.watchwitch.hex
 
 abstract class AbstractActionRequest(
     val publisherBulletinID: String?,

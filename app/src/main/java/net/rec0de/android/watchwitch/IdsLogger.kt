@@ -1,6 +1,8 @@
 package net.rec0de.android.watchwitch
 
 import android.content.Context
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
 import java.io.BufferedOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date

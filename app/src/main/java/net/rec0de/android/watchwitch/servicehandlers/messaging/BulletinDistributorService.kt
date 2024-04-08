@@ -5,19 +5,18 @@ import android.content.Context
 import android.content.Intent
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.Utils
+import net.rec0de.android.watchwitch.alloy.AlloyController
+import net.rec0de.android.watchwitch.alloy.AlloyHandler
+import net.rec0de.android.watchwitch.alloy.AlloyMessage
+import net.rec0de.android.watchwitch.alloy.AlloyService
+import net.rec0de.android.watchwitch.alloy.ProtobufMessage
+import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
-import net.rec0de.android.watchwitch.fromBytesLittle
-import net.rec0de.android.watchwitch.fromIndex
-import net.rec0de.android.watchwitch.hex
-import net.rec0de.android.watchwitch.alloy.AlloyService
-import net.rec0de.android.watchwitch.alloy.AlloyController
-import net.rec0de.android.watchwitch.alloy.AlloyHandler
-import net.rec0de.android.watchwitch.alloy.AlloyMessage
-import net.rec0de.android.watchwitch.alloy.ProtobufMessage
-import net.rec0de.android.watchwitch.servicehandlers.Screenshotter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
@@ -48,7 +47,7 @@ object BulletinDistributorService : AlloyService {
         msg as ProtobufMessage
 
         // trailer handling
-        val trailerLen = UInt.fromBytesLittle(msg.payload.fromIndex(msg.payload.size-2)).toInt()
+        val trailerLen = Int.fromBytes(msg.payload.fromIndex(msg.payload.size-2), net.rec0de.android.watchwitch.bitmage.ByteOrder.LITTLE)
         if(trailerLen > msg.payload.size - 2 || trailerLen > 100) {
             Logger.logIDS("[bulletin] got message without expected trailer: ${msg.payload.hex()}", 0)
             return

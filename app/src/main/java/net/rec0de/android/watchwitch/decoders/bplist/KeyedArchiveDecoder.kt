@@ -1,7 +1,7 @@
 package net.rec0de.android.watchwitch.decoders.bplist
 
-import net.rec0de.android.watchwitch.Utils
-import net.rec0de.android.watchwitch.fromBytesBig
+import net.rec0de.android.watchwitch.bitmage.ByteOrder
+import net.rec0de.android.watchwitch.bitmage.fromBytes
 import java.util.Date
 
 class KeyedArchiveDecoder {
@@ -20,7 +20,7 @@ class KeyedArchiveDecoder {
 
         fun decode(data: BPDict): BPListObject {
             // get offset of the root object in the $objects list
-            val top = UInt.fromBytesBig(((data.values[topKey]!! as BPDict).values[rootKey]!! as BPUid).value).toInt()
+            val top = Int.fromBytes(((data.values[topKey]!! as BPDict).values[rootKey]!! as BPUid).value, ByteOrder.BIG)
             val objects = data.values[objectsKey]!! as BPArray
 
             val rootObj = objects.values[top]
@@ -30,7 +30,7 @@ class KeyedArchiveDecoder {
 
         private fun optionallyResolveObjectReference(thing: CodableBPListObject, objects: BPArray): CodableBPListObject {
             return when(thing) {
-                is BPUid -> optionallyResolveObjectReference(objects.values[UInt.fromBytesBig(thing.value).toInt()], objects)
+                is BPUid -> optionallyResolveObjectReference(objects.values[Int.fromBytes(thing.value, ByteOrder.BIG)], objects)
                 is BPArray -> BPArray(thing.values.map { optionallyResolveObjectReference(it, objects) })
                 is BPSet -> BPSet(thing.entries, thing.values.map { optionallyResolveObjectReference(it, objects) })
                 is BPDict -> {
