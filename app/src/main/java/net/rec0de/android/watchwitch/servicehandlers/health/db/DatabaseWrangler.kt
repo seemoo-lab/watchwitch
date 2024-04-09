@@ -130,8 +130,7 @@ object DatabaseWrangler {
 
         }
 
-        if(sample.workoutEvent != null) {
-            val evt = sample.workoutEvent
+        sample.workoutEvents.forEach { evt ->
             val evtValues = ContentValues().apply {
                 put(HealthSyncSecureContract.WorkoutEvents.OWNER_ID, id)
                 put(HealthSyncSecureContract.WorkoutEvents.DATE, evt.date?.toAppleTimestamp())

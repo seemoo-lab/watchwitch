@@ -2,11 +2,11 @@ package net.rec0de.android.watchwitch.servicehandlers.health
 
 import net.rec0de.android.watchwitch.PBParsable
 import net.rec0de.android.watchwitch.Utils
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI32
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
-import net.rec0de.android.watchwitch.bitmage.hex
 import java.util.Date
 import java.util.UUID
 import kotlin.math.roundToInt
@@ -27,10 +27,21 @@ class WorkoutEvent(
             val duration = pb.readOptDouble(5)
             return WorkoutEvent(type, date, swimmingStrokeStyle, metadataDictionary, duration)
         }
+
+        // from __HKWorkoutEventTypeName in HealthKit
+        private val eventTypes = listOf("Pause", "Resume", "Lap", "Marker", "MotionPaused", "MotionResumed", "Segment", "PauseOrResumeRequest")
+
+        fun typeToString(type: Int?): String {
+            return when (type) {
+                null -> "null"
+                in 1..8 -> eventTypes[type - 1]
+                else -> "Unknown($type)"
+            }
+        }
     }
 
     override fun toString(): String {
-        return "WorkoutEvent(${Workout.typeToString(type)}, date $date, strokeStyle $swimmingStrokeStyle, metadata $metadataDictionary, duration $duration)"
+        return "WorkoutEvent(${typeToString(type)}, date $date, strokeStyle $swimmingStrokeStyle, metadata $metadataDictionary, duration $duration)"
     }
 }
 

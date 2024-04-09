@@ -4,6 +4,10 @@ import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.PBParsable
 import net.rec0de.android.watchwitch.WatchState
 import net.rec0de.android.watchwitch.alloy.AlloyController
+import net.rec0de.android.watchwitch.alloy.AlloyHandler
+import net.rec0de.android.watchwitch.alloy.AlloyMessage
+import net.rec0de.android.watchwitch.alloy.AlloyService
+import net.rec0de.android.watchwitch.alloy.ProtobufMessage
 import net.rec0de.android.watchwitch.decoders.bplist.BPArray
 import net.rec0de.android.watchwitch.decoders.bplist.BPAsciiString
 import net.rec0de.android.watchwitch.decoders.bplist.BPDate
@@ -12,20 +16,15 @@ import net.rec0de.android.watchwitch.decoders.bplist.BPInt
 import net.rec0de.android.watchwitch.decoders.bplist.BPListObject
 import net.rec0de.android.watchwitch.decoders.bplist.BPString
 import net.rec0de.android.watchwitch.decoders.bplist.BPTrue
+import net.rec0de.android.watchwitch.decoders.bplist.CodableBPListObject
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBPList
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
-import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
-import net.rec0de.android.watchwitch.alloy.ProtobufMessage
-import net.rec0de.android.watchwitch.alloy.AlloyHandler
-import net.rec0de.android.watchwitch.alloy.AlloyMessage
-import net.rec0de.android.watchwitch.alloy.AlloyService
-import net.rec0de.android.watchwitch.decoders.bplist.BPFalse
-import net.rec0de.android.watchwitch.decoders.bplist.CodableBPListObject
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.toAppleTimestamp
 import java.util.Date
 
@@ -168,13 +167,13 @@ object PreferencesSync : AlloyService {
     // from NPSServer::handleUserDefaultsBackupMsgData:backupFile:idsGuid: in nanoprefsyncd
     class UserDefaultsBackupMessage(
         val container: String?,
-        val key: String,
+        val key: String?,
         val value: List<UserDefaultsBackupMsgKey>
     ) {
         companion object : PBParsable<UserDefaultsBackupMessage>() {
             override fun fromSafePB(pb: ProtoBuf): UserDefaultsBackupMessage {
                 val container = pb.readOptString(1)
-                val domain = pb.readOptString(2)!!
+                val domain = pb.readOptString(2)
                 val keys = pb.readMulti(3).map { UserDefaultsBackupMsgKey.fromSafePB(it as ProtoBuf) }
 
                 return UserDefaultsBackupMessage(container, domain, keys)
@@ -187,7 +186,8 @@ object PreferencesSync : AlloyService {
             if(container != null)
                 fields[1] = listOf(ProtoString(container))
 
-            fields[2] = listOf(ProtoString(key))
+            if(key != null)
+                fields[2] = listOf(ProtoString(key))
 
             fields[3] = value.map { ProtoLen(it.renderProtobuf()) }
 

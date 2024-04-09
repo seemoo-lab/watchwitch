@@ -325,7 +325,7 @@ class ActivityCache(
 class Workout(
     val sample: Sample,
     val type: Int,
-    val workoutEvent: WorkoutEvent?,
+    val workoutEvents: List<WorkoutEvent>,
     val duration: Double?,
     val totalEnergyBurnedInCanonicalUnit: Double?,
     val totalDistanceInCanonicalUnit: Double?,
@@ -339,7 +339,7 @@ class Workout(
         override fun fromSafePB(pb: ProtoBuf): Workout {
             val sample = Sample.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
             val type = pb.readShortVarInt(2)
-            val workoutEvent = WorkoutEvent.fromPB(pb.readOptionalSinglet(3) as ProtoBuf?)
+            val workoutEvents = pb.readMulti(3).map { WorkoutEvent.fromSafePB(it as ProtoBuf) }
             val duration = pb.readOptDouble(4)
             val totalEnergyBurnedInCanonicalUnit = pb.readOptDouble(5)
             val totalDistanceInCanonicalUnit = pb.readOptDouble(6)
@@ -349,7 +349,7 @@ class Workout(
             val totalSwimmingStrokeCountInCanonicalUnit = pb.readOptDouble(10)
             val totalFlightsClimbedInCanonicalUnit = pb.readOptDouble(11)
 
-            return Workout(sample, type, workoutEvent, duration, totalEnergyBurnedInCanonicalUnit, totalDistanceInCanonicalUnit, goalType, goal, totalBasalEnergyBurnedInCanonicalUnit, totalSwimmingStrokeCountInCanonicalUnit, totalFlightsClimbedInCanonicalUnit)
+            return Workout(sample, type, workoutEvents, duration, totalEnergyBurnedInCanonicalUnit, totalDistanceInCanonicalUnit, goalType, goal, totalBasalEnergyBurnedInCanonicalUnit, totalSwimmingStrokeCountInCanonicalUnit, totalFlightsClimbedInCanonicalUnit)
         }
 
         // from __HKWorkoutActivityNameForActivityType(long param_1) in HealthKit
@@ -367,7 +367,7 @@ class Workout(
     }
 
     override fun toString(): String {
-        return "Workout(${typeToString(type)}, sample $sample, event $workoutEvent, duration $duration, energy $totalEnergyBurnedInCanonicalUnit, distance $totalDistanceInCanonicalUnit, goalType $goalType, goal $goal, flights $totalFlightsClimbedInCanonicalUnit, strokes $totalSwimmingStrokeCountInCanonicalUnit, basal energy $totalBasalEnergyBurnedInCanonicalUnit)"
+        return "Workout(${typeToString(type)}, sample $sample, events $workoutEvents, duration $duration, energy $totalEnergyBurnedInCanonicalUnit, distance $totalDistanceInCanonicalUnit, goalType $goalType, goal $goal, flights $totalFlightsClimbedInCanonicalUnit, strokes $totalSwimmingStrokeCountInCanonicalUnit, basal energy $totalBasalEnergyBurnedInCanonicalUnit)"
     }
 }
 

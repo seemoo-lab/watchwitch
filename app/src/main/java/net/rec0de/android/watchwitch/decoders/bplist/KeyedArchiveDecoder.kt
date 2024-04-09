@@ -20,17 +20,29 @@ class KeyedArchiveDecoder {
 
         fun decode(data: BPDict): BPListObject {
             // get offset of the root object in the $objects list
-            val top = Int.fromBytes(((data.values[topKey]!! as BPDict).values[rootKey]!! as BPUid).value, ByteOrder.BIG)
+            val topDict = data.values[topKey]!! as BPDict
+
+            // so, turns out the key for the top object is not ALWAYS "root" (but almost always?)
+            val top = if(topDict.values.containsKey(rootKey))
+                topDict.values[rootKey]!! as BPUid
+            // empty archive case
+            else if (topDict.values.isEmpty()) {
+                return BPNull
+            }
+            else
+                topDict.values.values.first { it is BPUid } as BPUid // this is about as good as we can do?
+
+            val topIndex = Int.fromBytes(top.value, ByteOrder.BIG)
             val objects = data.values[objectsKey]!! as BPArray
 
-            val rootObj = objects.values[top]
+            val rootObj = objects.values[topIndex]
             val resolved = optionallyResolveObjectReference(rootObj, objects)
             return transformSupportedClasses(resolved)
         }
 
         private fun optionallyResolveObjectReference(thing: CodableBPListObject, objects: BPArray): CodableBPListObject {
             return when(thing) {
-                is BPUid -> optionallyResolveObjectReference(objects.values[Int.fromBytes(thing.value, ByteOrder.BIG)], objects)
+                is BPUid -> optionallyResolveObjectReference(objects.values[UInt.fromBytes(thing.value, ByteOrder.BIG).toInt()], objects)
                 is BPArray -> BPArray(thing.values.map { optionallyResolveObjectReference(it, objects) })
                 is BPSet -> BPSet(thing.entries, thing.values.map { optionallyResolveObjectReference(it, objects) })
                 is BPDict -> {
