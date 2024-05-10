@@ -1,11 +1,11 @@
 package net.rec0de.android.watchwitch.servicehandlers.messaging
 
 import net.rec0de.android.watchwitch.PBParsable
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
-import net.rec0de.android.watchwitch.bitmage.hex
 
 class SectionIcon(val variants: List<SectionIconVariant>) {
     override fun toString(): String {
@@ -27,15 +27,15 @@ class SectionIcon(val variants: List<SectionIconVariant>) {
     }
 }
 
-class SectionIconVariant(val format: Int?, val imageData: ByteArray, val precomposed: Boolean?) {
+class SectionIconVariant(val format: Int?, val imageData: ByteArray?, val precomposed: Boolean?) {
     override fun toString(): String {
-        return "SectionIconVariant(format $format, precomposed? $precomposed, data: ${imageData.hex()})"
+        return "SectionIconVariant(format $format, precomposed? $precomposed, data: ${imageData?.hex()})"
     }
 
     companion object : PBParsable<SectionIconVariant>() {
         override fun fromSafePB(pb: ProtoBuf): SectionIconVariant {
             val format = pb.readOptShortVarInt(1)
-            val imageData = (pb.readAssertedSinglet(2) as ProtoLen).value
+            val imageData = (pb.readAssertedSinglet(2) as ProtoLen?)?.value
             val precomposed = pb.readOptBool(3)
 
             return SectionIconVariant(format, imageData, precomposed)
@@ -48,7 +48,8 @@ class SectionIconVariant(val format: Int?, val imageData: ByteArray, val precomp
         if(format != null)
             fields[1] = listOf(ProtoVarInt(format))
 
-        fields[2] = listOf(ProtoLen(imageData))
+        if(imageData != null)
+            fields[2] = listOf(ProtoLen(imageData))
 
         if(precomposed != null)
             fields[3] = listOf(ProtoVarInt(precomposed))

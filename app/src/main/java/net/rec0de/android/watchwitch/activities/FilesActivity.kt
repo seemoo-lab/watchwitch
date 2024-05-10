@@ -3,13 +3,13 @@ package net.rec0de.android.watchwitch.activities
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
 import net.rec0de.android.watchwitch.R
 import net.rec0de.android.watchwitch.adapter.FilesAdapter
@@ -52,7 +52,18 @@ class FilesActivity : AppCompatActivity() {
         val msgList = findViewById<RecyclerView>(R.id.listFiles)
         val emptyLabel = findViewById<TextView>(R.id.labelFilesEmpty)
 
-        val storedFiles = filesDir.listFiles()!!.toList().filter { it.name != "osmdroid" && !it.name.startsWith("ww-internal") }
+        val storedFiles = filesDir.listFiles()!!.toList().filter {
+            if(it.name == "osmdroid" || it.name.startsWith("ww-internal"))
+                false
+            // delete empty session logs before display
+            else if(it.length() == 0L && it.name.startsWith("session-")) {
+                it.delete()
+                false
+            }
+            else
+                true
+        }
+
         val items = storedFiles.map {file ->
             val bitmap = if(file.extension in imgExtensions) BitmapFactory.decodeFile(file.absolutePath) else null
             FileItem(file.name, Date(file.lastModified()), bitmap, file.absolutePath, file.length())

@@ -87,7 +87,7 @@ class ProtobufParser {
             val unusual = string.filter { !it.toString().matches(Regex("[a-zA-Z0-9\\-\\./,;\\(\\)_ ]")) }
 
             val utf8Errors = string.codePoints().anyMatch{ it == 0xFFFD }
-            val weirdASCII = unusual.chars().anyMatch { it < 32 }
+            val weirdASCII = unusual.any { it.code < 32 && it.code !in listOf(9, 10, 13)} // low ascii excluding CR,LF,TAB
 
             // is 90% of characters are 'common', we assume this is a correctly decoded string
             if(unusual.length.toDouble() / string.length < 0.1 && !utf8Errors && !weirdASCII)

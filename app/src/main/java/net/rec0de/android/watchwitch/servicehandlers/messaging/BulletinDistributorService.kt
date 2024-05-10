@@ -1,8 +1,11 @@
 package net.rec0de.android.watchwitch.servicehandlers.messaging
 
 import android.annotation.SuppressLint
+import android.app.Notification
+import android.app.RemoteInput
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.alloy.AlloyController
@@ -13,6 +16,9 @@ import net.rec0de.android.watchwitch.alloy.ProtobufMessage
 import net.rec0de.android.watchwitch.bitmage.fromBytes
 import net.rec0de.android.watchwitch.bitmage.fromIndex
 import net.rec0de.android.watchwitch.bitmage.hex
+import net.rec0de.android.watchwitch.decoders.bplist.BPAsciiString
+import net.rec0de.android.watchwitch.decoders.bplist.BPDict
+import net.rec0de.android.watchwitch.decoders.bplist.BPString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
@@ -38,6 +44,8 @@ object BulletinDistributorService : AlloyService {
     private var remoteUUID: UUID? = null
 
     private lateinit var context: Context
+
+    val replyable = mutableListOf<NotificationWaitingForReply>()
 
     fun initContext(ctx: Context) {
         context = ctx
@@ -117,10 +125,48 @@ object BulletinDistributorService : AlloyService {
 
     private fun handleActionRequest(msg: AbstractActionRequest) {
         Logger.logIDS("[bulletin] got $msg", 0)
-        Intent().also { intent ->
-            intent.action = "net.rec0de.android.watchwitch.chitchat"
-            intent.putExtra("data", "action:${msg.name}")
-            context.sendBroadcast(intent)
+
+        // we might have a reply here
+        if(msg is SupplementaryActionRequest) {
+            val reply = extractReplyText(msg)
+            if(reply != null) {
+                // reply to source message if possible
+                val matchingNotification = replyable.firstOrNull { it.sentAsUUID == UUID.fromString(msg.publisherBulletinID!!) }
+                val matchingReplyAction = matchingNotification?.quickReplyAction
+                if(matchingReplyAction != null) {
+                    val intent = Intent()
+                    val bundle = Bundle()
+
+                    val actualInputs = matchingReplyAction.remoteInputs.map { input ->
+                        bundle.putCharSequence(input.resultKey, reply)
+                        val builder: RemoteInput.Builder = RemoteInput.Builder(input.resultKey)
+                        builder.setLabel(input.label)
+                        builder.setChoices(input.choices)
+                        builder.addExtras(input.extras)
+                        builder.build()
+                    }
+
+                    val inputs: Array<RemoteInput> = actualInputs.toTypedArray()
+                    RemoteInput.addResultsToIntent(inputs, intent, bundle)
+                    matchingReplyAction.actionIntent.send(context, 0, intent)
+                    replyable.remove(matchingNotification)
+                }
+
+
+                // send reply to chat view
+                Intent().also { intent ->
+                    intent.action = "net.rec0de.android.watchwitch.chitchat"
+                    intent.putExtra("data", "reply:$reply")
+                    context.sendBroadcast(intent)
+                }
+            }
+        }
+        else {
+            Intent().also { intent ->
+                intent.action = "net.rec0de.android.watchwitch.chitchat"
+                intent.putExtra("data", "action:${msg.name}")
+                context.sendBroadcast(intent)
+            }
         }
     }
 
@@ -131,6 +177,17 @@ object BulletinDistributorService : AlloyService {
             intent.putExtra("data", "lightsandsirens:${msg.didPlayLightsAndSirens}")
             context.sendBroadcast(intent)
         }
+    }
+
+    private fun extractReplyText(msg: SupplementaryActionRequest): String? {
+        val ctx = msg.actionInfo?.context
+        if(ctx != null && ctx is BPDict && ctx.values.containsKey(BPAsciiString("userResponseInfo"))) {
+            val responseInfo = ctx.values[BPAsciiString("userResponseInfo")] as BPDict
+            if (responseInfo.values.containsKey(BPAsciiString("UIUserNotificationActionResponseTypedTextKey"))) {
+                return (responseInfo.values[BPAsciiString("UIUserNotificationActionResponseTypedTextKey")] as BPString).value
+            }
+        }
+        return null
     }
 
 
@@ -165,6 +222,18 @@ object BulletinDistributorService : AlloyService {
 
     fun sendBulletin(from: String, text: String): Boolean {
         val msg = BulletinRequest.mimicIMessage(from, text, "$from@example.com")
+
+        val trailer = if(sessionInitialized) genTrailer() else genTrailer(setFieldTwo = true, state = 1)
+        val payload = msg.renderProtobuf() + trailer
+
+        val success = sendMsg(payload, 1, false)
+        if(success)
+            sessionInitialized = true
+        return success
+    }
+
+    fun sendSignalReplyable(from: String, text: String, uuid: UUID): Boolean {
+        val msg = BulletinRequest.mimicSignal(from, text, uuid)
 
         val trailer = if(sessionInitialized) genTrailer() else genTrailer(setFieldTwo = true, state = 1)
         val payload = msg.renderProtobuf() + trailer
@@ -213,4 +282,13 @@ object BulletinDistributorService : AlloyService {
         buf.putShort(len.toShort())
         return buf.array()
     }
+}
+
+data class NotificationWaitingForReply(val notification: Notification, val sentAsUUID: UUID) {
+
+    // based on Rob J's Notification Helper Library: https://github.com/iamrobj/NotificationHelperLibrary/blob/master/notifLib/src/main/java/com/robj/notificationhelperlibrary/utils/NotificationUtils.java
+    val quickReplyAction: Notification.Action?
+        get() = notification.actions.firstOrNull { action -> action.remoteInputs?.any { isKnownReplyKey(it.resultKey) } ?: false }
+
+    private fun isKnownReplyKey(resultKey: String) = resultKey.lowercase().contains("reply") || resultKey.lowercase().contains("android.intent.extra.text")
 }

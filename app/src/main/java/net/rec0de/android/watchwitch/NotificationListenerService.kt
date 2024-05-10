@@ -3,16 +3,16 @@ package net.rec0de.android.watchwitch
 import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.widget.Toast
 import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
+import net.rec0de.android.watchwitch.servicehandlers.messaging.NotificationWaitingForReply
+import java.util.UUID
 
 
 class WatchNotificationForwarder : NotificationListenerService() {
+    
+    private val receivedTimestamps = mutableSetOf<Long>()
+    private val receivedNotifications = mutableSetOf<String>()
 
-    override fun onListenerConnected() {
-        super.onListenerConnected()
-
-    }
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         Logger.log("Notification received: $sbn", 2)
 
@@ -39,8 +39,28 @@ class WatchNotificationForwarder : NotificationListenerService() {
         if(sender == "Signal")
             return
 
+        if (System.currentTimeMillis() - msg.`when` > 3000 || receivedTimestamps.contains(msg.`when`) || receivedNotifications.contains("$sender|$message")) {
+            // discard re-posted old notifications (>3s) or notifications with timestamps we already received
+            return;
+        }
+        else {
+            receivedTimestamps.add(msg.`when`)
+            receivedNotifications.add("$sender|$message")
+            // keep only one minute worth of notification timestamps (or up to 20)
+            if(receivedTimestamps.size > 20) {
+                receivedTimestamps.removeIf { it < msg.`when` - 60000 }
+            }
+            if(receivedNotifications.size > 20) {
+                receivedNotifications.clear() // imperfect but should be good enough
+            }
+        }
+
         Logger.log("Signal: $sender - $message", 0)
-        forwardAsSpoofedIMessage(sender?: "unknown", message)
+
+        val bulletinUUID = UUID.randomUUID()
+        BulletinDistributorService.replyable.add(NotificationWaitingForReply(msg, bulletinUUID))
+
+        forwardAsSignalMessage(sender?: "unknown", message, bulletinUUID)
     }
 
     private fun handleWhatsapp(msg: Notification) {
@@ -55,6 +75,14 @@ class WatchNotificationForwarder : NotificationListenerService() {
         val thread = Thread {
             val success = BulletinDistributorService.sendBulletin(title, body)
             Logger.log("Forwarding message \"$title: $body\", success: $success", 0)
+        }
+        thread.start()
+    }
+
+    private fun forwardAsSignalMessage(title: String, body: String, uuid: UUID) {
+        val thread = Thread {
+            val success = BulletinDistributorService.sendSignalReplyable(title, body, uuid)
+            Logger.log("Forwarding message \"$title: $body\" as Signal message with UUID $uuid, success: $success", 0)
         }
         thread.start()
     }

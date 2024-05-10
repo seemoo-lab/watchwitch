@@ -174,6 +174,8 @@ class MainActivity : AppCompatActivity() {
         AddressAllocator().start()
         RoutingManager.startup(this.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager)
 
+        //BulletinDistributorService.("Ea", "circe")
+
         startForegroundService(Intent(applicationContext, TcpServerService::class.java))
         startForegroundService(Intent(applicationContext, ShoesService::class.java))
     }

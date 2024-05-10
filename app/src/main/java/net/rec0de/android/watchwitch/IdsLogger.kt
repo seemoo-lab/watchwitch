@@ -31,5 +31,6 @@ object IdsLogger {
 
     fun flush() {
         output?.flush()
+        output?.close()
     }
 }

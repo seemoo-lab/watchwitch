@@ -1,6 +1,7 @@
 package net.rec0de.android.watchwitch.servicehandlers.messaging
 
 import net.rec0de.android.watchwitch.PBParsable
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.bplist.BPListObject
 import net.rec0de.android.watchwitch.decoders.bplist.CodableBPListObject
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBPList
@@ -10,7 +11,6 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
-import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.toCanonicalTimestamp
 import java.util.Date
 
@@ -124,7 +124,7 @@ class Bulletin(
         if(soundAudioVolume != null)
             str += " volume: $soundAudioVolume"
         if(soundMaximumDuration != null)
-            str += " maxDuration: $soundAudioVolume"
+            str += " maxDuration: $soundMaximumDuration"
 
         if(date != null)
             str += " date: $date"
@@ -266,7 +266,7 @@ class Bulletin(
         val fields = mutableMapOf<Int,List<ProtoValue>>()
 
         if(bulletinID != null)
-            fields[0x02] = listOf(ProtoString(bulletinID))
+            fields[0x01] = listOf(ProtoString(bulletinID))
         if(sectionID != null)
             fields[0x02] = listOf(ProtoString(sectionID))
         if(sectionDisplayName != null)

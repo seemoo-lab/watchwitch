@@ -1,6 +1,5 @@
 package net.rec0de.android.watchwitch.activities
 
-import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -8,14 +7,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
 import android.provider.Settings
-import android.text.InputType
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
-import android.widget.LinearLayout
-import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -116,6 +109,9 @@ class ChatActivity : AppCompatActivity() {
                     "AcknowledgeActionRequest" -> activity.displayReceivedMessage("acknowledged")
                     else -> activity.displayReceivedMessage("action: $action")
                 }
+            }
+            else if(data.startsWith("reply:")) {
+                activity.displayReceivedMessage(data.removePrefix("reply:"))
             }
         }
     }
