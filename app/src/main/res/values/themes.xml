@@ -1,8 +1,13 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.WatchWitch" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+    <style name="Base.Theme.WatchWitch" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#aa1e2d</item> <!-- TU red, saturation lowered to work as background -->
+        <item name="colorOnPrimary">#ffffff</item>
+        <item name="switchStyle">@style/Widget.WatchWitch.Switch</item>
+        <item name="android:statusBarColor">#aa1e2d</item>
+    </style>
+
+    <style name="ThemeOverlay.App.Switch" parent="">
+        <item name="colorSecondary">#d11f30</item>
     </style>
 
     <style name="Theme.WatchWitch" parent="Base.Theme.WatchWitch" />

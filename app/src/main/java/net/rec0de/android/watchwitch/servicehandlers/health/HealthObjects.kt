@@ -103,9 +103,9 @@ class MetadataDictionary(
     companion object : PBParsable<MetadataDictionary>() {
         override fun fromSafePB(pb: ProtoBuf): MetadataDictionary {
             val entries = pb.readMulti(1).map {
-                if(it !is ProtoBuf)
+                if(it !is ProtoLen)
                     throw Exception("Unexpected metadata dict entry: $it")
-                MetadataKeyValuePair.fromSafePB(it as ProtoBuf)
+                MetadataKeyValuePair.fromSafePB(it.asProtoBuf())
             }
             return MetadataDictionary(entries)
         }
@@ -289,7 +289,7 @@ class Electrocardiogram(
     companion object : PBParsable<Electrocardiogram>() {
         override fun fromSafePB(pb: ProtoBuf): Electrocardiogram {
             val sampleRate = pb.readOptDouble(2)
-            val lead = ElectrocardiogramLead.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
+            val lead = ElectrocardiogramLead.fromSafePB((pb.readAssertedSinglet(1) as ProtoLen).asProtoBuf())
             return Electrocardiogram(sampleRate, lead)
         }
     }

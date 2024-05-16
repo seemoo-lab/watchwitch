@@ -11,9 +11,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
-import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.alloy.AlloyController
 import net.rec0de.android.watchwitch.alloy.AlloyHandler
+import net.rec0de.android.watchwitch.bitmage.hex
 import org.bouncycastle.crypto.generators.Ed25519KeyPairGenerator
 import org.bouncycastle.crypto.params.Ed25519KeyGenerationParameters
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
@@ -96,9 +96,11 @@ object NWSCManager {
             fromWatch.readFully(request, 0, request.size)
         }
 
-        Logger.logIDS("NWSC rcv req ${request.hex()}", 3)
+        Logger.logIDS("NWSC rcv raw ${request.hex()}", 3)
 
         val packet = NWSCPacket.parseRequest(request)
+
+        Logger.logIDS("NWSC rcv $packet", 1)
 
         if(packet.port != port)
             throw Exception("Got NWSC request for port ${packet.port} on port $port")
@@ -140,7 +142,6 @@ object NWSCManager {
 
     @OptIn(DelicateCoroutinesApi::class)
     private suspend fun handleServiceRequest(request: NWSCServiceRequest, fromWatch: DataInputStream, toWatch: DataOutputStream) {
-        Logger.logIDS("NWSC rcv $request", 1)
         if(request.service == "ids-control-channel") {
             accept(toWatch)
             Logger.logIDS("register IDS control", 0)
@@ -172,11 +173,10 @@ object NWSCManager {
     }
 
     private fun handlePubkeyRequest(toWatch: DataOutputStream) {
-        Logger.logIDS("NWSC rcv pubkey req", 3)
-
         // send feedback not accepting connection but including our pubkey
         val payload = NWSCFeedback.fresh(0x00u).toByteArray()
         Logger.logIDS("NWSC snd pubkey", 3)
+        Logger.logIDS("NWSC snd raw ${payload.hex()}", 3)
 
         toWatch.write(payload)
         toWatch.flush()
@@ -291,6 +291,7 @@ object NWSCManager {
         val ack = NWSCFeedback.fresh(flags.toUShort())
         val payload = ack.toByteArray()
         Logger.logIDS("NWSC snd reject with flags ${flags.toString(16)}", 3)
+        Logger.logIDS("NWSC snd raw ${payload.hex()}", 4)
 
         toWatch.write(payload)
         toWatch.flush()
@@ -300,6 +301,7 @@ object NWSCManager {
         val ack = NWSCFeedback.fresh(0x8000u)
         val payload = ack.toByteArray()
         Logger.logIDS("NWSC snd accept", 3)
+        Logger.logIDS("NWSC snd raw ${payload.hex()}", 4)
 
         toWatch.write(payload)
         toWatch.flush()
@@ -356,6 +358,7 @@ object NWSCManager {
         val payload = req.toByteArray()
 
         Logger.logIDS("NWSC snd $req", 1)
+        Logger.logIDS("NWSC snd raw ${payload.hex()}", 3)
 
         // send request and receive response buffer
         toWatch.write(payload)
@@ -363,6 +366,8 @@ object NWSCManager {
         val ackLen = fromWatch.readUnsignedShort()
         val ack = ByteArray(ackLen)
         fromWatch.readFully(ack, 0, ack.size)
+
+        Logger.logIDS("NWSC rcv raw ${ack.hex()}", 3)
 
         // parse response feedback
         val feedback = NWSCPacket.parseFeedback(ack)

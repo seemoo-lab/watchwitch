@@ -7,4 +7,11 @@
         <item name="cornerSizeBottomRight">4dp</item>
         <item name="cornerFamily">rounded</item>
     </style>
+
+
+
+    <style name="Widget.WatchWitch.Switch" parent="Widget.MaterialComponents.CompoundButton.Switch">
+        <item name="materialThemeOverlay">@style/ThemeOverlay.App.Switch</item>
+    </style>
+
 </resources>

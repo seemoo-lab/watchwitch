@@ -1,7 +1,15 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.WatchWitch" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+    <style name="Base.Theme.WatchWitch" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#cf5461</item> <!-- TU red, saturation lowered to work as background, brightness increased for contrast -->
+        <item name="colorOnPrimary">#1c080a</item> <!-- near-black version of primary color -->
+        <item name="switchStyle">@style/Widget.WatchWitch.Switch</item>
+        <item name="android:statusBarColor">#cf5461</item>
     </style>
+
+    <style name="ThemeOverlay.App.Switch" parent="">
+        <item name="colorSecondary">#e25f6b</item>
+    </style>
+
+    <style name="Theme.WatchWitch" parent="Base.Theme.WatchWitch" />
 </resources>

@@ -73,7 +73,9 @@ open class Decryptor(keys: MPKeys) {
             val c = Cipher.getInstance("AES/CBC/PKCS5Padding")
             c.init(Cipher.DECRYPT_MODE, cryptorKey, iv)
 
-            val plain = c.update(sed) + c.doFinal()
+            // if the message is shorter than one block, first will be null
+            val first = c.update(sed)
+            val plain = if(first == null) c.doFinal() else first + c.doFinal()
             plain
         }
     }

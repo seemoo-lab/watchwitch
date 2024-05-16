@@ -1,13 +1,13 @@
 package net.rec0de.android.watchwitch
 
 import android.util.Base64
-import java.net.DatagramPacket
-import java.net.DatagramSocket
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import net.rec0de.android.watchwitch.bitmage.fromIndex
 import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.aoverc.MPKeys
+import java.net.DatagramPacket
+import java.net.DatagramSocket
 import java.security.MessageDigest
 
 
@@ -25,6 +25,8 @@ class KeyReceiver : Thread() {
             Logger.log("listening for keys on :$serverPort", 1)
             while (true) {
                 socket!!.receive(packet)
+
+                Logger.log("received key message", 1)
 
                 if (currentThread().isInterrupted)
                     break

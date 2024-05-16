@@ -14,6 +14,7 @@ import net.rec0de.android.watchwitch.alloy.AlloyMessage
 import net.rec0de.android.watchwitch.alloy.AlloyService
 import net.rec0de.android.watchwitch.alloy.ProtobufMessage
 import net.rec0de.android.watchwitch.bitmage.fromBytes
+import net.rec0de.android.watchwitch.bitmage.fromHex
 import net.rec0de.android.watchwitch.bitmage.fromIndex
 import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.bplist.BPAsciiString
@@ -35,7 +36,7 @@ object BulletinDistributorService : AlloyService {
     // the watch refuses to properly reply to our bulletin messages, despite showing the notifications we send
     // (why?)
     // so we can't really know if we initialized a session successfully - we'll just reinitialize a new one on each app launch
-    private val localSessionId = UUID.randomUUID()
+    private val localSessionId = Utils.uuidFromBytes("6c760fe2ab084d8592de516d2aa6652c".fromHex())
     private var sessionInitialized = false
     private var sendingSequence = 1
 

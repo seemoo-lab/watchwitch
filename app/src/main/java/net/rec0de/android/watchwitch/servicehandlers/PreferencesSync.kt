@@ -141,7 +141,7 @@ object PreferencesSync : AlloyService {
         companion object : PBParsable<FileBackupMessage>() {
             override fun fromSafePB(pb: ProtoBuf): FileBackupMessage {
                 val domain = pb.readOptString(2)
-                val entries = pb.readMulti(3).map { FileBackupEntry.fromSafePB(it as ProtoBuf) }
+                val entries = pb.readMulti(3).map { FileBackupEntry.fromSafePB((it as ProtoLen).asProtoBuf()) }
                 return FileBackupMessage(domain, entries)
             }
         }
@@ -174,7 +174,7 @@ object PreferencesSync : AlloyService {
             override fun fromSafePB(pb: ProtoBuf): UserDefaultsBackupMessage {
                 val container = pb.readOptString(1)
                 val domain = pb.readOptString(2)
-                val keys = pb.readMulti(3).map { UserDefaultsBackupMsgKey.fromSafePB(it as ProtoBuf) }
+                val keys = pb.readMulti(3).map { UserDefaultsBackupMsgKey.fromSafePB((it as ProtoLen).asProtoBuf()) }
 
                 return UserDefaultsBackupMessage(container, domain, keys)
             }
@@ -207,7 +207,7 @@ object PreferencesSync : AlloyService {
             override fun fromSafePB(pb: ProtoBuf): UserDefaultsMessage {
                 val timestamp = pb.readOptDate(1)!!
                 val domain = pb.readOptString(2)!!
-                val keys = pb.readMulti(3).map { UserDefaultsMsgKey.fromSafePB(it as ProtoBuf) }
+                val keys = pb.readMulti(3).map { UserDefaultsMsgKey.fromSafePB((it as ProtoLen).asProtoBuf()) }
 
                 return UserDefaultsMessage(timestamp, domain, keys)
             }
