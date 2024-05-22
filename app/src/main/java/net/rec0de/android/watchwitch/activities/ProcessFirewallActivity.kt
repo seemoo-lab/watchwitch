@@ -11,26 +11,21 @@ import android.os.Looper
 import android.os.Message
 import android.os.Messenger
 import android.os.RemoteException
-import android.view.View.GONE
-import android.view.View.VISIBLE
-import android.widget.Button
+import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import net.rec0de.android.watchwitch.R
-import net.rec0de.android.watchwitch.adapter.NetworkStatsAdapter
-import net.rec0de.android.watchwitch.shoes.SHOES_MSG_FIREWALL_DEFAULT
-import net.rec0de.android.watchwitch.shoes.SHOES_MSG_FIREWALL_RULE
+import net.rec0de.android.watchwitch.adapter.FirewallProcessAdapter
+import net.rec0de.android.watchwitch.shoes.SHOES_MSG_FIREWALL_PROCESS_RULE
 import net.rec0de.android.watchwitch.shoes.SHOES_MSG_STATS
 import net.rec0de.android.watchwitch.shoes.ShoesService
 import net.rec0de.android.watchwitch.shoes.StatsEntry
 
-class NetworkLogActivity : AppCompatActivity(), ServiceConnection {
+class ProcessFirewallActivity : AppCompatActivity(), ServiceConnection {
 
-    var firewallIsDefaultAllow: Boolean = true
     private var isBound = false
     private var serverMessenger: Messenger? = null
     private var clientMessenger: Messenger? = null
@@ -40,51 +35,33 @@ class NetworkLogActivity : AppCompatActivity(), ServiceConnection {
             val bundle = msg.data
             val json = bundle.getString("statsJson")!!
 
-            // received stats contain synthetic default entry
             val decoded = Json.decodeFromString<Pair<Map<String, StatsEntry>, Map<String, Boolean?>>>(json)
-            val statsWithDefault = decoded.first
-            val stats = statsWithDefault.filterKeys { it != "default" }
-            firewallIsDefaultAllow = statsWithDefault["default"]!!.allow!!
+
+            val processes = decoded.second.toMutableMap()
+
+            // gather process / bundle ID names that do not have firewall rules yet from the generic stats
+            val undefinedProcesses = decoded.first.flatMap { it.value.bundleIDs }.toSet().minus(processes.keys)
+            processes.putAll(undefinedProcesses.map { Pair(it, null) })
 
             val recyclerView = findViewById<RecyclerView>(R.id.hostList)
 
-            val adapter = recyclerView.adapter as NetworkStatsAdapter
+            val adapter = recyclerView.adapter as FirewallProcessAdapter
             adapter.stats.clear()
-            adapter.stats.addAll(stats.toList().sortedBy { it.second.packets }.reversed())
+            adapter.stats.addAll(processes.toList().sortedBy { it.first })
             adapter.notifyDataSetChanged()
 
             val listEmptyLabel = findViewById<TextView>(R.id.emptyLabel)
-            listEmptyLabel.visibility = if(stats.isEmpty()) VISIBLE else GONE
-
-            val defaultSwitch = findViewById<SwitchMaterial>(R.id.swFirewallDefault)
-            defaultSwitch.setOnCheckedChangeListener(null)
-            defaultSwitch.isChecked = firewallIsDefaultAllow
-            defaultSwitch.setOnCheckedChangeListener { _, allowed ->
-                firewallIsDefaultAllow = allowed
-                setFirewallDefault(allowed)
-                recyclerView.adapter?.notifyDataSetChanged()
-            }
+            listEmptyLabel.visibility = if(processes.isEmpty()) View.VISIBLE else View.GONE
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_network_log)
+        setContentView(R.layout.activity_process_firewall)
 
         val recyclerView = findViewById<RecyclerView>(R.id.hostList)
-        recyclerView.adapter = NetworkStatsAdapter(mutableListOf(), this)
+        recyclerView.adapter = FirewallProcessAdapter(mutableListOf(), this)
         recyclerView.setHasFixedSize(true)
-
-        val refreshBtn = findViewById<Button>(R.id.btnRefresh)
-        refreshBtn.setOnClickListener {
-            getStats()
-        }
-
-        val processBtn = findViewById<Button>(R.id.btnByProcess)
-        processBtn.setOnClickListener {
-            val processView = Intent(this@NetworkLogActivity, ProcessFirewallActivity::class.java)
-            this@NetworkLogActivity.startActivity(processView)
-        }
     }
 
     override fun onStart() {
@@ -122,31 +99,15 @@ class NetworkLogActivity : AppCompatActivity(), ServiceConnection {
         }
     }
 
-    private fun setFirewallDefault(value: Boolean) {
+    fun setProcessRule(process: String, allow: Boolean?) {
         if (!isBound) return
 
         val bundle = Bundle()
-        bundle.putBoolean("allowByDefault", value)
-        val message = Message.obtain(null, SHOES_MSG_FIREWALL_DEFAULT)
-        message.data = bundle
+        bundle.putString("process", process)
+        if(allow != null)
+            bundle.putBoolean("allow", allow)
 
-        try {
-            serverMessenger?.send(message)
-        } catch (e: RemoteException) {
-            e.printStackTrace()
-        } finally {
-            message.recycle()
-        }
-    }
-
-    fun setFirewallRule(host: String, allow: Boolean) {
-        if (!isBound) return
-
-        val bundle = Bundle()
-        bundle.putString("host", host)
-        bundle.putBoolean("allow", allow)
-
-        val message = Message.obtain(null, SHOES_MSG_FIREWALL_RULE)
+        val message = Message.obtain(null, SHOES_MSG_FIREWALL_PROCESS_RULE)
         message.data = bundle
 
         try {

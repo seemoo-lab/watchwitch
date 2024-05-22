@@ -1,6 +1,5 @@
 package net.rec0de.android.watchwitch.shoes
 
-import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -32,6 +31,7 @@ const val SHOES_MSG_STATS = 2
 const val SHOES_MSG_STATS_RESPONSE = 3
 const val SHOES_MSG_FIREWALL_DEFAULT = 4
 const val SHOES_MSG_FIREWALL_RULE = 5
+const val SHOES_MSG_FIREWALL_PROCESS_RULE = 6
 
 class ShoesService : Service() {
 
@@ -73,6 +73,13 @@ class ShoesService : Service() {
                     NetworkStats.setRule(host, allow)
                     this@ShoesService.firewallStateJson = NetworkStats.json()
                 }
+                SHOES_MSG_FIREWALL_PROCESS_RULE -> {
+                    val bundle = msg.data
+                    val host = bundle.getString("process")!!
+                    val allow = bundle.getBoolean("allow")
+                    NetworkStats.setProcessRule(host, allow)
+                    this@ShoesService.firewallStateJson = NetworkStats.json()
+                }
                 else -> super.handleMessage(msg)
             }
         }
@@ -84,9 +91,16 @@ class ShoesService : Service() {
     }
 
     var firewallStateJson: String?
-        get() = baseContext.getSharedPreferences("${LongTermStorage.appID}.prefs", Context.MODE_PRIVATE).getString(
-            "netstats.state", null)
+        get() {
+            val value = baseContext.getSharedPreferences("${LongTermStorage.appID}.prefs", Context.MODE_PRIVATE)
+                .getString(
+                    "netstats.state", null
+                )
+            Logger.log(value ?: "null", 1)
+            return value
+        }
         set(value) = with (baseContext.getSharedPreferences("${LongTermStorage.appID}.prefs", Context.MODE_PRIVATE).edit()) {
+            Logger.log(value!!, 1)
             putString("netstats.state", value)
             apply()
         }

@@ -5,10 +5,10 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.rec0de.android.watchwitch.Logger
-import net.rec0de.android.watchwitch.LongTermStorage
 
 object NetworkStats {
     private val stats = mutableMapOf("default" to StatsEntry(0, 0, 0, 0, mutableSetOf(), true))
+    private val processFirewall = mutableMapOf<String,Boolean?>()
 
     // this is a little cursed but we'd like to include the default firewall behaviour in the JSON we send to the UI
     // so we'll put it in as a synthetic entry and use custom accessors for prettier access
@@ -18,13 +18,28 @@ object NetworkStats {
             stats["default"]!!.allow = value
         }
 
-    fun shouldAllowConnection(host: String) = stats[host]?.allow ?: allowByDefault
+    fun shouldAllowConnection(host: String, process: String?): Boolean {
+        return if(process != null && processFirewall.containsKey(process))
+            processFirewall[process]!!
+        else
+            stats[host]?.allow ?: allowByDefault
+
+    }
 
     fun setRule(host: String, allow: Boolean) {
         if(!stats.containsKey(host))
             return
         stats[host]!!.allow = allow
         Logger.logShoes("Firewall: Host $host allowed? $allow", 0)
+    }
+
+    fun setProcessRule(process: String, allow: Boolean?) {
+        if(allow == null)
+            processFirewall.remove(process)
+        else
+            processFirewall[process] = allow
+
+        Logger.logShoes("Firewall: Process $process allowed? $allow", 0)
     }
 
     fun connect(host: String, bundle: String?) {
@@ -53,12 +68,16 @@ object NetworkStats {
         entry.bytesSent += bytes
     }
 
-    fun json() = Json.encodeToString(stats)
+    fun json() = Json.encodeToString(Pair(stats, processFirewall))
 
     fun fromJson(json: String) {
-        val imported = Json.decodeFromString<Map<String,StatsEntry>>(json)
+        val imported = Json.decodeFromString<Pair<Map<String,StatsEntry>, Map<String,Boolean?>>>(json)
+        val importedStats = imported.first
+        val importedProcessRules = imported.second
         stats.clear()
-        stats.putAll(imported)
+        stats.putAll(importedStats)
+        processFirewall.clear()
+        processFirewall.putAll(importedProcessRules)
     }
 }
 

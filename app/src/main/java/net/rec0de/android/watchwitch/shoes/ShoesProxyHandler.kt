@@ -57,7 +57,7 @@ object ShoesProxyHandler {
 
                     // I'm not 100% sure this is how it works but I think the request flags specify under which conditions the phone should reject the connection
                     // we'll also reject connection attempts explicitly blocked by the user based on hostname & requesting process
-                    if(request.flags and networkFlags != 0 || !NetworkStats.shouldAllowConnection(host)) {
+                    if(request.flags and networkFlags != 0 || !NetworkStats.shouldAllowConnection(host, request.bundleId)) {
                         Logger.logShoes("Firewall: Host $host blocked connection", 0)
                         val reply = ShoesReply.reject()
                         Logger.logShoes("SHOES reply $reply", 1)
@@ -91,7 +91,7 @@ object ShoesProxyHandler {
 
                     GlobalScope.launch { forwardForever(fromRemote, toWatch, host) }
 
-                    while(NetworkStats.shouldAllowConnection(host)) {
+                    while(NetworkStats.shouldAllowConnection(host, request.bundleId)) {
                         // we expect a TLS record header here, which is 1 byte record type, 2 bytes TLS version, 2 bytes length
                         val recordHeader = ByteArray(5)
                         withContext(Dispatchers.IO) {

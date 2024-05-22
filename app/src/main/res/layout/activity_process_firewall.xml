@@ -29,34 +29,6 @@
             android:textStyle="bold" />
 
 
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/swFirewallDefault"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="14dp"
-            android:switchPadding="8dp"
-            android:text="@string/firewall_allow_by_default" />
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btnRefresh"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="refresh" />
-
-            <Button
-                android:id="@+id/btnByProcess"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:text="by process" />
-        </LinearLayout>
-
     </LinearLayout>
 
     <TextView
@@ -86,5 +58,5 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/linearLayout5"
-        tools:listitem="@layout/netstats_item" />
+        tools:listitem="@layout/firewall_process_item" />
 </androidx.constraintlayout.widget.ConstraintLayout>
