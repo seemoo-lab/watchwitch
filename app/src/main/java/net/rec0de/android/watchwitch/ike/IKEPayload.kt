@@ -3,6 +3,7 @@ package net.rec0de.android.watchwitch.ike
 import net.rec0de.android.watchwitch.bitmage.fromHex
 import org.bouncycastle.crypto.digests.SHA1Digest
 import org.bouncycastle.crypto.params.X25519PublicKeyParameters
+import org.bouncycastle.crypto.params.X448PublicKeyParameters
 import java.nio.ByteBuffer
 
 abstract class IKEPayload {
@@ -41,21 +42,25 @@ abstract class SAPayload : IKEPayload() {
     }
 }
 
-class IKESAPayload : SAPayload() {
+class IKESAPayload(useX448: Boolean) : SAPayload() {
     override val payload: ByteArray
 
     init {
         // build a single proposal containing our supported algorithms
-        val buf = ByteBuffer.allocate(32)
+        val length = 32
+        val buf = ByteBuffer.allocate(length)
         buf.putShort(0) // last substruct, reserved
-        buf.putShort(32) // length
+        buf.putShort(length.toShort()) // length
         buf.put(1) // proposal num
         buf.put(1) // protocol IKE
         buf.put(0) // spi size
         buf.put(3) // number of transforms
         buf.put(transformStruct(false, 1, 0x1c)) // Encryption Algorithm: ENCR_CHACHA20_POLY1305
         buf.put(transformStruct(false, 2, 0x07)) // Pseudorandom Function: PRF_HMAC_SHA2_512
-        buf.put(transformStruct(true, 4, 0x1f)) // Diffie-Hellman Group: Curve25519
+        if(useX448)
+            buf.put(transformStruct(true, 4, 0x20)) // Diffie-Hellman Group: Curve448
+        else
+            buf.put(transformStruct(true, 4, 0x1f)) // Diffie-Hellman Group: Curve25519
         payload = buf.array()
     }
 }
@@ -85,7 +90,7 @@ class ESPSAPayload(espSpi: ByteArray) : SAPayload() {
     }
 }
 
-class KExPayload(pubkey: X25519PublicKeyParameters) : IKEPayload() {
+class KExPayloadX25519(pubkey: X25519PublicKeyParameters) : IKEPayload() {
     override val payload: ByteArray
     override val typeByte = 34
 
@@ -95,6 +100,22 @@ class KExPayload(pubkey: X25519PublicKeyParameters) : IKEPayload() {
         val x25519id = 0x1f
         val buf = ByteBuffer.allocate(length)
         buf.putShort(x25519id.toShort()) // DH group id
+        buf.putShort(0) // reserved
+        buf.put(pubkeyBytes) // pubkey
+        payload = buf.array()
+    }
+}
+
+class KExPayloadX448(pubkey: X448PublicKeyParameters) : IKEPayload() {
+    override val payload: ByteArray
+    override val typeByte = 34
+
+    init {
+        val pubkeyBytes = pubkey.encoded
+        val length = 4 + pubkeyBytes.size
+        val x448id = 0x20
+        val buf = ByteBuffer.allocate(length)
+        buf.putShort(x448id.toShort()) // DH group id
         buf.putShort(0) // reserved
         buf.put(pubkeyBytes) // pubkey
         payload = buf.array()

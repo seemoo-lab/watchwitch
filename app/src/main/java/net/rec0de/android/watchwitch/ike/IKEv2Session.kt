@@ -12,9 +12,13 @@ import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair
 import org.bouncycastle.crypto.agreement.X25519Agreement
+import org.bouncycastle.crypto.agreement.X448Agreement
 import org.bouncycastle.crypto.generators.X25519KeyPairGenerator
+import org.bouncycastle.crypto.generators.X448KeyPairGenerator
 import org.bouncycastle.crypto.params.X25519KeyGenerationParameters
 import org.bouncycastle.crypto.params.X25519PublicKeyParameters
+import org.bouncycastle.crypto.params.X448KeyGenerationParameters
+import org.bouncycastle.crypto.params.X448PublicKeyParameters
 import org.bouncycastle.crypto.signers.Ed25519Signer
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -36,12 +40,19 @@ class IKEv2Session(
 
     private val cryptoValues = mutableMapOf<String, ByteArray>()
     private val x25519LocalKeys: AsymmetricCipherKeyPair
+    private val x448LocalKeys: AsymmetricCipherKeyPair
     private var sessionKeysReady = false
 
+    private var isX448Session = false
+
     init {
-        val keygen = X25519KeyPairGenerator()
-        keygen.init(X25519KeyGenerationParameters(random))
-        x25519LocalKeys = keygen.generateKeyPair()
+        val keygen25519 = X25519KeyPairGenerator()
+        keygen25519.init(X25519KeyGenerationParameters(random))
+        x25519LocalKeys = keygen25519.generateKeyPair()
+
+        val keygen448 = X448KeyPairGenerator()
+        keygen448.init(X448KeyGenerationParameters(random))
+        x448LocalKeys = keygen448.generateKeyPair()
 
         cryptoValues["nr"] = randomBytes(32) // our nonce
         cryptoValues["espSPIr"] = randomBytes(4) // eventually, our ESP SPI
@@ -85,7 +96,7 @@ class IKEv2Session(
 
         when(IKEDefs.exchangeType(exchange)) {
             "SA_INIT" -> {
-                val reply = replyToSAInit()
+                val reply = replyToSAInit(isX448Session)
                 val packet = DatagramPacket(reply, reply.size, sourceAddress, sourcePort)
                 socket.send(packet)
                 Logger.logIKE("snd: SA_INIT", 0)
@@ -170,19 +181,35 @@ class IKEv2Session(
                 val dhGroup = UInt.fromBytes(data.sliceArray(0 until 2), ByteOrder.BIG)
 
                 // we're expecting curve25519 DH exchange and support nothing else
-                if(dhGroup != 31u) {
-                    Logger.logIKE("ERROR: Unsupported KEx DH group $dhGroup", 0)
-                    throw Exception("Unsupported DH group used in key exchange: $dhGroup, expecting 31 (x25519)")
+                when(dhGroup) {
+                    31u -> {
+                        val dhData = data.fromIndex(4)
+                        val agreement = X25519Agreement()
+                        agreement.init(x25519LocalKeys.private)
+                        val sharedSecret = ByteArray(agreement.agreementSize)
+                        agreement.calculateAgreement(X25519PublicKeyParameters(dhData), sharedSecret, 0)
+                        //log("SHARED SECRET: ${sharedSecret.hex()}")
+                        cryptoValues["dhShared"] = sharedSecret
+                        cryptoValuesUpdated()
+                    }
+                    32u -> {
+                        val dhData = data.fromIndex(4)
+                        val agreement = X448Agreement()
+                        agreement.init(x448LocalKeys.private)
+                        val sharedSecret = ByteArray(agreement.agreementSize)
+                        agreement.calculateAgreement(X448PublicKeyParameters(dhData), sharedSecret, 0)
+                        //log("SHARED SECRET: ${sharedSecret.hex()}")
+                        cryptoValues["dhShared"] = sharedSecret
+                        cryptoValuesUpdated()
+                        isX448Session = true
+                    }
+                    else -> {
+                        Logger.logIKE("ERROR: Unsupported KEx DH group $dhGroup", 0)
+                        throw Exception("Unsupported DH group used in key exchange: $dhGroup, expecting 31 (Curve25519) or 32 (Curve448)")
+                    }
                 }
 
-                val dhData = data.fromIndex(4)
-                val agreement = X25519Agreement()
-                agreement.init(x25519LocalKeys.private)
-                val sharedSecret = ByteArray(agreement.agreementSize)
-                agreement.calculateAgreement(X25519PublicKeyParameters(dhData), sharedSecret, 0)
-                //log("SHARED SECRET: ${sharedSecret.hex()}")
-                cryptoValues["dhShared"] = sharedSecret
-                cryptoValuesUpdated()
+
             }
             "AUTH" -> {
                 val asn1Length = data[4].toInt()
@@ -284,9 +311,14 @@ class IKEv2Session(
         }
     }
 
-    private fun replyToSAInit(): ByteArray {
-        val sa = IKESAPayload()
-        val kex = KExPayload(x25519LocalKeys.public as X25519PublicKeyParameters)
+    private fun replyToSAInit(useX448: Boolean): ByteArray {
+        val sa = IKESAPayload(useX448)
+
+        val kex = if(useX448)
+            KExPayloadX448(x448LocalKeys.public as X448PublicKeyParameters)
+        else
+            KExPayloadX25519(x25519LocalKeys.public as X25519PublicKeyParameters)
+
         val nonce = NoncePayload(cryptoValues["nr"]!!)
 
         // sending trash NAT detection payloads, they don't seem to do anything here either way

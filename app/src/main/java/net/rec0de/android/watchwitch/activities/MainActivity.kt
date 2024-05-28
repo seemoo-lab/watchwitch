@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var packetLog: TextView
     private val localIP = Utils.getLocalIP()
     private var udpHandler: UDPHandler? = null
+    private var altUdpHandler: UDPHandler? = null
 
     private val keyReceiver = KeyReceiver()
 
@@ -93,9 +94,12 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.text = getString(R.string.status_starting)
                 udpHandler = UDPHandler(this, 5000)
                 udpHandler!!.start()
+                altUdpHandler = UDPHandler(this, 62743)
+                altUdpHandler!!.start()
             } else {
                 statusLabel.text = getString(R.string.status_stopping)
                 udpHandler?.kill()
+                altUdpHandler?.kill()
                 NWSCManager.reset()
                 WatchState.resetConnectionState()
             }
