@@ -19,6 +19,8 @@ abstract class UTunControlMessage {
                 0x04 -> CompressionRequest.parse(bytes)
                 0x05 -> CompressionResponse.parse(bytes)
                 0x06 -> SetupEncryptedChannel.parse(bytes)
+                0x0d -> SetupDirectChannel.parse(bytes)
+                0x0e -> DirectMsgInfo.parse(bytes)
                 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c -> throw Exception("Unsupported UTunControlMsg type $type / ${msgTypeToString(type)}")
                 else -> throw Exception("Unknown UTunControlMsg type $type in message ${bytes.hex()}")
             }
@@ -36,7 +38,9 @@ abstract class UTunControlMessage {
             "FairplayDeviceSessionInfo",
             "OTRNegotiationMessage",
             "EncryptControlChannel",
-            "SuspendOTRNegotiationMessage"
+            "SuspendOTRNegotiationMessage",
+            "SetupChannelForDirectMsg",
+            "DirectMsgInfo"
         )
 
         private fun msgTypeToString(type: Int) = typeStrings[type-1]
@@ -257,6 +261,64 @@ class SetupChannel(val protocol: Int, val receiverPort: Int, val senderPort: Int
     }
 }
 
+class SetupDirectChannel(val protocol: Int, val receiverPort: Int, val senderPort: Int, val senderUUID: UUID, val receiverUUID: UUID?, val account: String, val service: String, val name: String): UTunControlMessage() {
+    companion object : ParseCompanion() {
+        fun parse(bytes: ByteArray): SetupDirectChannel {
+            if(bytes[0].toInt() != 0x02)
+                throw Exception("Expected UTunControlMsg type 0x0d for SetupDirectChannel but got ${bytes[0]}")
+            parseOffset = 1
+
+            val proto = readInt(bytes, 1)
+            val remotePort = readInt(bytes, 2)
+            val localPort = readInt(bytes, 2)
+
+            val remoteUUIDLen = readInt(bytes, 2)
+            val localUUIDLen = readInt(bytes, 2)
+            val accLen = readInt(bytes, 2)
+            val serviceLen = readInt(bytes, 2)
+            val nameLen = readInt(bytes, 2)
+
+            val remoteUUID = UUID.fromString(readString(bytes, remoteUUIDLen))
+            val localUUID = if(localUUIDLen > 0) UUID.fromString(readString(bytes, localUUIDLen)) else null
+
+            val account = readString(bytes, accLen)
+            val service = readString(bytes, serviceLen)
+            val name = readString(bytes, nameLen)
+
+            return SetupDirectChannel(proto, localPort, remotePort, remoteUUID, localUUID, account, service, name)
+        }
+    }
+
+    fun toBytes(): ByteArray {
+        val accBytes = account.encodeToByteArray()
+        val serviceBytes = service.encodeToByteArray()
+        val nameBytes = name.encodeToByteArray()
+
+        val header = ByteBuffer.allocate(16)
+        header.put(0x0d) // SetupDirectChannel type byte
+        header.put(protocol.toByte())
+        header.putShort(receiverPort.toShort())
+        header.putShort(senderPort.toShort())
+        header.putShort(0x24) // sender UUID length
+        header.putShort(if(receiverUUID != null) 0x24 else 0x00) // receiver UUID length
+        header.putShort(accBytes.size.toShort())
+        header.putShort(serviceBytes.size.toShort())
+        header.putShort(nameBytes.size.toShort())
+
+        val uuids = if(receiverUUID != null)
+            senderUUID.toString().encodeToByteArray() + receiverUUID.toString().encodeToByteArray()
+        else
+            senderUUID.toString().encodeToByteArray()
+
+        return header.array() + uuids + accBytes + serviceBytes + nameBytes
+    }
+
+    override fun toString(): String {
+        return "SetupDirectChannel(for $account $service $name ports $senderPort->$receiverPort proto $protocol uuids $senderUUID $receiverUUID)"
+    }
+}
+
+
 class CloseChannel(val senderUUID: UUID, val receiverUUID: UUID?, val account: String, val service: String, val name: String): UTunControlMessage() {
     companion object : ParseCompanion() {
         fun parse(bytes: ByteArray): CloseChannel {
@@ -441,5 +503,24 @@ class SetupEncryptedChannel(
 
     override fun toString(): String {
         return "SetupEncryptedChannel(ssrc $ssrc startSeq $startSeq for $account $service $name ports $senderPort->$receiverPort proto $protocol uuids $senderUUID $receiverUUID key ${key.hex()})"
+    }
+}
+
+class DirectMsgInfo(val data: ByteArray): UTunControlMessage() {
+    companion object : ParseCompanion() {
+        fun parse(bytes: ByteArray): DirectMsgInfo {
+            if(bytes[0].toInt() != 0x0e)
+                throw Exception("Expected UTunControlMsg type 0x0e for DirectMsgInfo but got ${bytes[0]}")
+            parseOffset = 1
+
+            val data = bytes.fromIndex(1)
+
+
+            return DirectMsgInfo(data)
+        }
+    }
+
+    override fun toString(): String {
+        return "DirectMsgInfo(data: ${data.hex()})"
     }
 }

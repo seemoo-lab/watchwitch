@@ -53,6 +53,16 @@ abstract class AlloyMessage(val sequence: Int) {
             0x27 to "ServiceMapMessage",          // superclass: SocketPairMessage
             // 0x28 missing?
             0x29 to "SessionReinitiateMessage",   // superclass: DataMessage
+            0x2a to "SyndicationAction",          // new in iOS 17.5
+            0x2b to "RetractMessage",             // new in iOS 17.5
+            0x2c to "EditMessage",                // new in iOS 17.5
+            0x2d to "RecoverSyncMessage",         // new in iOS 17.5
+            0x2e to "MarkAsUnreadMessage",        // new in iOS 17.5
+            0x2f to "DeliveredQuietlyMessage",    // new in iOS 17.5
+            0x30 to "NotifyRecipientMessage",     // new in iOS 17.5
+            0x31 to "RecoverJunkMessage",         // new in iOS 17.5
+            0x32 to "SMSFilteringSettingsMessage" // new in iOS 17.5
+
         )
 
         // converts UTun message type bytes to internally used 'commands' for actual application data messages
@@ -99,7 +109,16 @@ abstract class AlloyMessage(val sequence: Int) {
             // missing: ErrorMessage
             // missing: ServiceMapMessage
             0x28 to 0xc4, // ???
-            0x29 to 0xee
+            0x29 to 0xee,
+            0x2a to 0x74,
+            0x2b to 0x75,
+            0x2c to 0x76,
+            0x2d to 0xb6,
+            0x2e to 0x6f,
+            0x2f to 0x70,
+            0x30 to 0x71,
+            0x31 to 0x77,
+            0x32 to 0x8b
         )
 
         fun parse(bytes: ByteArray): AlloyMessage {
@@ -120,7 +139,7 @@ abstract class AlloyMessage(val sequence: Int) {
                 in 0x19..0x24 -> GenericDataMessage.parse(bytes, typeMap[type]!!, type)
                 0x25 -> ExpiredAckMessage.parse(bytes)
                 0x27 -> ServiceMapMessage.parse(bytes)
-                in 0x17..0x29 -> throw Exception("Unsupported UTunMsg ${typeMap[type]!!} in ${bytes.hex()}")
+                in 0x17..0x32 -> throw Exception("Unsupported UTunMsg ${typeMap[type]!!} in ${bytes.hex()}")
                 else -> throw Exception("Unknown UTunMsg type 0x${type.toString(16)} in ${bytes.hex()}")
             }
         }
