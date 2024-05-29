@@ -2,13 +2,14 @@ package net.rec0de.android.watchwitch.servicehandlers.health
 
 import net.rec0de.android.watchwitch.PBParsable
 import net.rec0de.android.watchwitch.Utils
+import net.rec0de.android.watchwitch.bitmage.fromHex
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
-import java.lang.Exception
+import net.rec0de.android.watchwitch.toAppleTimestamp
 import java.util.Date
 import java.util.UUID
 
@@ -41,6 +42,9 @@ class NanoSyncMessage(
         }
     }
 
+    fun renderReply() = "0200".fromHex() + renderProtobuf()
+    fun renderRequest() = "020000".fromHex() + renderProtobuf()
+
     fun renderProtobuf(): ByteArray {
         val fields = mutableMapOf<Int,List<ProtoValue>>()
         if(version != null)
@@ -49,8 +53,7 @@ class NanoSyncMessage(
         fields[4] = listOf(ProtoLen(Utils.uuidToBytes(healthPairingUUID)))
 
         if(changeSet != null)
-            //fields[7] = listOf(ProtoString(domain))
-            throw Exception("rendering change sets not yet supported")
+            fields[7] = listOf(ProtoLen(changeSet.renderProtobuf()))
         if(status != null)
             fields[8] = listOf(ProtoLen(status.renderProtobuf()))
         if(activationRestore != null)
@@ -90,11 +93,33 @@ class NanoSyncChangeSet(
         }
     }
 
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        fields[1] = changes.map { ProtoLen(it.renderProtobuf()) }
+        fields[2] = listOf(ProtoLen(Utils.uuidToBytes(sessionUUID)))
+
+        if(sessionStart != null)
+            fields[3] = listOf(ProtoI64(sessionStart.toAppleTimestamp()))
+
+        if(error != null)
+            fields[4] = listOf(ProtoLen(error.renderProtobuf()))
+
+        if(statusCode != null)
+            fields[5] = listOf(ProtoVarInt(statusCode))
+
+        return ProtoBuf(fields).renderStandalone()
+    }
+
     val statusString: String
         get() = statusCodeAsString(statusCode)
 
     override fun toString(): String {
         return "ChangeSet(uuid $sessionUUID, start $sessionStart, status $statusString, error $error, changes: $changes)"
+    }
+
+    enum class Status(val code: Int) {
+        CONTINUE(1), FINISHED(2), ERROR(3)
     }
 }
 
@@ -130,6 +155,30 @@ class NanoSyncChange(
 
             return NanoSyncChange(objectType, startAnchor, endAnchor, objectData, syncAnchors, speculative, sequence, complete, entityIdentifier)
         }
+    }
+
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        if(objectType != null)
+            fields[1] = listOf(ProtoVarInt(objectType))
+
+        fields[2] = listOf(ProtoVarInt(startAnchor))
+        fields[3] = listOf(ProtoVarInt(endAnchor))
+
+        fields[4] = objectData.map { ProtoLen(it.renderProtobuf()) }
+        fields[5] = syncAnchors.map { ProtoLen(it.renderProtobuf()) }
+
+        if(speculative != null)
+            fields[6] = listOf(ProtoVarInt(speculative))
+        if(sequence != null)
+            fields[7] = listOf(ProtoVarInt(sequence))
+        if(complete != null)
+            fields[8] = listOf(ProtoVarInt(complete))
+
+        fields[9] = listOf(ProtoLen(entityIdentifier.renderProtobuf()))
+
+        return ProtoBuf(fields).renderStandalone()
     }
 
     val objectTypeString: String

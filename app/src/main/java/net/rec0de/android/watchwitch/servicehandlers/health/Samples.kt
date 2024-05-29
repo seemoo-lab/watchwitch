@@ -170,6 +170,8 @@ class QuantitySample(
                 0xac -> "EnvironmentalAudioExposure"
                 0xad -> "HeadphoneAudioExposure"
                 0xba -> "AppleStandTime"
+                0xc3 -> "StairSpeedUp"      // unofficial name, inferred from logs
+                0xc4 -> "StairSpeedDown"    // unofficial name, inferred from logs
                 else -> "UnknownQuantityType($type)"
             }
         }

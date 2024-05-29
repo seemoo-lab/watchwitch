@@ -19,6 +19,8 @@
     <string name="healthlog_locationseries">GPS Track</string>
     <string name="healthlog_gps_points">%1$d points, tap to view</string>
     <string name="healthlog_min_max">min: %1$s max: %2$s</string>
+    <string name="health_unlock_ecg">Unlock ECG &amp; Cycles</string>
+    <string name="reset_sync_status">reset sync</string>
     <string name="osm_attribution">© OpenStreetMap contributors</string>
 
     <string name="status_not_running">not running</string>
@@ -32,7 +34,7 @@
     <string name="netstats_received">received</string>
     <string name="netstats_sent">sent</string>
 
-    <string name="reset_sync_status">reset sync status</string>
+
 
     <string name="service_shoes_desc">SHOES internet sharing for Apple Watch</string>
     <string name="service_alloy_desc">Alloy message handling for Apple Watch</string>

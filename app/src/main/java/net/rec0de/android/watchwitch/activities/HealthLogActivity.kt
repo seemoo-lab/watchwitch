@@ -13,7 +13,7 @@ import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 class HealthLogActivity : AppCompatActivity() {
 
     private val ignoreBoring = true
-    private val boringTypes = listOf("BasalEnergyBurned", "ActiveEnergyBurned", "WristEvent", "HeartRate")
+    private val boringTypes = listOf("BasalEnergyBurned", "ActiveEnergyBurned", "WristEvent", "HeartRate", "DistanceWalkingRunning")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,6 +38,14 @@ class HealthLogActivity : AppCompatActivity() {
         resetButton.setOnClickListener {
             Thread {
                 HealthSync.resetSyncStatus()
+            }.start()
+        }
+
+        val unlockEcgButton = findViewById<Button>(R.id.btnEcgUnlock)
+        unlockEcgButton.setOnClickListener {
+            Thread {
+                HealthSync.enableECG()
+                HealthSync.enableCycleTracking()
             }.start()
         }
     }

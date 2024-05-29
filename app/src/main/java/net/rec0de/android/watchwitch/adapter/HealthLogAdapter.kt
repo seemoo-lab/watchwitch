@@ -20,8 +20,8 @@ import com.patrykandpatrick.vico.core.entry.entryModelOf
 import com.patrykandpatrick.vico.core.entry.entryOf
 import com.patrykandpatrick.vico.views.chart.ChartView
 import com.patrykandpatrick.vico.views.component.shape.shader.verticalGradient
-import net.rec0de.android.watchwitch.activities.MapActivity
 import net.rec0de.android.watchwitch.R
+import net.rec0de.android.watchwitch.activities.MapActivity
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -73,6 +73,7 @@ class HealthLogAdapter(
                     item.dataType.contains("Heart") -> R.drawable.icon_health_heart
                     item.dataType.contains("Energy") -> R.drawable.icon_health_energy
                     item.dataType.contains("Audio") -> R.drawable.icon_health_audio
+                    item.dataType.contains("Walking") || item.dataType.contains("StepCount") || item.dataType.contains("Stair") -> R.drawable.icon_health_walk
                     else -> R.drawable.icon_health_unknown
                 }
                 holder.icon.setImageDrawable(ResourcesCompat.getDrawable(holder.view.resources, ico, null))

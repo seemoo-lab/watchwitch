@@ -9,7 +9,6 @@ import net.rec0de.android.watchwitch.alloy.AlloyService
 import net.rec0de.android.watchwitch.alloy.DataMessage
 import net.rec0de.android.watchwitch.bitmage.ByteOrder
 import net.rec0de.android.watchwitch.bitmage.fromBytes
-import net.rec0de.android.watchwitch.bitmage.fromHex
 import net.rec0de.android.watchwitch.bitmage.fromIndex
 import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.aoverc.Decryptor
@@ -18,6 +17,7 @@ import net.rec0de.android.watchwitch.decoders.bplist.BPAsciiString
 import net.rec0de.android.watchwitch.decoders.bplist.BPDict
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
+import net.rec0de.android.watchwitch.servicehandlers.PreferencesSync
 import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 import net.rec0de.android.watchwitch.toAppleTimestamp
 import java.util.Date
@@ -37,6 +37,9 @@ object HealthSync : AlloyService {
     private var initialized = false
     private lateinit var persistentUUID: UUID
     private lateinit var healthPairingUUID: UUID
+
+    private var cachedHandler: AlloyHandler? = null
+    private var cachedStream: Int? = null
 
     override fun acceptsMessageType(msg: AlloyMessage) = msg is DataMessage
 
@@ -60,6 +63,8 @@ object HealthSync : AlloyService {
             if(!initialized) {
                 persistentUUID = syncMsg.persistentPairingUUID
                 healthPairingUUID = syncMsg.healthPairingUUID
+                cachedHandler = handler
+                cachedStream = msg.streamID
                 initialized = true
             }
 
@@ -71,9 +76,7 @@ object HealthSync : AlloyService {
             val syncAnchors = syncStatus.map { it.key.toSyncAnchorWithValue(it.value.toLong()) }
             val nanoSyncStatus = NanoSyncStatus(syncAnchors, syncMsg.changeSet?.statusCode ?: 1) // status: echo incoming sync set
             val reply = NanoSyncMessage(12, syncMsg.persistentPairingUUID, syncMsg.healthPairingUUID, nanoSyncStatus, null, null)
-            val protoBytes = "0200".fromHex() + reply.renderProtobuf() // responses are only prefixed with msgid, not priority
-
-            sendEncrypted(protoBytes, msg.streamID, msg.messageUUID.toString(), handler)
+            sendEncrypted(reply.renderReply(), msg.streamID, msg.messageUUID.toString(), handler)
         }
     }
 
@@ -180,12 +183,19 @@ object HealthSync : AlloyService {
         val encrypted = decryptor!!.encrypt(bytes).renderAsTopLevelObject()
         val sequence = AlloyController.nextSenderSequence.incrementAndGet()
         val dataMsg = DataMessage(sequence, streamId, 0, inResponseTo, UUID.randomUUID(), null, null, encrypted)
+        Logger.logIDS("Sending encrypted: $dataMsg", 2)
         handler.send(dataMsg)
     }
 
-    private fun enableECG(): NanoSyncMessage {
+    fun enableECG() {
+        if(!initialized) {
+            Logger.log("Can't send ECG unlock: Health sync not initialized", 0)
+            return
+        }
+
         val startAnchor = syncStatus[SyncStatusKey(17, "main", 17)] ?: 0
         val endAnchor = startAnchor + 4 // why 4? no idea.
+        syncStatus[SyncStatusKey(17, "main", 17)] = endAnchor
         val timestamp = Date()
         val cc = "DE"
         val countryCodeBpDict = BPDict(mapOf(BPAsciiString("4") to BPAsciiString(cc)))
@@ -198,9 +208,55 @@ object HealthSync : AlloyService {
         )
         val objectData = CategoryDomainDictionary("com.apple.private.health.heart-rhythm", 105, protectedUserDefaultEntries)
         val change = NanoSyncChange(17, startAnchor, endAnchor, listOf(objectData), emptyList(), null,0, true, EntityIdentifier(17, null))
+        sendMessageWithChangeset(changeSetWithChange(change))
+        sendMessageWithChangeset(finishedChangeSet)
 
-        val changeSet = NanoSyncChangeSet(sessionUUID, sessionStart, 1, listOf(change), null)
-        return NanoSyncMessage(12, persistentUUID, healthPairingUUID, null, changeSet, null)
+        PreferencesSync.enableECG()
+    }
+
+    fun enableCycleTracking() {
+        if(!initialized) {
+            Logger.log("Can't send Cycle Tracking unlock: Health sync not initialized", 0)
+            return
+        }
+
+        var startAnchor = syncStatus[SyncStatusKey(8, "main", 6)] ?: 0
+        var endAnchor = startAnchor + 6
+        syncStatus[SyncStatusKey(8, "main", 6)] = endAnchor
+
+        val userCharacteristicsDict = CategoryDomainDictionary(null, 101, listOf(
+            TimestampedKeyValuePair("user_entered_menstrual_cycle_length", Date(), null, 28.0, null, null),
+            TimestampedKeyValuePair("user_entered_period_cycle_length", Date(), null, 5.0, null, null)
+        ))
+        sendMessageWithChangeset(changeSetWithChange(NanoSyncChange(6, startAnchor, endAnchor, listOf(userCharacteristicsDict), emptyList(), null, 0, true, EntityIdentifier(8, null))))
+
+        startAnchor = syncStatus[SyncStatusKey(17, "main", 17)] ?: 0
+        endAnchor = startAnchor + 20
+        syncStatus[SyncStatusKey(17, "main", 17)] = endAnchor
+
+        val userDefaultsDict = CategoryDomainDictionary("com.apple.private.health.menstrual-cycles", 105, listOf(
+            TimestampedKeyValuePair("OnboardingCompleted", Date(), 2, null, null, null),
+            TimestampedKeyValuePair("OnboardingFirstCompletedDate", Date(), null, Date().toAppleTimestamp(), null, null)
+        ))
+        sendMessageWithChangeset(changeSetWithChange(NanoSyncChange(17, startAnchor, endAnchor, listOf(userDefaultsDict), emptyList(), null, 0, true, EntityIdentifier(17, null))))
+
+        sendMessageWithChangeset(finishedChangeSet)
+
+        PreferencesSync.enableCycleTracking()
+    }
+
+    private val finishedChangeSet: NanoSyncChangeSet
+        get() = NanoSyncChangeSet(sessionUUID, sessionStart, NanoSyncChangeSet.Status.FINISHED.code, emptyList(), null)
+
+    private fun changeSetWithChange(change: NanoSyncChange): NanoSyncChangeSet {
+        return NanoSyncChangeSet(sessionUUID, sessionStart, NanoSyncChangeSet.Status.CONTINUE.code, listOf(change), null)
+    }
+
+    private fun sendMessageWithChangeset(changeSet: NanoSyncChangeSet) {
+        val msg = NanoSyncMessage(12, persistentUUID, healthPairingUUID, null, changeSet, null)
+        Logger.logIDS("Prepared outgoing msg: $msg", 2)
+        sendEncrypted(msg.renderRequest(), cachedStream!!, null, cachedHandler!!)
+
     }
 
     fun resetSyncStatus() {

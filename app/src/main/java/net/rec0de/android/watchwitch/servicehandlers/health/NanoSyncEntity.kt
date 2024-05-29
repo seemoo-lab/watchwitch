@@ -2,10 +2,13 @@ package net.rec0de.android.watchwitch.servicehandlers.health
 
 import net.rec0de.android.watchwitch.PBParsable
 import net.rec0de.android.watchwitch.Utils
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
-import net.rec0de.android.watchwitch.bitmage.hex
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
 import java.util.Date
 import java.util.UUID
 
@@ -83,6 +86,10 @@ interface NanoSyncEntity {
             }
         }
     }
+
+    fun renderProtobuf(): ByteArray {
+        throw Exception("Cannot render: $this")
+    }
 }
 
 
@@ -120,6 +127,29 @@ class ObjectCollection(
         }
     }
 
+    /*override fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        if(sourceBundleIdentifier != null)
+            fields[1] = listOf(ProtoString(sourceBundleIdentifier))
+        if(source != null)
+            fields[2] = listOf(ProtoLen(source.renderProtobuf()))
+
+        fields[3] = categorySamples.map { ProtoLen(it.renderProtobuf()) }
+        fields[4] = quantitySamples.map { ProtoLen(it.renderProtobuf()) }
+        fields[5] = workouts.map { ProtoLen(it.renderProtobuf()) }
+        // correlation
+        fields[7] = activityCaches.map { ProtoLen(it.renderProtobuf()) }
+        fields[8] = binarySamples.map { ProtoLen(it.renderProtobuf()) }
+        fields[9] = deletedSamples.map { ProtoLen(it.renderProtobuf()) }
+        fields[10] = locationSeries.map { ProtoLen(it.renderProtobuf()) }
+
+        fields[20] = listOf(ProtoLen(provenance.renderProtobuf()))
+        fields[22] = ecgSamples.map { ProtoLen(it.renderProtobuf()) }
+
+        return ProtoBuf(fields).renderStandalone()
+    }*/
+
     override fun toString(): String {
         val containedObjects = mutableListOf<Any>()
         containedObjects.addAll(categorySamples)
@@ -148,6 +178,19 @@ class CategoryDomainDictionary(
 
             return CategoryDomainDictionary(domain, category, entries)
         }
+    }
+
+    override fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        if(category != null)
+            fields[1] = listOf(ProtoVarInt(category))
+        if(domain != null)
+            fields[2] = listOf(ProtoString(domain))
+
+        fields[3] = keyValuePairs.map { ProtoLen(it.renderProtobuf()) }
+
+        return ProtoBuf(fields).renderStandalone()
     }
 
     override fun toString(): String {

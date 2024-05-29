@@ -5,8 +5,12 @@ import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI32
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
+import net.rec0de.android.watchwitch.toAppleTimestamp
 import java.util.Date
 import java.util.UUID
 import kotlin.math.roundToInt
@@ -83,6 +87,24 @@ class TimestampedKeyValuePair(
 
             return TimestampedKeyValuePair(key, timestamp, numberIntValue, numberDoubleValue, stringValue, bytesValue)
         }
+    }
+
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        fields[1] = listOf(ProtoString(key))
+        fields[2] = listOf(ProtoI64(timestamp.toAppleTimestamp()))
+
+        if(numberIntValue != null)
+            fields[3] = listOf(ProtoVarInt(numberIntValue))
+        if(numberDoubleValue != null)
+            fields[4] = listOf(ProtoI64(numberDoubleValue))
+        if(stringValue != null)
+            fields[5] = listOf(ProtoString(stringValue))
+        if(byteValue != null)
+            fields[6] = listOf(ProtoLen(byteValue))
+
+        return ProtoBuf(fields).renderStandalone()
     }
 
     override fun toString(): String {

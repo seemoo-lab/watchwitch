@@ -12,6 +12,7 @@ import net.rec0de.android.watchwitch.decoders.bplist.BPArray
 import net.rec0de.android.watchwitch.decoders.bplist.BPAsciiString
 import net.rec0de.android.watchwitch.decoders.bplist.BPDate
 import net.rec0de.android.watchwitch.decoders.bplist.BPDict
+import net.rec0de.android.watchwitch.decoders.bplist.BPFalse
 import net.rec0de.android.watchwitch.decoders.bplist.BPInt
 import net.rec0de.android.watchwitch.decoders.bplist.BPListObject
 import net.rec0de.android.watchwitch.decoders.bplist.BPString
@@ -26,6 +27,7 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
 import net.rec0de.android.watchwitch.toAppleTimestamp
+import java.math.BigInteger
 import java.util.Date
 
 object PreferencesSync : AlloyService {
@@ -64,6 +66,77 @@ object PreferencesSync : AlloyService {
         Logger.logIDS("[nps] trying to enable screenshots: $enableScreenshotsMsg", 0)
         val handler = AlloyController.getHandlerForChannel(listOf("UTunDelivery-Default-Sync-C", "UTunDelivery-Default-Sync-D", "UTunDelivery-Default-Default-C", "UTunDelivery-Default-Default-D", "UTunDelivery-Default-Urgent-C", "UTunDelivery-Default-Urgent-D", "UTunDelivery-Default-DefaultCloud-C", "UTunDelivery-Default-DefaultCloud-D", "UTunDelivery-Default-UrgentCloud-C", "UTunDelivery-Default-UrgentCloud-D"))
         handler?.sendProtobuf(enableScreenshotsMsg.renderProtobuf(), "com.apple.private.alloy.preferencessync", 0, isResponse = false)
+    }
+
+    fun enableECG() {
+        val handler = AlloyController.getHandlerForChannel(listOf("UTunDelivery-Default-Sync-C", "UTunDelivery-Default-Sync-D", "UTunDelivery-Default-Default-C", "UTunDelivery-Default-Default-D", "UTunDelivery-Default-Urgent-C", "UTunDelivery-Default-Urgent-D", "UTunDelivery-Default-DefaultCloud-C", "UTunDelivery-Default-DefaultCloud-D", "UTunDelivery-Default-UrgentCloud-C", "UTunDelivery-Default-UrgentCloud-D"))
+
+        val watchAppInstallAllowed = UserDefaultsMessage(
+            Date(),
+            "com.apple.private.health.heart-rhythm",
+            listOf(
+                UserDefaultsMsgKey("ElectrocardiogramWatchAppInstallIsAllowed", BPTrue, null, null)
+            )
+        )
+
+        Logger.logIDS("[nps] trying to allow ECG app install: $watchAppInstallAllowed", 0)
+        handler?.sendProtobuf(watchAppInstallAllowed.renderProtobuf(), "com.apple.private.alloy.preferencessync", 0, isResponse = false)
+
+        val onboardingCompleted = UserDefaultsMessage(
+            Date(),
+            "com.apple.private.health.heart-rhythm",
+            listOf(
+                UserDefaultsMsgKey("HKElectrocardiogramOnboardingCompleted", BPInt(BigInteger.valueOf(4)), true, Date())
+            )
+        )
+
+        Logger.logIDS("[nps] trying to set ECG onboarding completed: $onboardingCompleted", 0)
+        handler?.sendProtobuf(onboardingCompleted.renderProtobuf(), "com.apple.private.alloy.preferencessync", 0, isResponse = false)
+
+        val refreshFeatureAvailability = UserDefaultsMessage(
+            Date(),
+            "com.apple.private.health.feature-availability",
+            listOf(
+                UserDefaultsMsgKey("RefreshFeatureAvailabilityConditions", BPDate(Date().toAppleTimestamp()), null, null)
+            )
+        )
+
+        Logger.logIDS("[nps] trying to refresh feature availability: $refreshFeatureAvailability", 0)
+        handler?.sendProtobuf(refreshFeatureAvailability.renderProtobuf(), "com.apple.private.alloy.preferencessync", 0, isResponse = false)
+
+    }
+
+    fun enableCycleTracking() {
+        val handler = AlloyController.getHandlerForChannel(listOf("UTunDelivery-Default-Sync-C", "UTunDelivery-Default-Sync-D", "UTunDelivery-Default-Default-C", "UTunDelivery-Default-Default-D", "UTunDelivery-Default-Urgent-C", "UTunDelivery-Default-Urgent-D", "UTunDelivery-Default-DefaultCloud-C", "UTunDelivery-Default-DefaultCloud-D", "UTunDelivery-Default-UrgentCloud-C", "UTunDelivery-Default-UrgentCloud-D"))
+
+        // we're enabling cycle tracking with some arbitrary conservative default settings
+        // could eventually expose to UI if we wanted to
+
+        val hidden = BPDict(mapOf(
+            BPAsciiString("DisplayTypeIdentifierOvulationTestResult") to BPTrue,
+            BPAsciiString("DisplayTypeIdentifierSexualActivity") to BPTrue,
+            BPAsciiString("DisplayTypeIdentifierIntermenstrualBleeding") to BPFalse,
+            BPAsciiString("DisplayTypeIdentifierCervicalMucusQuality") to BPTrue,
+            BPAsciiString("DisplayTypeIdentifierBasalBodyTemperature") to BPTrue,
+            BPAsciiString("DisplayTypeIdentifierSymptoms") to BPFalse,
+        ))
+
+        val cycleTrackingPrefs = UserDefaultsMessage(
+            Date(),
+            "com.apple.private.health.menstrual-cycles",
+            listOf(
+                UserDefaultsMsgKey("MenstruationProjectionsEnabled", BPTrue, null, null),
+                UserDefaultsMsgKey("MenstruationNotificationsEnabled", BPFalse, null, null),
+                UserDefaultsMsgKey("FertileWindowProjectionsEnabled", BPFalse, null, null),
+                UserDefaultsMsgKey("FertileWindowNotificationsEnabled", BPFalse, null, null),
+                UserDefaultsMsgKey("MenstruationProjectionsDisabledForVersionMismatch", BPFalse, null, null),
+                UserDefaultsMsgKey("FertileWindowProjectionsDisabledForVersionMismatch", BPFalse, null, null),
+                UserDefaultsMsgKey("ShouldHideByDisplayTypeIdentifier", hidden, null, null),
+            )
+        )
+
+        Logger.logIDS("[nps] trying to set cycle tracking settings: $cycleTrackingPrefs", 0)
+        handler?.sendProtobuf(cycleTrackingPrefs.renderProtobuf(), "com.apple.private.alloy.preferencessync", 0, isResponse = false)
     }
 
     private fun handleUserDefaultMessage(pb: ProtoBuf, handler: AlloyHandler) {
