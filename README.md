@@ -6,8 +6,8 @@ WatchWitch is an Android app that allows you to communicate with your Apple Watc
 
 ## Features
 
-* The WatchWitch app provides internet access to the watch using the SHOES protocol. Statistics on contacted hosts and data transferred are displayed in the *Network Stats* view.
-* Send text message notifications to the watch using the *Chat* view.
+* The WatchWitch app provides internet access to the watch using the SHOES protocol. Statistics on contacted hosts and data transferred are displayed in the *Firewall* view, which allows you to block selected connections.
+* Send text message notifications to the watch (and set up notification forwarding) using the *Chat* view.
 * Browse health data collected by the watch in the *Health* view, including ECG charts and GPS tracks.
 * View a list of open apps, alarms set, and the ringer state of the watch (only available after sent by the watch).
 * Receive and download screenshots taken on the watch and communication transcripts in the *Files* view.
@@ -17,6 +17,10 @@ WatchWitch is an Android app that allows you to communicate with your Apple Watc
 ![Screenshots 1](img/screenshots-1.png)
 
 ![Screenshots 2](img/screenshots-2.png)
+
+## Compatibility
+
+WatchWitch is built and tested with an iPhone 8 running iOS 14.8 and an Apple Watch Series 5 running watchOS 7.3.3. You probably have some latitude when it comes to versions and device models. As of watchOS 10, however, the watch only supports _implicit initialization vector_ modes for ESP encryption. These modes are not (yet?) supported on Android/Linux which means we cannot establish the required IPSec tunnel. The Android app is built for API level 33, so any recent Android phone should work.
 
 ## Usage
 
@@ -37,3 +41,13 @@ The watch will now connect to the Android phone *when it chooses to*. To force t
 For a successful connection, you should see several *SetupChannel* messages in the debug log. Once connected, you should be able to use all features of the app.
 
 **Note:** The watch is a moody creature. Taking over the connection from an iPhone stretches the intended use case of the involved protocols a fair bit, and can get the watch into weird, half-functional states. Especially when re-connecting to the iPhone after being connected to the Android phone, you can expect various features to not work as intended. For best results, reboot the watch, restart the WatchWitch app, and try again.
+
+## Health Sync
+
+The watch only synchronizes health data every now and then. To manually trigger it a sync, you can start a short workout, log some symptom in the cycle tracking app, or take an ECG reading. Once WatchWitch has received some health messages, you can also manually unlock the ECG and cycle tracking app, if you haven't done so before.
+
+## Notification Forwarding
+
+WatchWitch can forward instant messages from your Android phone to your watch. Currently forwarding is only supported for Signal messages. To use this, you'll have to grant the app permission to access your Android notifications. You'll be prompted to do so when you open the *Chat* view. 
+
+Replies you compose on the watch will be sent back *if the watch fully accepts our session*. This is somewhat rare as it requires taking over a session with an unknown ID from the previously connected iPhone. It might take some tries (reconnecting, restarting app & watch) to get a session that works.
