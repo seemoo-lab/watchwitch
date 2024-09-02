@@ -63,7 +63,8 @@
             android:inputType="text"
             android:paddingHorizontal="20dp"
             android:paddingVertical="8dp"
-            android:textColor="?attr/colorOnBackground" />
+            android:textColor="?attr/colorOnBackground"
+            android:autofillHints="" />
 
         <ImageButton
             android:id="@+id/btnSend"

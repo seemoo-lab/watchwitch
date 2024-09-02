@@ -12,7 +12,7 @@ WatchWitch is an Android app that allows you to communicate with your Apple Watc
 * View a list of open apps, alarms set, and the ringer state of the watch (only available after sent by the watch).
 * Receive and download screenshots taken on the watch and communication transcripts in the *Files* view.
 
-We showcase some of these features in a short [demo video](https://streamable.com/k7878q).
+We showcase some of these features in a short [demo video](https://streamable.com/k7878q). Further tools for working with the Apple Watch protocol stack can be found in [watchwitch-tools](https://github.com/seemoo-lab/watchwitch-tools).
 
 ## Screenshots
 

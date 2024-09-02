@@ -1,11 +1,11 @@
 package net.rec0de.android.watchwitch.activities
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.RecyclerView
 import net.rec0de.android.watchwitch.R
@@ -20,7 +20,6 @@ class WatchStateActivity : AppCompatActivity() {
 
         val alarmList = findViewById<RecyclerView>(R.id.listFiles)
         val alarmListEmpty = findViewById<TextView>(R.id.labelFilesEmpty)
-        alarmList.setHasFixedSize(true)
         WatchState.alarms.observe(this) { alarms ->
             alarmList.swapAdapter(AlarmsAdapter(alarms), true)
             if(alarms.isEmpty()) {

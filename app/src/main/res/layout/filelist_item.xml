@@ -82,7 +82,7 @@
                     app:tint="?attr/colorPrimary"
                     card_view:srcCompat="@drawable/icon_download" />
 
-                <Space
+                <android.widget.Space
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="1" />
@@ -93,7 +93,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="bottom"
                     android:alpha="1"
-                    android:gravity="bottom"
+                    android:gravity="end"
                     android:textAlignment="textEnd"
                     android:textColor="?attr/colorOnPrimary"
                     tools:text="Sun 13:37" />

@@ -37,7 +37,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="0"
                 android:paddingHorizontal="16dp"
-                android:tint="?attr/colorOnPrimary"
+                app:tint="?attr/colorOnPrimary"
                 card_view:srcCompat="@drawable/icon_alarm_enabled" />
 
         </LinearLayout>
