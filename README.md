@@ -2,7 +2,7 @@
 
 ![WatchWitch icon](img/banner.png)
 
-WatchWitch is an Android app that allows you to communicate with your Apple Watch. It requires a jailbroken iPhone and a rooted Android phone to set up.
+WatchWitch is an Android app that allows you to communicate with your Apple Watch. It requires a jailbroken iPhone and a rooted Android phone to set up. 
 
 ## Features
 
@@ -12,11 +12,11 @@ WatchWitch is an Android app that allows you to communicate with your Apple Watc
 * View a list of open apps, alarms set, and the ringer state of the watch (only available after sent by the watch).
 * Receive and download screenshots taken on the watch and communication transcripts in the *Files* view.
 
+We showcase some of these features in a short [demo video](https://streamable.com/k7878q).
+
 ## Screenshots
 
 ![Screenshots 1](img/screenshots-1.png)
-
-![Screenshots 2](img/screenshots-2.png)
 
 ## Compatibility
 
