@@ -24,7 +24,7 @@ WatchWitch is built and tested with an iPhone 8 running iOS 14.8 and an Apple Wa
 
 ## Usage
 
-To get your watch to connect to your Android phone, you'll need the [WatchWitch iOS app](https://github.com/rec0de/watchwitch-ios-companion) and the [WatchWitch iOS tweak](https://github.com/rec0de/watchwitch-ios). You'll also have to grant the WatchWitch Android app root privileges, which are required to set up the IPSec tunnel networking with the watch.
+To get your watch to connect to your Android phone, you'll need the WatchWitch iOS app and the WatchWitch iOS tweak. You can find both at [github.com/seemoo-lab/watchwitch-ios](https://github.com/seemoo-lab/watchwitch-ios). You'll also have to grant the WatchWitch Android app root privileges, which are required to set up the IPSec tunnel networking with the watch.
 
 Once you have everything installed, open the WatchWitch apps on both the iPhone and the Android phone. Make sure all devices are connected to the same WiFi network.
 
