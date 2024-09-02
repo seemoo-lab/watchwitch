@@ -133,6 +133,12 @@ class MetadataDictionary(
         }
     }
 
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+        fields[1] = entries.map { ProtoLen(it.renderProtobuf()) }
+        return ProtoBuf(fields).renderStandalone()
+    }
+
     override fun toString() = entries.toString()
 }
 
@@ -159,6 +165,32 @@ class MetadataKeyValuePair(
         }
     }
 
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        fields[1] = listOf(ProtoString(key))
+
+        if(stringValue != null)
+            fields[2] = listOf(ProtoString(stringValue))
+
+        if(dateValue != null)
+            fields[3] = listOf(ProtoI64(dateValue.toAppleTimestamp()))
+
+        if(numberIntValue != null)
+            fields[4] = listOf(ProtoVarInt(numberIntValue))
+
+        if(numberDoubleValue != null)
+            fields[5] = listOf(ProtoI64(numberDoubleValue))
+
+        if(quantityValue != null)
+            fields[6] = listOf(ProtoLen(quantityValue.renderProtobuf()))
+
+        if(dataValue != null)
+            fields[7] = listOf(dataValue)
+
+        return ProtoBuf(fields).renderStandalone()
+    }
+
     override fun toString(): String {
         val valueStr = when {
             stringValue != null -> stringValue
@@ -183,6 +215,15 @@ class Quantity(
             val unitString = pb.readOptString(2)!!
             return Quantity(value, unitString)
         }
+    }
+
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        fields[1] = listOf(ProtoI64(value))
+        fields[2] = listOf(ProtoString(unitString))
+
+        return ProtoBuf(fields).renderStandalone()
     }
 
     override fun toString() = "${(value*1000).roundToInt().toDouble()/1000}$unitString"
@@ -232,6 +273,31 @@ class LocationDatum(
         }
     }
 
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        fields[1] = listOf(ProtoI64(timestamp.toAppleTimestamp()))
+        fields[2] = listOf(ProtoI64(latitude))
+        fields[3] = listOf(ProtoI64(longitude))
+
+        if(altitude != null)
+            fields[4] = listOf(ProtoI64(altitude))
+
+        if(speed != null)
+            fields[5] = listOf(ProtoI64(speed))
+
+        if(course != null)
+            fields[6] = listOf(ProtoI64(course))
+
+        if(horizontalAccuracy != null)
+            fields[7] = listOf(ProtoI64(horizontalAccuracy))
+
+        if(verticalAccuracy != null)
+            fields[8] = listOf(ProtoI64(verticalAccuracy))
+
+        return ProtoBuf(fields).renderStandalone()
+    }
+
     override fun toString(): String {
         return "LocationDatum($timestamp, $latitude, $longitude, ${altitude}m, $speed, $course, +-$horizontalAccuracy/$verticalAccuracy)"
     }
@@ -255,6 +321,26 @@ class HealthObject(
 
             return HealthObject(uuid, metadata, bundle, created, syncObjCode)
         }
+    }
+
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        fields[1] = listOf(ProtoLen(Utils.uuidToBytes(uuid)))
+
+        if(metadataDictionary != null)
+            fields[2] = listOf(ProtoLen(metadataDictionary.renderProtobuf()))
+
+        if(sourceBundleIdentifier != null)
+            fields[3] = listOf(ProtoString(sourceBundleIdentifier))
+
+        if(creationDate != null)
+            fields[4] = listOf(ProtoI64(creationDate.toAppleTimestamp()))
+
+        if(externalSyncObjectCode != null)
+            fields[5] = listOf(ProtoVarInt(externalSyncObjectCode))
+
+        return ProtoBuf(fields).renderStandalone()
     }
 
     override fun toString(): String {
@@ -299,6 +385,17 @@ class ElectrocardiogramLead(
         }
     }
 
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        if(unkInt != null)
+            fields[1] = listOf(ProtoVarInt(unkInt))
+
+        fields[2] = samples.map { ProtoI32(it) }
+
+        return ProtoBuf(fields).renderStandalone()
+    }
+
     override fun toString(): String {
         return "Lead($unkInt, ${samples.size} voltage samples)"
     }
@@ -314,6 +411,17 @@ class Electrocardiogram(
             val lead = ElectrocardiogramLead.fromSafePB((pb.readAssertedSinglet(1) as ProtoLen).asProtoBuf())
             return Electrocardiogram(sampleRate, lead)
         }
+    }
+
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        fields[1] = listOf(ProtoLen(lead.renderProtobuf()))
+
+        if(sampleRate != null)
+            fields[2] = listOf(ProtoI64(sampleRate))
+
+        return ProtoBuf(fields).renderStandalone()
     }
 
     override fun toString(): String {

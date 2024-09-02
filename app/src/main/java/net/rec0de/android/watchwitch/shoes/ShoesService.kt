@@ -109,6 +109,7 @@ class ShoesService : Service() {
         var socket: Socket? = null
         try {
             serverSocket = ServerSocket(62742)
+            Logger.logShoes("started shoes server on port 62742", 1)
             while (true) {
                 socket = serverSocket.accept()
                 val dataInputStream = DataInputStream(socket.getInputStream())

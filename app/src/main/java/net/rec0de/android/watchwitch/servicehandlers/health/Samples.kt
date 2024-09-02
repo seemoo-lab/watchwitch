@@ -6,6 +6,9 @@ import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
+import net.rec0de.android.watchwitch.toAppleTimestamp
 import java.util.Date
 import java.util.UUID
 
@@ -27,6 +30,21 @@ class Sample(
         }
     }
 
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        fields[1] = listOf(ProtoLen(healthObject.renderProtobuf()))
+        fields[2] = listOf(ProtoVarInt(dataType))
+
+        if(startDate != null)
+            fields[3] = listOf(ProtoI64(startDate.toAppleTimestamp()))
+
+        if(endDate != null)
+            fields[4] = listOf(ProtoI64(endDate.toAppleTimestamp()))
+
+        return ProtoBuf(fields).renderStandalone()
+    }
+
     override fun toString(): String {
         return "Sample(type $dataType, start $startDate, end $endDate, object: $healthObject)"
     }
@@ -40,6 +58,12 @@ class DeletedSample(
             val sample = Sample.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
             return DeletedSample(sample)
         }
+    }
+
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+        fields[1] = listOf(ProtoLen(sample.renderProtobuf()))
+        return ProtoBuf(fields).renderStandalone()
     }
 
     override fun toString(): String {
@@ -242,6 +266,13 @@ class CategorySample(
         }
     }
 
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+        fields[1] = listOf(ProtoLen(sample.renderProtobuf()))
+        fields[2] = listOf(ProtoVarInt(value))
+        return ProtoBuf(fields).renderStandalone()
+    }
+
     override fun toString(): String {
         return "CategorySample(${categoryTypeToString(sample.dataType)} $value, $sample)"
     }
@@ -257,6 +288,13 @@ class BinarySample(
             val sample = Sample.fromSafePB(pb.readAssertedSinglet(1) as ProtoBuf)
             return BinarySample(payload, sample)
         }
+    }
+
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+        fields[1] = listOf(ProtoLen(sample.renderProtobuf()))
+        fields[2] = listOf(ProtoLen(payload))
+        return ProtoBuf(fields).renderStandalone()
     }
 
     override fun toString(): String {
@@ -392,6 +430,24 @@ class LocationSeries(
         }
     }
 
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+        fields[1] = listOf(ProtoLen(sample.renderProtobuf()))
+
+        if(frozen != null)
+            fields[2] = listOf(ProtoVarInt(frozen))
+
+        if(continuationUUID != null)
+            fields[3] = listOf(ProtoLen(Utils.uuidToBytes(continuationUUID)))
+
+        if(final != null)
+            fields[4] = listOf(ProtoVarInt(final))
+
+        fields[10] = locationData.map { ProtoLen(it.renderProtobuf()) }
+
+        return ProtoBuf(fields).renderStandalone()
+    }
+
     override fun toString(): String {
         return "LocationSeries($sample, contUUID $continuationUUID, points $locationData)"
     }
@@ -414,6 +470,24 @@ class ECGSample(
 
             return ECGSample(sample, maybeVersion, heartrate, ecg, maybeClassification)
         }
+    }
+
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+        fields[1] = listOf(ProtoLen(sample.renderProtobuf()))
+
+        if(version != null)
+            fields[2] = listOf(ProtoVarInt(version))
+
+        if(heartRate != null)
+            fields[3] = listOf(ProtoI64(heartRate))
+
+        fields[4] = listOf(ProtoLen(ecg.renderProtobuf()))
+
+        if(classification != null)
+            fields[5] = listOf(ProtoVarInt(classification))
+
+        return ProtoBuf(fields).renderStandalone()
     }
 
     override fun toString(): String {

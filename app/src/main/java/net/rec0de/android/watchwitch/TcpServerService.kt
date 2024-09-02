@@ -26,17 +26,18 @@ import java.io.IOException
 import java.net.BindException
 import java.net.ServerSocket
 import java.net.Socket
-import java.util.concurrent.atomic.AtomicBoolean
 
 
 // adapted from https://perihanmirkelam.medium.com/socket-programming-on-android-tcp-server-example-e4552a957c08
 class TcpServerService : Service() {
     private val idsA = TcpServer(61314)
     private val idsB = TcpServer(61315)
+    private val shoes = TcpServer(62742)
 
     private val runnable = Runnable {
         idsA.start()
         idsB.start()
+        //shoes.start()
 
         idsA.join()
     }
@@ -107,8 +108,15 @@ class TcpServer(private val port: Int) : Thread() {
                 val dataOutputStream = DataOutputStream(socket.getOutputStream())
 
                 // Use global coroutines for each client to communicate with them simultaneously
-                if(port == 62742)
-                    GlobalScope.launch { ShoesProxyHandler.handleConnection(dataInputStream, dataOutputStream) }
+                if(port == 62742) {
+                    Logger.logIDS("Shoes connect on $port: src port ${socket.port}", 0)
+                    GlobalScope.launch {
+                        ShoesProxyHandler.handleConnection(
+                            dataInputStream,
+                            dataOutputStream
+                        )
+                    }
+                }
                 else {
                     Logger.logIDS("IDS connect on $port: src port ${socket.port}", 3)
                     GlobalScope.launch{ NWSCManager.readFromSocket(dataInputStream, dataOutputStream, port) }

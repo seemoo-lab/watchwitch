@@ -71,6 +71,10 @@ open class Decryptor(keys: MPKeys) {
             val iv = IvParameterSpec("00000000000000000000000000000000".fromHex())
             val cryptorKey = SecretKeySpec(symKey, "AES/CBC/PKCS5Padding")
             val c = Cipher.getInstance("AES/CBC/PKCS5Padding")
+
+            //Logger.log("AoverC AES key ${symKey.hex()}", 0)
+            //Logger.log("AoverC AES ciphertext ${sed.hex()}", 0)
+
             c.init(Cipher.DECRYPT_MODE, cryptorKey, iv)
 
             // if the message is shorter than one block, first will be null
@@ -80,16 +84,18 @@ open class Decryptor(keys: MPKeys) {
         }
     }
 
-    fun encrypt(plaintext: ByteArray): BPDict {
-        val symKey = ByteArray(16)
-        random.nextBytes(symKey)
+    fun encrypt(plaintext: ByteArray, key: ByteArray? = null): BPDict {
 
-        val iv = IvParameterSpec("00000000000000000000000000000000".fromHex())
-        val cryptorKey = SecretKeySpec(symKey, "AES/CBC/PKCS5Padding")
-        val c = Cipher.getInstance("AES/CBC/PKCS5Padding")
-        c.init(Cipher.ENCRYPT_MODE, cryptorKey, iv)
+        val symKey = if(key == null) {
+            val s = ByteArray(16)
+            random.nextBytes(s)
+            s
+        }
+        else
+            key
 
-        val ciphertext = c.update(plaintext) + c.doFinal()
+
+        val ciphertext = encryptSed(plaintext, symKey)
         val sed = BPData(ciphertext)
         val ekd = BPData(encapsulateKey(symKey))
 
@@ -98,6 +104,16 @@ open class Decryptor(keys: MPKeys) {
             (BPAsciiString("ekd") as CodableBPListObject) to (ekd as CodableBPListObject)
         )
         return BPDict(dict)
+    }
+
+    fun encryptSed(plaintext: ByteArray, symKey: ByteArray): ByteArray {
+        val iv = IvParameterSpec("00000000000000000000000000000000".fromHex())
+        val cryptorKey = SecretKeySpec(symKey, "AES/CBC/PKCS5Padding")
+        val c = Cipher.getInstance("AES/CBC/PKCS5Padding")
+        c.init(Cipher.ENCRYPT_MODE, cryptorKey, iv)
+
+        val ciphertext = c.update(plaintext) + c.doFinal()
+        return ciphertext
     }
 
     private fun encapsulateKey(key: ByteArray): ByteArray {

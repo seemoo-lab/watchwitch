@@ -5,6 +5,7 @@ import net.rec0de.android.watchwitch.bitmage.fromBytes
 import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.bitmage.readDouble
 import net.rec0de.android.watchwitch.bitmage.readFloat
+import net.rec0de.android.watchwitch.bitmage.readInt
 import net.rec0de.android.watchwitch.bitmage.readLong
 import net.rec0de.android.watchwitch.bitmage.toBytes
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
@@ -233,6 +234,8 @@ data class ProtoBuf(val objs: Map<Int, List<ProtoValue>>, val bytes: ByteArray =
 }
 
 data class ProtoI32(val value: Int) : ProtoValue {
+    constructor(value: Float) : this(value.toBytes(ByteOrder.BIG).readInt(ByteOrder.BIG))
+
     override val wireType = 5
     override fun toString() = "I32($value)"
 

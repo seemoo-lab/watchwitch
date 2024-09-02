@@ -378,6 +378,32 @@ class Provenance(
         }
     }
 
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        if(originBuild != null)
+            fields[1] = listOf(ProtoString(originBuild))
+
+        fields[3] = listOf(ProtoLen(Utils.uuidToBytes(sourceUUID)))
+        fields[4] = listOf(ProtoLen(Utils.uuidToBytes(deviceUUID)))
+
+        if(sourceVersion != null)
+            fields[5] = listOf(ProtoString(sourceVersion))
+        if(originProductType != null)
+            fields[6] = listOf(ProtoString(originProductType))
+        if(timeZoneName != null)
+            fields[7] = listOf(ProtoString(timeZoneName))
+
+        if(originMajorVersion != null)
+            fields[8] = listOf(ProtoVarInt(originMajorVersion))
+        if(originMinorVersion != null)
+            fields[9] = listOf(ProtoVarInt(originMinorVersion))
+        if(originPatchVersion != null)
+            fields[10] = listOf(ProtoVarInt(originPatchVersion))
+
+        return ProtoBuf(fields).renderStandalone()
+    }
+
     override fun toString(): String {
         return "Provenance($originProductType version $sourceVersion, build $originBuild, timezone $timeZoneName source $sourceUUID, device $deviceUUID)"
     }

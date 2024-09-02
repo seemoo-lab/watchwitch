@@ -9,13 +9,13 @@ object HealthSyncContract {
     const val KEY_VALUE = "key_value"
     const val SOURCES = "sources"
 
-    const val SQL_CREATE_SIMPLE_SYNC_ANCHORS = "CREATE TABLE simple_sync_anchors (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, next INTEGER NOT NULL, schema TEXT NOT NULL, type INTEGER NOT NULL, store INTEGER NOT NULL, epoch INTEGER NOT NULL, UNIQUE(store, epoch, type, schema));"
+    const val SQL_CREATE_SIMPLE_SYNC_ANCHORS = "CREATE TABLE simple_sync_anchors (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, next INTEGER NOT NULL, schema TEXT NOT NULL, type INTEGER NOT NULL, store INTEGER NOT NULL, epoch INTEGER NOT NULL, remote INTEGER NOT NULL, UNIQUE(store, epoch, type, schema, remote));"
     const val SQL_CREATE_SYNC_ANCHORS = "CREATE TABLE sync_anchors (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, next INTEGER NOT NULL, next_updated_date REAL NOT NULL, acked INTEGER NOT NULL, acked_updated_date REAL NOT NULL, frozen INTEGER NOT NULL, frozen_updated_date REAL NOT NULL, received INTEGER NOT NULL, received_updated_date REAL NOT NULL, expected INTEGER NOT NULL, expected_updated_date REAL NOT NULL, schema TEXT NOT NULL, type INTEGER NOT NULL, store INTEGER NOT NULL, epoch INTEGER NOT NULL, UNIQUE(store, epoch, type, schema));"
     const val SQL_CREATE_KEY_VALUE = "CREATE TABLE key_value (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, category INTEGER NOT NULL, domain TEXT NOT NULL, key TEXT NOT NULL, value, provenance INTEGER NOT NULL, mod_date REAL NOT NULL, UNIQUE(category, domain, key));"
     const val SQL_CREATE_SOURCES = "CREATE TABLE sources (ROWID INTEGER PRIMARY KEY AUTOINCREMENT, uuid BLOB UNIQUE NOT NULL, bundle_id TEXT NOT NULL, name TEXT NOT NULL, source_options INTEGER NOT NULL, local_device INTEGER NOT NULL, product_type TEXT NOT NULL, deleted INTEGER NOT NULL, mod_date REAL NOT NULL, provenance INTEGER NOT NULL, sync_anchor INTEGER NOT NULL, owner_bundle_id TEXT);"
 
     const val SQL_INDEX_SOURCES_BUNDLE = "CREATE INDEX sources_bundle_id_uuid ON sources (bundle_id, uuid);"
-    const val SQL_INDEX_SYNC_ANCHORS = "CREATE INDEX simple_sync_anchors_idx ON simple_sync_anchors (store, epoch, type, schema);"
+    const val SQL_INDEX_SYNC_ANCHORS = "CREATE INDEX simple_sync_anchors_idx ON simple_sync_anchors (store, epoch, type, schema, remote);"
 
     object SimpleSyncAnchors : BaseColumns {
         const val ROWID = "ROWID"
@@ -24,6 +24,7 @@ object HealthSyncContract {
         const val TYPE = "type"
         const val STORE = "store"
         const val EPOCH = "epoch"
+        const val REMOTE = "remote"
     }
 
     object SyncAnchors : BaseColumns {

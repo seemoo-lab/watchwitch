@@ -2,11 +2,11 @@ package net.rec0de.android.watchwitch.alloy
 
 import net.rec0de.android.watchwitch.IdsLogger
 import net.rec0de.android.watchwitch.Logger
+import net.rec0de.android.watchwitch.bitmage.fromIndex
+import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.bplist.BPListParser
 import net.rec0de.android.watchwitch.decoders.compression.GzipDecoder
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtobufParser
-import net.rec0de.android.watchwitch.bitmage.fromIndex
-import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.servicehandlers.GenericResourceTransferReceiver
 import java.io.DataOutputStream
 import java.time.Instant
@@ -22,6 +22,8 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
     private var handshakeSent = false
 
     private val shortName = channel.split("/").last().replace("UTunDelivery-", "")
+
+    val awaitAckMap = mutableMapOf<Int,Long>()
 
     open fun init(weInitiated: Boolean) {
         Logger.logUTUN("[$shortName] Creating handler for $channel", 1)
@@ -40,7 +42,7 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
         }
     }
 
-    open fun receive(message: ByteArray) {
+    open fun receive(message: ByteArray, receiveTime: Long? = null) {
         IdsLogger.logAlloy(false, message)
         Logger.logUTUN("[$shortName] UTUN rcv raw for $channel: ${message.hex()}", 5)
         val parsed = AlloyMessage.parse(message)
@@ -54,7 +56,13 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
                 AlloyController.registerChannelCreation(channel, this)
             }
             is FragmentedMessage -> handleFragment(parsed)
-            is AckMessage -> {}
+            is AckMessage -> {
+                if(awaitAckMap.containsKey(parsed.sequence)){
+                    val elapsed = (receiveTime ?: 0) - awaitAckMap[parsed.sequence]!!
+                    Logger.logUTUN("ack for sequence ${parsed.sequence} took $elapsed ns", 0)
+                    awaitAckMap.remove(parsed.sequence)
+                }
+            }
             is ServiceMapMessage -> AlloyController.associateStreamWithTopic(parsed.streamID, parsed.serviceName, true)
             else -> Logger.logUTUN("[$shortName] Unhandled UTUN rcv for $channel: $parsed", 0)
         }
@@ -168,9 +176,33 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
         send(msg)
     }
 
+    fun sendData(payload: ByteArray, topic: String, uuid: UUID, compress: Boolean = false, flags: Int = 0, responseIdentifier: String? = null) {
+        val seq = AlloyController.nextSenderSequence.incrementAndGet()
+        var stream = AlloyController.resolveTopic(topic)
+        var effectiveFlags = flags
+
+        // we don't have a stream of this type yet, so we need a fresh one (and include the topic)
+        val msgTopic = if(stream == null) {
+            stream = AlloyController.getFreshStream(topic)
+            effectiveFlags = effectiveFlags or 0x10 // set hasTopic flag
+            topic
+        }
+        else
+            null
+
+        val effectivePayload = if(compress) {
+            GzipDecoder.compress(payload)
+        } else {
+            payload
+        }
+
+        val msg = DataMessage(seq, stream, effectiveFlags, responseIdentifier, uuid, msgTopic, null, effectivePayload)
+        send(msg)
+    }
+
     // note: messages fragment at 7983b
     fun send(message: AlloyMessage) {
-        Logger.logUTUN("[$shortName] UTUN snd for $channel: $message", 1)
+        Logger.logUTUN("[$shortName] seq ${message.sequence} UTUN snd for $channel: $message", 1)
         send(message.toBytes())
     }
 

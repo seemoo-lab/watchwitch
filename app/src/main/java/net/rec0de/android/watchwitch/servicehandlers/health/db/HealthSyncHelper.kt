@@ -17,11 +17,17 @@ class HealthSyncHelper (context: Context) : SQLiteOpenHelper(context, DATABASE_N
         db.execSQL(HealthSyncContract.SQL_INDEX_SYNC_ANCHORS)
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        if(newVersion > 1) {
+        if(newVersion > 1 && oldVersion <= 1) {
             // remove unique constraint on sync anchor
             db.execSQL("DROP TABLE ${HealthSyncContract.SOURCES};")
             db.execSQL(HealthSyncContract.SQL_CREATE_SOURCES)
             db.execSQL(HealthSyncContract.SQL_INDEX_SOURCES_BUNDLE)
+        }
+        if(newVersion > 2 && oldVersion <= 2) {
+            // remove unique constraint on sync anchor
+            db.execSQL("DROP TABLE ${HealthSyncContract.SIMPLE_SYNC_ANCHORS};")
+            db.execSQL(HealthSyncContract.SQL_CREATE_SIMPLE_SYNC_ANCHORS)
+            db.execSQL(HealthSyncContract.SQL_INDEX_SYNC_ANCHORS)
         }
     }
 
@@ -31,7 +37,7 @@ class HealthSyncHelper (context: Context) : SQLiteOpenHelper(context, DATABASE_N
 
     companion object {
         // If you change the database schema, you must increment the database version.
-        const val DATABASE_VERSION = 2
+        const val DATABASE_VERSION = 3
         const val DATABASE_NAME = "healthdb.db"
     }
 }

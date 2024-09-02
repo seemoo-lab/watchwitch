@@ -11,7 +11,7 @@ import javax.crypto.spec.SecretKeySpec
 class KeystoreBackedDecryptor(keys: MPKeys) : Decryptor(keys) {
 
     override fun signEkd(message: ByteArray): ByteArray {
-        println("Signing msg using keystore keys")
+        //println("Signing msg using keystore keys")
         return KeyStoreHelper.aovercEcdsaSign(message)
     }
 

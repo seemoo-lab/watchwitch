@@ -9,14 +9,14 @@ import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
 import net.rec0de.android.watchwitch.WatchState
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
+import net.rec0de.android.watchwitch.servicehandlers.CoreDuet
 import net.rec0de.android.watchwitch.servicehandlers.FindMyLocalDevice
-import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
 import net.rec0de.android.watchwitch.servicehandlers.PreferencesSync
 import net.rec0de.android.watchwitch.servicehandlers.Screenshotter
+import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
 import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
 import java.io.DataOutputStream
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 
@@ -36,7 +36,7 @@ object AlloyController {
 
     val nextSenderSequence: AtomicInteger = AtomicInteger(0)
 
-    val services: Map<String, AlloyService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice, BulletinDistributorService, Screenshotter).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
+    val services: Map<String, AlloyService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice, BulletinDistributorService, Screenshotter, CoreDuet).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
 
     fun usingOutput(out: DataOutputStream): AlloyController {
         output = out

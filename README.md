@@ -6,7 +6,7 @@ WatchWitch is an Android app that allows you to communicate with your Apple Watc
 
 ## Features
 
-* The WatchWitch app provides internet access to the watch using the SHOES protocol. Statistics on contacted hosts and data transferred are displayed in the *Firewall* view, which allows you to block selected connections.
+* The WatchWitch app provides internet access to the watch using the Shoes protocol. Statistics on contacted hosts and data transferred are displayed in the *Firewall* view, which allows you to block selected connections.
 * Send text message notifications to the watch (and set up notification forwarding) using the *Chat* view.
 * Browse health data collected by the watch in the *Health* view, including ECG charts and GPS tracks.
 * View a list of open apps, alarms set, and the ringer state of the watch (only available after sent by the watch).

@@ -409,6 +409,7 @@ class IKEv2Session(
         cryptoValues["espSaltR"] = keymat.sliceArray(68 until 72)
 
         Logger.logIKE("derived key material", 3)
+
         sessionKeysReady = true
 
         createTunnelIfReady()

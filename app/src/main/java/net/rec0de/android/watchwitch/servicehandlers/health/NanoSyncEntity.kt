@@ -9,6 +9,7 @@ import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
+import net.rec0de.android.watchwitch.toAppleTimestamp
 import java.util.Date
 import java.util.UUID
 
@@ -127,7 +128,7 @@ class ObjectCollection(
         }
     }
 
-    /*override fun renderProtobuf(): ByteArray {
+    override fun renderProtobuf(): ByteArray {
         val fields = mutableMapOf<Int,List<ProtoValue>>()
 
         if(sourceBundleIdentifier != null)
@@ -136,10 +137,11 @@ class ObjectCollection(
             fields[2] = listOf(ProtoLen(source.renderProtobuf()))
 
         fields[3] = categorySamples.map { ProtoLen(it.renderProtobuf()) }
-        fields[4] = quantitySamples.map { ProtoLen(it.renderProtobuf()) }
-        fields[5] = workouts.map { ProtoLen(it.renderProtobuf()) }
+        // we don't need those for now...
+        //fields[4] = quantitySamples.map { ProtoLen(it.renderProtobuf()) }
+        //fields[5] = workouts.map { ProtoLen(it.renderProtobuf()) }
         // correlation
-        fields[7] = activityCaches.map { ProtoLen(it.renderProtobuf()) }
+        //fields[7] = activityCaches.map { ProtoLen(it.renderProtobuf()) }
         fields[8] = binarySamples.map { ProtoLen(it.renderProtobuf()) }
         fields[9] = deletedSamples.map { ProtoLen(it.renderProtobuf()) }
         fields[10] = locationSeries.map { ProtoLen(it.renderProtobuf()) }
@@ -148,7 +150,7 @@ class ObjectCollection(
         fields[22] = ecgSamples.map { ProtoLen(it.renderProtobuf()) }
 
         return ProtoBuf(fields).renderStandalone()
-    }*/
+    }
 
     override fun toString(): String {
         val containedObjects = mutableListOf<Any>()
@@ -321,6 +323,30 @@ class Source(
 
             return Source(name, bundle, product, options, uuid, modified, deleted, owningBundle)
         }
+    }
+
+    override fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+
+        if(name != null)
+            fields[1] = listOf(ProtoString(name))
+        if(bundleIdentifier != null)
+            fields[2] = listOf(ProtoString(bundleIdentifier))
+        if(productType != null)
+            fields[3] = listOf(ProtoString(productType))
+        if(options != null)
+            fields[4] = listOf(ProtoVarInt(options))
+
+        fields[5] = listOf(ProtoLen(Utils.uuidToBytes(uuid)))
+
+        if(modificationDate != null)
+            fields[6] = listOf(ProtoI64(modificationDate.toAppleTimestamp()))
+        if(deleted != null)
+            fields[7] = listOf(ProtoVarInt(deleted))
+        if(owningAppBundleIdentifier != null)
+            fields[8] = listOf(ProtoString(owningAppBundleIdentifier))
+
+        return ProtoBuf(fields).renderStandalone()
     }
 
     override fun toString(): String {

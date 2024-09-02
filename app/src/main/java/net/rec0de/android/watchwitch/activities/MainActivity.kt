@@ -94,8 +94,8 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.text = getString(R.string.status_starting)
                 udpHandler = UDPHandler(this, 5000)
                 udpHandler!!.start()
-                altUdpHandler = UDPHandler(this, 62743)
-                altUdpHandler!!.start()
+                //altUdpHandler = UDPHandler(this, 62743)
+                //altUdpHandler!!.start()
             } else {
                 statusLabel.text = getString(R.string.status_stopping)
                 udpHandler?.kill()
@@ -177,8 +177,6 @@ class MainActivity : AppCompatActivity() {
         keyReceiver.start()
         AddressAllocator().start()
         RoutingManager.startup(this.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager)
-
-        //BulletinDistributorService.("Ea", "circe")
 
         startForegroundService(Intent(applicationContext, TcpServerService::class.java))
         startForegroundService(Intent(applicationContext, ShoesService::class.java))

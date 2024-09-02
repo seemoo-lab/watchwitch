@@ -389,6 +389,7 @@ object NWSCManager {
         try {
             while(true) {
                 val type = fromWatch.readByte()
+                val receiveTime = System.nanoTime()
                 val length = fromWatch.readInt() // read length of incoming message
                 if (length > 0) {
                     val message = ByteArray(length+5)
@@ -396,7 +397,7 @@ object NWSCManager {
                     buf.put(type)
                     buf.putInt(length)
                     fromWatch.readFully(message, 5, message.size-5)
-                    handler.receive(message)
+                    handler.receive(message, receiveTime)
                 }
             }
         }

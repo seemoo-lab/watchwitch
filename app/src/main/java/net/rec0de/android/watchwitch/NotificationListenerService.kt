@@ -60,7 +60,8 @@ class WatchNotificationForwarder : NotificationListenerService() {
         val bulletinUUID = UUID.randomUUID()
         BulletinDistributorService.replyable.add(NotificationWaitingForReply(msg, bulletinUUID))
 
-        forwardAsSignalMessage(sender?: "unknown", message, bulletinUUID)
+        forwardAsSpoofedIMessage(sender?: "unknown", message)
+        //forwardAsSignalMessage(sender?: "unknown", message, bulletinUUID)
     }
 
     private fun handleWhatsapp(msg: Notification) {

@@ -625,12 +625,15 @@ object DatabaseWrangler {
         secure.writableDatabase.execSQL("UPDATE $objs SET $type = 2 WHERE $uuidField = x'${Utils.uuidToBytes(uuid).hex()}';")
     }
 
-    fun setSyncAnchor(schema: String, objType: Int, identifier: Int, value: Int) {
+    fun setSyncAnchor(schema: String, objType: Int, identifier: Int, value: Int, remote: Boolean) {
+        val remoteValue = if(remote) 1 else 0
+
         val initialValues = ContentValues().apply {
             put(HealthSyncContract.SimpleSyncAnchors.EPOCH, 0)
             put(HealthSyncContract.SimpleSyncAnchors.SCHEMA, schema)
             put(HealthSyncContract.SimpleSyncAnchors.TYPE, objType)
             put(HealthSyncContract.SimpleSyncAnchors.STORE, identifier)
+            put(HealthSyncContract.SimpleSyncAnchors.REMOTE, remote)
             put(HealthSyncContract.SimpleSyncAnchors.NEXT, value)
         }
 
@@ -638,8 +641,8 @@ object DatabaseWrangler {
             regular.writableDatabase.update(
                 HealthSyncContract.SIMPLE_SYNC_ANCHORS,
                 initialValues,
-                "${HealthSyncContract.SimpleSyncAnchors.EPOCH}=? AND ${HealthSyncContract.SimpleSyncAnchors.SCHEMA}=? AND ${HealthSyncContract.SimpleSyncAnchors.TYPE}=? AND ${HealthSyncContract.SimpleSyncAnchors.STORE}=?",
-                arrayOf("0", schema, objType.toString(), identifier.toString())
+                "${HealthSyncContract.SimpleSyncAnchors.EPOCH}=? AND ${HealthSyncContract.SimpleSyncAnchors.SCHEMA}=? AND ${HealthSyncContract.SimpleSyncAnchors.TYPE}=? AND ${HealthSyncContract.SimpleSyncAnchors.STORE}=? AND ${HealthSyncContract.SimpleSyncAnchors.REMOTE}=?",
+                arrayOf("0", schema, objType.toString(), identifier.toString(), remoteValue.toString())
             )
         }
 
@@ -655,13 +658,14 @@ object DatabaseWrangler {
             HealthSyncContract.SimpleSyncAnchors.SCHEMA,
             HealthSyncContract.SimpleSyncAnchors.TYPE,
             HealthSyncContract.SimpleSyncAnchors.STORE,
-            HealthSyncContract.SimpleSyncAnchors.NEXT
+            HealthSyncContract.SimpleSyncAnchors.NEXT,
+            HealthSyncContract.SimpleSyncAnchors.REMOTE,
         )
 
         val map = mutableMapOf<SyncStatusKey,Int>()
         val cursor = regular.readableDatabase.query(HealthSyncContract.SIMPLE_SYNC_ANCHORS, projection, null, null, null, null, null)
         while (cursor.moveToNext()) {
-            val key = SyncStatusKey(cursor.getInt(2), cursor.getString(0), cursor.getInt(1))
+            val key = SyncStatusKey(cursor.getInt(2), cursor.getString(0), cursor.getInt(1), cursor.getInt(4) == 1)
             map[key] = cursor.getInt(3)
         }
         cursor.close()

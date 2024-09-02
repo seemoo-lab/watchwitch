@@ -9,16 +9,16 @@ object Logger {
     private const val GEN_LOG_LVL = 3
 
     private const val IKE_SCREEN_LVL = 0
-    private const val IKE_LOG_LVL = 0
+    private const val IKE_LOG_LVL = 5
 
     private const val IDS_SCREEN_LVL = 0
-    private const val IDS_LOG_LVL = 5
+    private const val IDS_LOG_LVL = 2
 
     private const val UTUN_SCREEN_LVL = 0
-    private const val UTUN_LOG_LVL = 5
+    private const val UTUN_LOG_LVL = 3
 
     private const val SHOES_SCREEN_LVL = 5
-    private const val SHOES_LOG_LVL = 10
+    private const val SHOES_LOG_LVL = 5
 
     private const val CMD_SCREEN_LVL = -1
     private const val CMD_LOG_LVL = 5

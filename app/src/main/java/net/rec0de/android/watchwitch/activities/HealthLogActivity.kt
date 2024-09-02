@@ -13,7 +13,7 @@ import net.rec0de.android.watchwitch.servicehandlers.health.db.DatabaseWrangler
 class HealthLogActivity : AppCompatActivity() {
 
     private val ignoreBoring = true
-    private val boringTypes = listOf("BasalEnergyBurned", "ActiveEnergyBurned", "WristEvent", "HeartRate", "DistanceWalkingRunning")
+    private val boringTypes = listOf("BasalEnergyBurned", "ActiveEnergyBurned", "WristEvent")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
