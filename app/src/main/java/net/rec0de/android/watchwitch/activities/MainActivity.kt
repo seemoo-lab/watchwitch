@@ -13,6 +13,7 @@ import android.text.InputType
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.LinearLayout.GONE
 import android.widget.LinearLayout.VERTICAL
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -33,6 +34,7 @@ import net.rec0de.android.watchwitch.WatchState
 import net.rec0de.android.watchwitch.nwsc.NWSCManager
 import net.rec0de.android.watchwitch.servicehandlers.messaging.BulletinDistributorService
 import net.rec0de.android.watchwitch.shoes.ShoesService
+import net.rec0de.android.watchwitch.watchsim.SimulatedWatch
 
 
 class MainActivity : AppCompatActivity() {
@@ -133,6 +135,14 @@ class MainActivity : AppCompatActivity() {
         chatButton.setOnClickListener {
             val healthLog = Intent(this@MainActivity, ChatActivity::class.java)
             this@MainActivity.startActivity(healthLog)
+        }
+
+        val simButton: Button = findViewById(R.id.btnSimWatch)
+        simButton.setOnClickListener {
+            val simulator = SimulatedWatch()
+            simulator.start()
+            val buttonContainer: LinearLayout = findViewById(R.id.layoutSimulateButton)
+            buttonContainer.visibility = GONE
         }
 
         val transitKeyButton: Button = findViewById(R.id.btnSetTransitKey)

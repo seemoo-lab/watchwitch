@@ -51,6 +51,12 @@ fun Int.toBytes(byteOrder: ByteOrder): ByteArray {
 }
 fun UInt.toBytes(byteOrder: ByteOrder) = this.toInt().toBytes(byteOrder)
 
+fun Short.toBytes(byteOrder: ByteOrder): ByteArray {
+    val bytesBE = byteArrayOf((this.toInt() shr 8).toByte(), (this.toInt() shr 0).toByte())
+    return if(byteOrder == ByteOrder.BIG) bytesBE else bytesBE.reversed().toByteArray()
+}
+fun UShort.toBytes(byteOrder: ByteOrder) = this.toShort().toBytes(byteOrder)
+
 // Floats
 
 fun Float.Companion.fromBytes(bytes: ByteArray, byteOrder: ByteOrder): Float {

@@ -420,4 +420,9 @@ object NWSCManager {
         return microsecondsSinceEpoch + microsecondsSinceSecond
     }
 
+    fun simulatorSetRemotePubkey(key: ByteArray) {
+        remotePubKey = key
+        gotPubkey = true
+    }
+
 }

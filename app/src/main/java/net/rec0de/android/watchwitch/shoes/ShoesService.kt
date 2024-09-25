@@ -112,6 +112,7 @@ class ShoesService : Service() {
             Logger.logShoes("started shoes server on port 62742", 1)
             while (true) {
                 socket = serverSocket.accept()
+                Logger.logShoes("got shoes connection", 5)
                 val dataInputStream = DataInputStream(socket.getInputStream())
                 val dataOutputStream = DataOutputStream(socket.getOutputStream())
                 GlobalScope.launch { ShoesProxyHandler.handleConnection(dataInputStream, dataOutputStream) }

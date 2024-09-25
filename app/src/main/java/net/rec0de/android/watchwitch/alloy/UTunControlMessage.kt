@@ -66,6 +66,8 @@ class Hello(
     var deviceID: UUID? = null
 
     companion object : ParseCompanion() {
+
+        @Synchronized
         fun parse(bytes: ByteArray): Hello {
             if(bytes[0].toInt() != 0x01)
                 throw Exception("Expected UTunControlMsg type 0x01 for Hello but got ${bytes[0]}")
@@ -206,6 +208,7 @@ class Hello(
 // the sender port is completely meaningless??
 class SetupChannel(val protocol: Int, val receiverPort: Int, val senderPort: Int, val senderUUID: UUID, val receiverUUID: UUID?, val account: String, val service: String, val name: String): UTunControlMessage() {
     companion object : ParseCompanion() {
+        @Synchronized
         fun parse(bytes: ByteArray): SetupChannel {
             if(bytes[0].toInt() != 0x02)
                 throw Exception("Expected UTunControlMsg type 0x02 for SetupChannel but got ${bytes[0]}")
@@ -236,22 +239,25 @@ class SetupChannel(val protocol: Int, val receiverPort: Int, val senderPort: Int
         val accBytes = account.encodeToByteArray()
         val serviceBytes = service.encodeToByteArray()
         val nameBytes = name.encodeToByteArray()
+        val senderUUIDBytes = senderUUID.toString().encodeToByteArray()
+        val receiverUUIDBytes = receiverUUID?.toString()?.encodeToByteArray()
+
 
         val header = ByteBuffer.allocate(16)
         header.put(0x02) // SetupChannel type byte
         header.put(protocol.toByte())
         header.putShort(senderPort.toShort())
         header.putShort(receiverPort.toShort())
-        header.putShort(0x24) // sender UUID length
-        header.putShort(if(receiverUUID != null) 0x24 else 0x00) // receiver UUID length
+        header.putShort(senderUUIDBytes.size.toShort()) // sender UUID length
+        header.putShort(receiverUUIDBytes?.size?.toShort() ?: 0x00) // receiver UUID length
         header.putShort(accBytes.size.toShort())
         header.putShort(serviceBytes.size.toShort())
         header.putShort(nameBytes.size.toShort())
 
-        val uuids = if(receiverUUID != null)
-                senderUUID.toString().encodeToByteArray() + receiverUUID.toString().encodeToByteArray()
+        val uuids = if(receiverUUIDBytes != null)
+                senderUUIDBytes + receiverUUIDBytes
             else
-                senderUUID.toString().encodeToByteArray()
+                senderUUIDBytes
 
         return header.array() + uuids + accBytes + serviceBytes + nameBytes
     }
@@ -263,6 +269,8 @@ class SetupChannel(val protocol: Int, val receiverPort: Int, val senderPort: Int
 
 class SetupDirectChannel(val protocol: Int, val receiverPort: Int, val senderPort: Int, val senderUUID: UUID, val receiverUUID: UUID?, val account: String, val service: String, val name: String): UTunControlMessage() {
     companion object : ParseCompanion() {
+
+        @Synchronized
         fun parse(bytes: ByteArray): SetupDirectChannel {
             if(bytes[0].toInt() != 0x02)
                 throw Exception("Expected UTunControlMsg type 0x0d for SetupDirectChannel but got ${bytes[0]}")
@@ -293,14 +301,16 @@ class SetupDirectChannel(val protocol: Int, val receiverPort: Int, val senderPor
         val accBytes = account.encodeToByteArray()
         val serviceBytes = service.encodeToByteArray()
         val nameBytes = name.encodeToByteArray()
+        val senderUUIDBytes = senderUUID.toString().encodeToByteArray()
+        val receiverUUIDBytes = receiverUUID?.toString()?.encodeToByteArray()
 
         val header = ByteBuffer.allocate(16)
         header.put(0x0d) // SetupDirectChannel type byte
         header.put(protocol.toByte())
         header.putShort(receiverPort.toShort())
         header.putShort(senderPort.toShort())
-        header.putShort(0x24) // sender UUID length
-        header.putShort(if(receiverUUID != null) 0x24 else 0x00) // receiver UUID length
+        header.putShort(senderUUIDBytes.size.toShort()) // sender UUID length
+        header.putShort(receiverUUIDBytes?.size?.toShort() ?: 0x00) // receiver UUID length
         header.putShort(accBytes.size.toShort())
         header.putShort(serviceBytes.size.toShort())
         header.putShort(nameBytes.size.toShort())
@@ -321,6 +331,8 @@ class SetupDirectChannel(val protocol: Int, val receiverPort: Int, val senderPor
 
 class CloseChannel(val senderUUID: UUID, val receiverUUID: UUID?, val account: String, val service: String, val name: String): UTunControlMessage() {
     companion object : ParseCompanion() {
+
+        @Synchronized
         fun parse(bytes: ByteArray): CloseChannel {
             if(bytes[0].toInt() != 0x03)
                 throw Exception("Expected UTunControlMsg type 0x03 for CloseChannel but got ${bytes[0]}")
@@ -361,6 +373,8 @@ class CompressionRequest(
     val name: String
     ): UTunControlMessage() {
     companion object : ParseCompanion() {
+
+        @Synchronized
         fun parse(bytes: ByteArray): CompressionRequest {
             if(bytes[0].toInt() != 0x04)
                 throw Exception("Expected UTunControlMsg type 0x04 for CompressionRequest but got ${bytes[0]}")
@@ -401,6 +415,8 @@ class CompressionResponse(
     val name: String
 ): UTunControlMessage() {
     companion object : ParseCompanion() {
+
+        @Synchronized
         fun parse(bytes: ByteArray): CompressionResponse {
             if(bytes[0].toInt() != 0x05)
                 throw Exception("Expected UTunControlMsg type 0x05 for CompressionResponse but got ${bytes[0]}")
@@ -443,6 +459,8 @@ class SetupEncryptedChannel(
     val key: ByteArray
 ): UTunControlMessage() {
     companion object : ParseCompanion() {
+
+        @Synchronized
         fun parse(bytes: ByteArray): SetupEncryptedChannel {
             if(bytes[0].toInt() != 0x06)
                 throw Exception("Expected UTunControlMsg type 0x06 for SetupEncryptedChannel but got ${bytes[0]}")
@@ -477,14 +495,16 @@ class SetupEncryptedChannel(
         val accBytes = account.encodeToByteArray()
         val serviceBytes = service.encodeToByteArray()
         val nameBytes = name.encodeToByteArray()
+        val senderUUIDBytes = senderUUID.toString().encodeToByteArray()
+        val receiverUUIDBytes = receiverUUID?.toString()?.encodeToByteArray()
 
         val header = ByteBuffer.allocate(24)
         header.put(0x06) // SetupChannel type byte
         header.put(protocol.toByte())
         header.putShort(senderPort.toShort())
         header.putShort(receiverPort.toShort())
-        header.putShort(0x24) // sender UUID length
-        header.putShort(if(receiverUUID != null) 0x24 else 0x00) // receiver UUID length
+        header.putShort(senderUUIDBytes.size.toShort()) // sender UUID length
+        header.putShort(receiverUUIDBytes?.size?.toShort() ?: 0x00) // receiver UUID length
         header.putShort(accBytes.size.toShort())
         header.putShort(serviceBytes.size.toShort())
         header.putShort(nameBytes.size.toShort())
@@ -508,6 +528,8 @@ class SetupEncryptedChannel(
 
 class DirectMsgInfo(val data: ByteArray): UTunControlMessage() {
     companion object : ParseCompanion() {
+
+        @Synchronized
         fun parse(bytes: ByteArray): DirectMsgInfo {
             if(bytes[0].toInt() != 0x0e)
                 throw Exception("Expected UTunControlMsg type 0x0e for DirectMsgInfo but got ${bytes[0]}")

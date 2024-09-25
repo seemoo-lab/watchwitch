@@ -1,6 +1,7 @@
 package net.rec0de.android.watchwitch
 
 import android.annotation.SuppressLint
+import android.util.Log
 import net.rec0de.android.watchwitch.activities.MainActivity
 
 object Logger {
@@ -53,48 +54,48 @@ object Logger {
         if(level <= GEN_SCREEN_LVL)
             logToScreen(msg)
         if(level <= GEN_LOG_LVL)
-            println(msg)
+            Log.d("WatchWitch", msg)
     }
 
     fun logIDS(msg: String, level: Int) {
         if(level <= IDS_SCREEN_LVL)
             logToScreen(msg)
         if(level <= IDS_LOG_LVL)
-            println(msg)
+            Log.d("WatchWitchIDS", msg)
     }
 
     fun logUTUN(msg: String, level: Int) {
         if(level <= UTUN_SCREEN_LVL)
             logToScreen(msg)
         if(level <= UTUN_LOG_LVL)
-            println(msg)
+            Log.d("WatchWitchAlloy", msg)
     }
 
     fun logShoes(msg: String, level: Int) {
         if(level <= SHOES_SCREEN_LVL)
             logToScreen(msg)
         if(level <= SHOES_LOG_LVL)
-            println(msg)
+            Log.d("WatchWitchShoes", msg)
     }
 
     fun logIKE(msg: String, level: Int) {
         if(level <= IKE_SCREEN_LVL)
             logToScreen(msg)
         if(level <= IKE_LOG_LVL)
-            println(msg)
+            Log.d("WatchWitchIKE", msg)
     }
 
     fun logSQL(msg: String, level: Int) {
         if(level <= SQL_SCREEN_LVL)
             logToScreen(msg)
         if(level <= SQL_LOG_LVL)
-            println(msg)
+            Log.d("WatchWitchSQL", msg)
     }
 
     fun logCmd(msg: String, level: Int) {
         if(level <= CMD_SCREEN_LVL)
             logToScreen(msg)
         if(level <= CMD_LOG_LVL)
-            println(msg)
+            Log.d("WatchWitchCmd", msg)
     }
 }

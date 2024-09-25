@@ -80,7 +80,7 @@ object AlloyController {
 
             // attempt to open an actual connection
             GlobalScope.launch {
-                delay((200 + 30*i).toLong())
+                delay((400 + 30*i).toLong())
                 // we may have received and accepted an incoming request for this channel in the meantime
                 if(!establishedChannels.contains(fullService)) {
                     val handler = AlloyHandler(fullService, null)

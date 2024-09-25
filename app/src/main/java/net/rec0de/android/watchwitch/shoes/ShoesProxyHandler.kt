@@ -29,7 +29,7 @@ object ShoesProxyHandler {
                 fromWatch.readUnsignedShort()
             }
 
-            //Logger.logShoes("TLS rcv trying to read $headerLen header bytes", 10)
+            Logger.logShoes("Shoes request reading $headerLen bytes", 10)
 
             val requestBytes = ByteArray(headerLen)
             withContext(Dispatchers.IO) {

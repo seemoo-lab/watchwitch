@@ -131,6 +131,7 @@
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:text="@string/set_key" />
+
         </LinearLayout>
 
     </LinearLayout>
@@ -170,5 +171,31 @@
             android:textColor="?android:attr/textColorPrimary"
             tools:text="rcv 0xdeadbeef\nsnd 0xcafebabe" />
     </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/layoutSimulateButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="@+id/scrollPktLog"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="No Apple Watch at hand?"
+            android:textAlignment="center"
+            android:textColor="?android:attr/textColorPrimary" />
+
+        <Button
+            android:id="@+id/btnSimWatch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Simulate Watch" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

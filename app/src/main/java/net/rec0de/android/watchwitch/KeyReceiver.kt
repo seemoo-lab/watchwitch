@@ -4,7 +4,6 @@ import android.util.Base64
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import net.rec0de.android.watchwitch.bitmage.fromIndex
-import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.aoverc.MPKeys
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -93,9 +92,9 @@ class KeyReceiver : Thread() {
 
                 RoutingManager.registerAddresses()
                 Logger.log("got keys!", 0)
-                Logger.log("remote public (C/D):", 1)
-                Logger.log(Base64.decode(map["cr"]!!, Base64.DEFAULT).hex(), 1)
-                Logger.log(Base64.decode(map["dr"]!!, Base64.DEFAULT).hex(), 1)
+                //Logger.log("remote public (C/D):", 1)
+                //Logger.log(Base64.decode(map["cr"]!!, Base64.DEFAULT).hex(), 1)
+                //Logger.log(Base64.decode(map["dr"]!!, Base64.DEFAULT).hex(), 1)
             }
         }
         catch (e: Throwable) {
