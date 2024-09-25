@@ -5,6 +5,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import net.rec0de.android.watchwitch.bitmage.fromIndex
 import net.rec0de.android.watchwitch.decoders.aoverc.MPKeys
+import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.security.MessageDigest
@@ -88,6 +89,7 @@ class KeyReceiver : Thread() {
                     LongTermStorage.storeMPKeysForClass("A", keys)
                     KeyStoreHelper.enrollAovercEcdsaPrivateKey(keys.friendlyEcdsaPrivateKey())
                     KeyStoreHelper.enrollAovercRsaPrivateKey(keys.friendlyRsaPrivateKey())
+                    HealthSync.reloadKeys()
                 }
 
                 RoutingManager.registerAddresses()

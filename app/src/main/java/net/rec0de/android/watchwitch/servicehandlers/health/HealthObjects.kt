@@ -66,6 +66,14 @@ class QuantitySeriesDatum(
     override fun toString(): String {
         return "QSDatum($startDate-$endDate: $value)"
     }
+
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+        fields[1] = listOf(ProtoI64(startDate.toAppleTimestamp()))
+        fields[3] = listOf(ProtoI64(endDate.toAppleTimestamp()))
+        fields[2] = listOf(ProtoI64(value))
+        return ProtoBuf(fields).renderStandalone()
+    }
 }
 
 class TimestampedKeyValuePair(

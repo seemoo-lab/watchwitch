@@ -1,6 +1,7 @@
 package net.rec0de.android.watchwitch.watchsim
 
 import android.util.Log
+import net.rec0de.android.watchwitch.alloy.DataMessage
 import net.rec0de.android.watchwitch.alloy.ProtobufMessage
 import net.rec0de.android.watchwitch.alloy.SetupChannel
 import net.rec0de.android.watchwitch.alloy.UTunControlMessage
@@ -47,6 +48,30 @@ class AlloyControlClient : Thread() {
         }
 
         val msg = ProtobufMessage(seq, stream, flags, null, uuid, msgTopic, null, type, if(isResponse) 1 else 0, effectivePayload)
+
+        // we'll just send on any channel, receiving implementation does not care
+        val channel = channelMap.values.firstOrNull()
+        channel?.sendMessage(msg.toBytes())
+    }
+
+    @Synchronized
+    fun sendData(topic: String, responseIdentifier: String?, payload: ByteArray) {
+        sequence += 1
+        val seq = sequence
+        var stream = resolveTopic(topic)
+        val uuid = UUID.randomUUID()
+        var flags = 0
+
+        // we don't have a stream of this type yet, so we need a fresh one (and include the topic)
+        val msgTopic = if(stream == null) {
+            stream = getFreshStream(topic)
+            flags = flags or 0x10 // set hasTopic flag
+            topic
+        }
+        else
+            null
+
+        val msg = DataMessage(seq, stream, flags, responseIdentifier, uuid, msgTopic, null, payload)
 
         // we'll just send on any channel, receiving implementation does not care
         val channel = channelMap.values.firstOrNull()

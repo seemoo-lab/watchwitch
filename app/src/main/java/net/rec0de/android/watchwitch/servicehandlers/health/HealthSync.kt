@@ -30,8 +30,8 @@ import kotlin.random.Random
 object HealthSync : AlloyService {
     override val handlesTopics = listOf("com.apple.private.alloy.health.sync.classc")
 
-    private val keys = LongTermStorage.getMPKeysForClass("A")
-    private val decryptor = if(keys != null) KeystoreBackedDecryptor(keys) else null
+
+    private var decryptor: Decryptor?
 
     private val syncStatus = DatabaseWrangler.loadSyncAnchors().toMutableMap()
 
@@ -41,6 +41,16 @@ object HealthSync : AlloyService {
 
     private var cachedHandler: AlloyHandler? = null
     private var cachedStream: Int? = null
+
+    init {
+        val keys = LongTermStorage.getMPKeysForClass("A")
+        decryptor = if(keys != null) KeystoreBackedDecryptor(keys) else null
+    }
+
+    fun reloadKeys() {
+        val keys = LongTermStorage.getMPKeysForClass("A")
+        decryptor = if(keys != null) KeystoreBackedDecryptor(keys) else null
+    }
 
     override fun acceptsMessageType(msg: AlloyMessage) = msg is DataMessage
 
@@ -58,7 +68,7 @@ object HealthSync : AlloyService {
         if(decryptor == null)
             Logger.logUTUN("HealthSync: got encrypted message but no keys to decrypt", 1)
         else {
-            val plaintext = decryptor.decrypt(parsed as BPDict) ?: throw Exception("HealthSync decryption failed for $parsed")
+            val plaintext = decryptor!!.decrypt(parsed as BPDict) ?: throw Exception("HealthSync decryption failed for $parsed")
             val syncMsg = parseSyncMsg(plaintext, msg.responseIdentifier != null) ?: return
 
             if(!initialized) {

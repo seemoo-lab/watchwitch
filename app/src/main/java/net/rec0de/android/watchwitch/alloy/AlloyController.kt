@@ -34,6 +34,8 @@ object AlloyController {
     private val streamIdAssociations = mutableMapOf<Int, String>()
     private val reverseStreamIdAssociations = mutableMapOf<String, Int>()
 
+    private var neverInitiate: Boolean = false
+
     val nextSenderSequence: AtomicInteger = AtomicInteger(0)
 
     val services: Map<String, AlloyService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice, BulletinDistributorService, Screenshotter, CoreDuet).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
@@ -78,13 +80,16 @@ object AlloyController {
             send(setupChan.toBytes())
             requestingChannels.add(fullService)
 
-            // attempt to open an actual connection
-            GlobalScope.launch {
-                delay((400 + 30*i).toLong())
-                // we may have received and accepted an incoming request for this channel in the meantime
-                if(!establishedChannels.contains(fullService)) {
-                    val handler = AlloyHandler(fullService, null)
-                    NWSCManager.initiateChannelAndForward(fullService, targetPort, handler)
+            // if we're simulating the watch, initiating channels gets messy because of IP routing
+            if(!neverInitiate) {
+                // attempt to open an actual connection
+                GlobalScope.launch {
+                    delay((400 + 30*i).toLong())
+                    // we may have received and accepted an incoming request for this channel in the meantime
+                    if(!establishedChannels.contains(fullService)) {
+                        val handler = AlloyHandler(fullService, null)
+                        NWSCManager.initiateChannelAndForward(fullService, targetPort, handler)
+                    }
                 }
             }
         }
@@ -217,5 +222,9 @@ object AlloyController {
 
     fun close() {
         Logger.logUTUN("Handler closed for ids-control-channel", 1)
+    }
+
+    fun simulateNeverInitiate() {
+        neverInitiate = true
     }
 }

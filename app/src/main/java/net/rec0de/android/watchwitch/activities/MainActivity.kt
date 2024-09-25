@@ -139,8 +139,10 @@ class MainActivity : AppCompatActivity() {
 
         val simButton: Button = findViewById(R.id.btnSimWatch)
         simButton.setOnClickListener {
-            val simulator = SimulatedWatch()
-            simulator.start()
+            Thread {
+                val simulator = SimulatedWatch()
+                simulator.start()
+            }.start()
             val buttonContainer: LinearLayout = findViewById(R.id.layoutSimulateButton)
             buttonContainer.visibility = GONE
         }

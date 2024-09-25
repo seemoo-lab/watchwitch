@@ -137,8 +137,8 @@ class ObjectCollection(
             fields[2] = listOf(ProtoLen(source.renderProtobuf()))
 
         fields[3] = categorySamples.map { ProtoLen(it.renderProtobuf()) }
+        fields[4] = quantitySamples.map { ProtoLen(it.renderProtobuf()) }
         // we don't need those for now...
-        //fields[4] = quantitySamples.map { ProtoLen(it.renderProtobuf()) }
         //fields[5] = workouts.map { ProtoLen(it.renderProtobuf()) }
         // correlation
         //fields[7] = activityCaches.map { ProtoLen(it.renderProtobuf()) }

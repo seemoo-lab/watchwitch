@@ -47,6 +47,8 @@ class TcpServerService : Service() {
     }
 
     override fun onCreate() {
+        startMeForeground()
+
         // Android is annoying in that it requires context objects for file operations
         // as these services are called by code in the TcpServerService, we'll initialize them with that context
         Screenshotter.initContext(baseContext)
@@ -54,7 +56,6 @@ class TcpServerService : Service() {
         GenericResourceTransferReceiver.initContext(baseContext)
         IdsLogger.init(baseContext)
 
-        startMeForeground()
         Thread(runnable).start()
         DatabaseWrangler.initDbHelper(HealthSyncSecureHelper(baseContext), HealthSyncHelper(baseContext))
     }

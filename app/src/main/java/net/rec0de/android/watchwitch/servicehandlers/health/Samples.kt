@@ -6,6 +6,7 @@ import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoBuf
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoI64
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoLen
+import net.rec0de.android.watchwitch.decoders.protobuf.ProtoString
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoValue
 import net.rec0de.android.watchwitch.decoders.protobuf.ProtoVarInt
 import net.rec0de.android.watchwitch.toAppleTimestamp
@@ -203,6 +204,48 @@ class QuantitySample(
 
     override fun toString(): String {
         return "QuantitySample(${quantityTypeToString(sample.dataType)} sample $sample, canon $valueInCanonicalUnit, orig $valueInOriginalUnit $originalUnitString, frozen? $frozen, final? $final, count $count, min $min max $max, mostRecent $mostRecent $mostRecentDate duration $mostRecentDuration, quantitySeries $quantitySeriesData)"
+    }
+
+    fun renderProtobuf(): ByteArray {
+        val fields = mutableMapOf<Int,List<ProtoValue>>()
+        fields[1] = listOf(ProtoLen(sample.renderProtobuf()))
+
+        if(valueInCanonicalUnit != null)
+            fields[2] = listOf(ProtoI64(valueInCanonicalUnit))
+
+        if(valueInOriginalUnit != null)
+            fields[3] = listOf(ProtoI64(valueInOriginalUnit))
+
+        if(originalUnitString != null)
+            fields[4] = listOf(ProtoString(originalUnitString))
+
+       if(frozen != null)
+           fields[5] = listOf(ProtoVarInt(frozen))
+
+       if(count != null)
+           fields[6] = listOf(ProtoVarInt(count))
+
+       if(final != null)
+           fields[7] = listOf(ProtoVarInt(final))
+
+       if(min != null)
+           fields[8] = listOf(ProtoI64(min))
+
+       if(max != null)
+           fields[9] = listOf(ProtoI64(max))
+
+       if(mostRecent != null)
+           fields[10] = listOf(ProtoI64(mostRecent))
+
+       if(mostRecentDate != null)
+           fields[11] = listOf(ProtoI64(mostRecentDate.toAppleTimestamp()))
+
+       fields[12] = quantitySeriesData.map { ProtoLen(it.renderProtobuf()) }
+
+       if(mostRecentDuration != null)
+           fields[13] = listOf(ProtoI64(mostRecentDuration))
+
+       return ProtoBuf(fields).renderStandalone()
     }
 }
 

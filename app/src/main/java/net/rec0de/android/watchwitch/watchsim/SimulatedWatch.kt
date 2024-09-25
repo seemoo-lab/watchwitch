@@ -1,12 +1,13 @@
 package net.rec0de.android.watchwitch.watchsim
 
-import android.util.Log
 import net.rec0de.android.watchwitch.KeyStoreHelper
 import net.rec0de.android.watchwitch.LongTermStorage
+import net.rec0de.android.watchwitch.alloy.AlloyController
 import net.rec0de.android.watchwitch.bitmage.fromHex
-import net.rec0de.android.watchwitch.bitmage.hex
 import net.rec0de.android.watchwitch.decoders.aoverc.MPKeys
+import net.rec0de.android.watchwitch.servicehandlers.health.HealthSync
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECPrivateKey
 import org.bouncycastle.jce.interfaces.ECPublicKey
@@ -18,15 +19,22 @@ import java.security.SecureRandom
 
 class SimulatedWatch {
 
+    private lateinit var watchKeys: MPKeys
+    private lateinit var phoneKeys: MPKeys
+
     fun start() {
+
+        AlloyController.simulateNeverInitiate()
+        installKeys()
+
         val controller = AlloyControlClient()
         controller.start()
 
-        //val watchState = WatchStateMockup(controller)
+        WatchStateMockup(controller)
         val shoes = ShoesMockup()
-        //shoes.start()
+        shoes.start()
 
-        installKeys()
+        HealthDataMockup(watchKeys, controller)
     }
 
     fun installKeys() {
@@ -37,35 +45,38 @@ class SimulatedWatch {
         generator.initialize(ecSpec, SecureRandom())
         val watchEcdsaKeys: KeyPair = generator.generateKeyPair()
         val watchEcdsaPublicBytes = ecdsaGetPublicBytes(watchEcdsaKeys.public as ECPublicKey)
+        val watchEcdsaPrivateBytes = ecdsaGetPublicBytes(watchEcdsaKeys.public as ECPublicKey) + (watchEcdsaKeys.private as ECPrivateKey).d.toByteArray()
 
         // "Watch" RSA keys
         val rsaGen = KeyPairGenerator.getInstance("RSA")
         rsaGen.initialize(1280)
         val watchRsaKeys = rsaGen.generateKeyPair()
-        val watchRsaPublicBytes = watchRsaKeys.public.encoded
+        // java can be incredibly annoying about key encodings
+        // these are the magic words to get it to output PKCS#1
+        val watchRsaPublicBytes = SubjectPublicKeyInfo.getInstance(watchRsaKeys.public.encoded).parsePublicKey().encoded
+        val watchRsaPrivateBytes = PrivateKeyInfo.getInstance(watchRsaKeys.private.encoded).parsePrivateKey().toASN1Primitive().encoded
 
         // Phone ECDSA keys
         val phoneEcdsaKeys: KeyPair = generator.generateKeyPair()
         // the private key we get is actually the public key (65B) followed by the private key (32B)
         val phoneEcdsaPrivateBytes = ecdsaGetPublicBytes(phoneEcdsaKeys.public as ECPublicKey) + (phoneEcdsaKeys.private as ECPrivateKey).d.toByteArray()
+        val phoneEcdsaPublicBytes = ecdsaGetPublicBytes(phoneEcdsaKeys.public as ECPublicKey)
 
         // Phone RSA keys
         val phoneRsaKeys = rsaGen.generateKeyPair()
         val privBytes = phoneRsaKeys.private.encoded
-        val pkInfo = PrivateKeyInfo.getInstance(privBytes)
-        val encodable = pkInfo.parsePrivateKey()
-        val primitive = encodable.toASN1Primitive()
-        val phoneRsaPrivateBytes = primitive.getEncoded()
+        val phoneRsaPrivateBytes = PrivateKeyInfo.getInstance(privBytes).parsePrivateKey().toASN1Primitive().encoded
+        val phoneRsaPublicBytes = SubjectPublicKeyInfo.getInstance(phoneRsaKeys.public.encoded).parsePublicKey().encoded
 
-        Log.d("SimCrypto", "Ecdsa public: ${watchEcdsaPublicBytes.hex()}")
-        Log.d("SimCrypto", "Ecdsa private: ${phoneEcdsaPrivateBytes.hex()}")
-        Log.d("SimCrypto", "RSA public: ${watchRsaPublicBytes.hex()}")
-        Log.d("SimCrypto", "RSA private: ${phoneRsaPrivateBytes.hex()}")
-
-        val keys = MPKeys(watchEcdsaPublicBytes, watchRsaPublicBytes, phoneEcdsaPrivateBytes, phoneRsaPrivateBytes)
+        val keys = MPKeys(watchEcdsaPublicBytes, phoneRsaPrivateBytes, phoneEcdsaPrivateBytes, watchRsaPublicBytes)
+        phoneKeys = keys
         LongTermStorage.storeMPKeysForClass("A", keys)
         KeyStoreHelper.enrollAovercEcdsaPrivateKey(keys.friendlyEcdsaPrivateKey())
         KeyStoreHelper.enrollAovercRsaPrivateKey(keys.friendlyRsaPrivateKey())
+
+        HealthSync.reloadKeys()
+
+        watchKeys = MPKeys(phoneEcdsaPublicBytes, watchRsaPrivateBytes, watchEcdsaPrivateBytes, phoneRsaPublicBytes)
     }
 
     private fun ecdsaGetPublicBytes(ecPublicKey: ECPublicKey): ByteArray {
