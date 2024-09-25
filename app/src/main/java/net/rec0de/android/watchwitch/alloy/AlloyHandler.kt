@@ -17,7 +17,7 @@ import kotlin.math.roundToInt
 
 open class AlloyHandler(private val channel: String, var output: DataOutputStream?) {
 
-    private var fragmentBuffer: ByteArray = byteArrayOf()
+    private var fragmentBuffer: MutableMap<Int,ByteArray> = mutableMapOf()
     private val parser = BPListParser()
     private var handshakeSent = false
 
@@ -140,9 +140,12 @@ open class AlloyHandler(private val channel: String, var output: DataOutputStrea
 
     private fun handleFragment(msg: FragmentedMessage) {
         when (msg.fragmentIndex) {
-            0 -> fragmentBuffer = msg.payload // first fragment
-            msg.fragmentCount - 1 -> receive(fragmentBuffer + msg.payload) // last fragment
-            else -> fragmentBuffer += msg.payload // middle fragments
+            0 -> fragmentBuffer[msg.sequence] = msg.payload // first fragment
+            msg.fragmentCount - 1 -> {
+                receive(fragmentBuffer[msg.sequence]!! + msg.payload) // last fragment
+                fragmentBuffer.remove(msg.sequence)
+            }
+            else -> fragmentBuffer[msg.sequence] = fragmentBuffer[msg.sequence]!! + msg.payload // middle fragments
         }
     }
 
