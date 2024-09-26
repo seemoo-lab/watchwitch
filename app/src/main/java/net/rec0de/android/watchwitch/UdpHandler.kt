@@ -25,6 +25,7 @@ object IKEDispatcher {
             ikeSessions[hexspi]!!.ingestPacket(payload)
         // fresh session
         else if(Long.fromBytes(responderSPI, ByteOrder.BIG) == 0L) {
+            main.hideWatchSimButton()
             val session = IKEv2Session(socket, packet.address, packet.port, initiatorSPI)
             session.ingestPacket(payload)
             ikeSessions[hexspi] = session

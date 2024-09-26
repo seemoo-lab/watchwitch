@@ -210,6 +210,11 @@ class MainActivity : AppCompatActivity() {
         statusLabel.text = getString(R.string.status_listening, localIP, port)
     }
 
+    fun hideWatchSimButton() {
+        val buttonContainer: LinearLayout = findViewById(R.id.layoutSimulateButton)
+        buttonContainer.visibility = GONE
+    }
+
     fun statusIdle() {
         statusLabel.text = getString(R.string.status_not_running)
         NWSCManager.reset()
