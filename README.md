@@ -12,7 +12,7 @@ WatchWitch is an Android app that allows you to communicate with your Apple Watc
 * View a list of open apps, alarms set, and the ringer state of the watch (only available after sent by the watch).
 * Receive and download screenshots taken on the watch and communication transcripts in the *Files* view.
 
-We showcase some of these features in a short [demo video](https://streamable.com/k7878q). Further tools for working with the Apple Watch protocol stack can be found in [watchwitch-tools](https://github.com/seemoo-lab/watchwitch-tools).
+We showcase some of these features in a short [demo video](https://www.youtube.com/watch?v=dHz8NHMhtLY). Further tools for working with the Apple Watch protocol stack can be found in [watchwitch-tools](https://github.com/seemoo-lab/watchwitch-tools).
 
 ## Screenshots
 
@@ -21,6 +21,30 @@ We showcase some of these features in a short [demo video](https://streamable.co
 ## Compatibility
 
 WatchWitch is built and tested with an iPhone 8 running iOS 14.8 and an Apple Watch Series 5 running watchOS 7.3.3. You probably have some latitude when it comes to versions and device models. As of watchOS 10, however, the watch only supports _implicit initialization vector_ modes for ESP encryption. These modes are not (yet?) supported on Android/Linux which means we cannot establish the required IPSec tunnel. The Android app is built for API level 33, so any recent Android phone should work.
+
+## Building
+
+The easiest way to get started is to import WatchWitch using [Android Studio](https://developer.android.com/studio) and let it work its magic.
+
+Alternatively, build from scratch using gradle (shown here for Ubuntu):
+
+```bash
+sudo apt install openjdk-17-jdk android-sdk sdkmanager
+export ANDROID_HOME=/home/[username]/.android # set Android SDK location
+sdkmanager --licenses # accept Android SDK licenses
+git clone https://github.com/seemoo-lab/watchwitch.git
+cd watchwitch
+./gradlew build
+cd app/build/outputs/apk/debug # generated APK location
+```
+
+## Testing without an Apple Watch
+
+The full setup required to connect to a real Apple Watch is rather complicated. If you'd just like to see how it works, you can install just the Android app (or use Android Studio's emulator). When starting the app, you'll be prompted to simulate an Apple Watch.  
+
+If you do so, WatchWitch will simulate a watch on the TCP level, sending all the required messages to itself. The simulated watch periodically synchronizes Health data, makes network requests via Shoes, and shares the current device state. A few seconds after starting the simulation, you will see the corresponding data starting to appear in the respective views of the WatchWitch app.
+
+Note that this is not just a UI mockup: All the required traffic, starting from the TCP layer, is actually being sent, received, and parsed in the background — just like with a real watch in the loop.
 
 ## Usage
 
@@ -42,11 +66,13 @@ For a successful connection, you should see several *SetupChannel* messages in t
 
 **Note:** The watch is a moody creature. Taking over the connection from an iPhone stretches the intended use case of the involved protocols a fair bit, and can get the watch into weird, half-functional states. Especially when re-connecting to the iPhone after being connected to the Android phone, you can expect various features to not work as intended. For best results, reboot the watch, restart the WatchWitch app, and try again.
 
-## Health Sync
+## Notes
+
+### Health Sync
 
 The watch only synchronizes health data every now and then. To manually trigger it a sync, you can start a short workout, log some symptom in the cycle tracking app, or take an ECG reading. Once WatchWitch has received some health messages, you can also manually unlock the ECG and cycle tracking app, if you haven't done so before.
 
-## Notification Forwarding
+### Notification Forwarding
 
 WatchWitch can forward instant messages from your Android phone to your watch. Currently forwarding is only supported for Signal messages. To use this, you'll have to grant the app permission to access your Android notifications. You'll be prompted to do so when you open the *Chat* view. 
 
