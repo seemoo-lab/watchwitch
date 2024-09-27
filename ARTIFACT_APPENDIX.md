@@ -33,7 +33,7 @@ An APK build from scratch on the Standard VM, following the commands below, take
 
 ### Accessibility
 
-The git repository for the Android app is available at [github.com/seemoo-lab/watchwitch](https://github.com/seemoo-lab/watchwitch). Other components are linked from the readme but not required for evaluation using a simulated Apple Watch.
+The git repository for the Android app is available at [github.com/seemoo-lab/watchwitch/tree/pets](https://github.com/seemoo-lab/watchwitch/tree/pets). The tag submitted for evaluation is `v1.2.0`. Other components are linked from the readme but not required for evaluation using a simulated Apple Watch.
 
 ### Set up the environment
 
