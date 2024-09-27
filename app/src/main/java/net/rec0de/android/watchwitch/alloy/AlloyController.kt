@@ -38,6 +38,7 @@ object AlloyController {
 
     val nextSenderSequence: AtomicInteger = AtomicInteger(0)
 
+    // add custom alloy services here
     val services: Map<String, AlloyService> = listOf(PreferencesSync, HealthSync, FindMyLocalDevice, BulletinDistributorService, Screenshotter, CoreDuet).flatMap { service -> service.handlesTopics.map { Pair(it, service) } }.toMap()
 
     fun usingOutput(out: DataOutputStream): AlloyController {
