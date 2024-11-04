@@ -7,10 +7,10 @@ Artifacts HotCRP Id: #13
 Requested Badge: **Available**, **Functional**
 
 ## Description
-The WatchWitch Android app is our open reimplementation of the Apple Watch protocol stack that allows Android devices to interoperate with the Apple Watch and implements a privacy-preserving, user-first approach for using modern smartwatches.
+The WatchWitch Android app is our open reimplementation of the Apple Watch protocol stack that allows Android devices to interoperate with the Apple Watch and implements a privacy-preserving, user-first approach to using modern smartwatches.
 
 ### Security/Privacy Issues and Ethical Concerns (All badges)
-Running WatchWitch in a complete setup requires rooted/jailbroken devices, which disables some security mechanisms of the devices. Using WatchWitch with a real Apple Watch will also access private key material used to communicate with the watch and cause the watch to synchronize private health information with the app.
+Running WatchWitch in a complete setup requires rooted/jailbroken devices, which disables some of the device's security mechanisms. Using WatchWitch with a real Apple Watch will also access private key material used to communicate with the watch and cause the watch to synchronize private health information with the app.
 
 Running the Android WatchWitch in a simulated setup without a real Apple Watch does not require root access and does not pose any security or ethical concerns.
 
@@ -19,7 +19,7 @@ Running the Android WatchWitch in a simulated setup without a real Apple Watch d
 ### Hardware Requirements
 
 A full setup would require an Apple Watch running watchOS 8 or earlier, a jailbroken iPhone running iOS with a root-ful jailbreak, and a rooted Android phone running Android 13 or later.  
-For ease of review, we include an Apple Watch simulator in our Android App. If using the simulator, only an Android phone or emulator for Android 13 or later is required. Root access is not necessary in this case.
+For ease of review, we include an Apple Watch simulator in our Android app. If using the simulator, only an Android phone or emulator for Android 13 or later is required. Root access is not necessary in this case.
 
 ### Software Requirements
 
@@ -27,7 +27,7 @@ Build instructions are based on the Standard VM running Ubuntu 22.04. Using an e
 
 ### Estimated Time and Storage Consumption
 
-An APK build from scratch on the Standard VM, following the commands below, takes less than 10 minutes and requires about ~4GB of storage for all installed build tools / dependencies. Installing Android Studio and the Android emulator might require more time and storage (~10GB).
+An APK build from scratch on the Standard VM, following the commands below, takes less than 10 minutes and requires about ~4GB of storage for all installed build tools/dependencies. Installing Android Studio and the Android emulator might require more time and storage (~10GB).
 
 ## Environment 
 
@@ -58,13 +58,13 @@ cd /usr/local/android-studio/
 bin/studio.sh
 ```
 
-This should launch the Android Studio install wizard. Complete the wizard with default settings. Once completed, choose "open project" and select the dowloaded copy of the watchwitch repository. Wait for the gradle sync to finish and launch the app on a virtual Android device from the top right corner of the window.  
+This should launch the Android Studio install wizard. Complete the wizard with default settings. Once completed, choose "open project" and select the downloaded copy of the watchwitch repository. Wait for the gradle sync to finish and launch the app on a virtual Android device from the top right corner of the window.  
 
-*Note that the virtual device will fail to start if Android Studio itself was installed in a virtual machine. If you'd like to run the build in an untrusted VM, follow the above plain build instructions and copy the `app-debug.apk` file to your host machine. Install Android Studio on the host, open the device manager from the right sidebar and launch the virtual device. Once the virtual device is booted, you can drag-and-drop the APK file into the virtual device to install it.*
+*Note that the virtual device will fail to start if Android Studio itself is installed in a virtual machine. If you'd like to run the build in an untrusted VM, follow the above plain build instructions and copy the `app-debug.apk` file to your host machine. Install Android Studio on the host, open the device manager from the right sidebar, and launch the virtual device. Once the virtual device is booted, you can drag and drop the APK file into the virtual device to install it.*
 
 ### Testing the Environment
 
-Gradle performs large parts of the dependency and build tool installation and testing automatically. To veryify your environment is set up correctly, start a gradle build using the provided wrapper:
+Gradle performs large parts of the dependency and build tool installation and testing automatically. To verify your environment is set up correctly, start a gradle build using the provided wrapper:
 
 ```bash
 cd watchwitch
@@ -92,23 +92,27 @@ We implement a fine-grained firewall building on top of our reimplementation of 
 
 *should take ~3 minutes and no significant disk space*
 
-Start the watchwitch app on your physical or emulated Android device. Tap the 'simulate watch' button at the bottom of the screen. You should observe some debug output being printed to the screen. Wait for ~10 seconds for the setup to complete. You can then view the watch state, synchronized health data, and outgoing network connections from the watch by tapping the 'watch', 'health', and 'firewall' buttons, respectively.
+Start the watchwitch app on your physical or emulated Android device. Tap the 'simulate watch' button at the bottom of the screen (Screenshot A). You should observe some debug output being printed to the screen (Screenshot B). Wait for ~10 seconds for the setup to complete. You can then view the watch state, synchronized health data, and outgoing network connections from the watch by tapping the 'watch,' 'health,' and 'firewall' buttons, respectively.
 
-In the watch state view, you should see some alarms being set as well as a list of apps running on the watch. This list will change every 10 seconds as a new state update is received.
+In the watch state view, you should see some alarms being set, as well as a list of apps running on the watch (Screenshot C). This list will change every 10 seconds as a new state update is received.
 
-In the health view, you should see heart rate and step count samples accumulating. New samples should arrive every ~45 seconds, but will only be shown when you exit and re-enter the view. 
+In the health view, you should see heart rate and step count samples accumulating (Screenshot D). New samples should arrive every ~45 seconds but will only be shown when you exit and re-enter the view. 
 
 In the firewall view, you should see network requests to various example domains from different processes, with some data being transferred.
 
-This shows support for core smartwatch features as discussed in Section 5 of our paper.
+This shows support for core smartwatch features, as discussed in Section 5 of our paper.
+
+![Screenshots of the WatchWitch app](img/ex1-s.png)
 
 #### Experiment 2: User-controlled Firewall
 
 *should take ~3 minutes and no significant disk space*
 
-Start the app as before and enable the watch simulation. Tap on the 'Firewall' button on the main screen, then wait for ~10 seconds and tap 'refresh'. You should see some requests from different processes to various example domains showing up with non-zero amounts of data transferred. Pick some of the example domains and disable the 'allow?' switch. Continue refreshing the view occasionally (every ~10-30 seconds). You should be able to observe the packet counter (left) for the disabled hosts to continue increasing as the watch attempts to make connections, but the amount of data transferred should stay the same, as new connections are now blocked. For allowed hosts, data should continue to be transferred.
+Start the app as before and enable the watch simulation (Screenshots A and B). Tap on the 'Firewall' button on the main screen, then wait for ~10 seconds and tap 'refresh'. You should see some requests from different processes to various example domains showing up with non-zero amounts of data transferred (Screenshot E). Pick some of the example domains and disable the 'allow?' switch. Continue refreshing the view occasionally (every ~10-30 seconds). You should be able to observe the packet counter (left) for the disabled hosts to continue increasing as the watch attempts to make connections, but the amount of data transferred should stay the same as new connections are now blocked. For allowed hosts, data should continue to be transferred (Screenshot F).
 
 This shows that we can make fine-grained decisions on which connections our watch is allowed to establish and that we can keep certain processes (such as the simulated `com.watchwitch.spyware`) completely offline (see Section 5.3.2 in the paper).
+
+![Screenshots of the WatchWitch app](img/ex2-s.png)
 
 ## Limitations
 
