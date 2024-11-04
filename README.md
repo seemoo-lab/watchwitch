@@ -24,7 +24,7 @@ WatchWitch is built and tested with an iPhone 8 running iOS 14.8 and an Apple Wa
 
 ## Building
 
-The easiest way to get started is to import WatchWitch using [Android Studio](https://developer.android.com/studio) and let it work its magic.
+The easiest way to get started is to import WatchWitch using [Android Studio](https://developer.android.com/studio). Once imported, build an APK using the `Build > Make Project` option. The generated APK is located in `app/build/outputs/apk/debug` and can be installed on an Android device using the `adb install app-debug.apk` command. We use Android Studio Ladybug (2024.2.1) — build instructions for other versions may vary slightly.
 
 Alternatively, build from scratch using gradle (shown here for Ubuntu):
 
