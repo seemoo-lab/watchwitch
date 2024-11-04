@@ -102,7 +102,7 @@ In the firewall view, you should see network requests to various example domains
 
 This shows support for core smartwatch features, as discussed in Section 5 of our paper.
 
-![Screenshots of the WatchWitch app](img/ex1-s.png)
+![Screenshots of the WatchWitch app](img/ex-1-s.png)
 
 #### Experiment 2: User-controlled Firewall
 
@@ -112,7 +112,7 @@ Start the app as before and enable the watch simulation (Screenshots A and B). T
 
 This shows that we can make fine-grained decisions on which connections our watch is allowed to establish and that we can keep certain processes (such as the simulated `com.watchwitch.spyware`) completely offline (see Section 5.3.2 in the paper).
 
-![Screenshots of the WatchWitch app](img/ex2-s.png)
+![Screenshots of the WatchWitch app](img/ex-2-s.png)
 
 ## Limitations
 
