@@ -21,7 +21,7 @@ interface AlloyService {
 
     // called when a watch is connected and at least one channel is open
     // you may perform setup and send initial messages here
-    // use AlloyController.getHandlerForChannel or AlloyController.getAnyHandler to obtaina handler
+    // use AlloyController.getHandlerForChannel or AlloyController.getAnyHandler to obtain a handler
     // that lets you send messages
     fun onWatchConnect() {}
 }
