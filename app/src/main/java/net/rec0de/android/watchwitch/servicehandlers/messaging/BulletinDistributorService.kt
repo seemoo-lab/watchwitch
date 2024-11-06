@@ -164,6 +164,7 @@ object BulletinDistributorService : AlloyService {
         else {
             Intent().also { intent ->
                 intent.action = "net.rec0de.android.watchwitch.chitchat"
+                intent.setPackage("net.rec0de.android.watchwitch")
                 intent.putExtra("data", "action:${msg.name}")
                 context.sendBroadcast(intent)
             }

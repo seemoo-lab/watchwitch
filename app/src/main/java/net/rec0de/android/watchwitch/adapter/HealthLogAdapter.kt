@@ -66,7 +66,7 @@ class HealthLogAdapter(
         when(item) {
             is DatabaseWrangler.DisplaySample -> {
                 // Title & main value
-                holder.title.text = "${item.dataType}: ${roundPretty(item.value)}${item.unit}"
+                holder.title.text = "${item.dataType}: ${roundPretty(item.value)} ${item.unit}"
 
                 val ico = when {
                     item.dataType.startsWith("Menstrual") -> R.drawable.icon_health_cycletracking
@@ -134,7 +134,7 @@ class HealthLogAdapter(
                 // Title & main value
                 holder.title.text = "${item.type}, ${prettyDuration(item.duration)}"
 
-                holder.stats.text = "${item.steps} steps, ${roundPretty(item.distance)}km, ${roundPretty(item.energy)} kcal"
+                holder.stats.text = "${item.steps} steps, ${roundPretty(item.distance)} km, ${roundPretty(item.energy)} kcal"
                 holder.stats.visibility = VISIBLE
 
                 val ico = ResourcesCompat.getDrawable(holder.view.resources, R.drawable.icon_health_workout, null);
