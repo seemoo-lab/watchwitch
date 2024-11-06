@@ -156,6 +156,7 @@ object BulletinDistributorService : AlloyService {
                 // send reply to chat view
                 Intent().also { intent ->
                     intent.action = "net.rec0de.android.watchwitch.chitchat"
+                    intent.setPackage("net.rec0de.android.watchwitch")
                     intent.putExtra("data", "reply:$reply")
                     context.sendBroadcast(intent)
                 }
@@ -175,6 +176,7 @@ object BulletinDistributorService : AlloyService {
         Logger.logIDS("[bulletin] got $msg", 0)
         Intent().also { intent ->
             intent.action = "net.rec0de.android.watchwitch.chitchat"
+            intent.setPackage("net.rec0de.android.watchwitch")
             intent.putExtra("data", "lightsandsirens:${msg.didPlayLightsAndSirens}")
             context.sendBroadcast(intent)
         }
