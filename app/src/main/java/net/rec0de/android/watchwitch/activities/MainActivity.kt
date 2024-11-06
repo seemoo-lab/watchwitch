@@ -211,8 +211,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun hideWatchSimButton() {
-        val buttonContainer: LinearLayout = findViewById(R.id.layoutSimulateButton)
-        buttonContainer.visibility = GONE
+        runOnUiThread {
+            val buttonContainer: LinearLayout = findViewById(R.id.layoutSimulateButton)
+            buttonContainer.visibility = GONE
+        }
     }
 
     fun statusIdle() {
