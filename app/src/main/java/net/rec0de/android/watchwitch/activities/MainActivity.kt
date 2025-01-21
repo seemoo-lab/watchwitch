@@ -24,6 +24,7 @@ import net.rec0de.android.watchwitch.AddressAllocator
 import net.rec0de.android.watchwitch.KeyReceiver
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
+import net.rec0de.android.watchwitch.NRLPoverUDPhandler
 import net.rec0de.android.watchwitch.Poetry
 import net.rec0de.android.watchwitch.R
 import net.rec0de.android.watchwitch.RoutingManager
@@ -41,6 +42,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusLabel: TextView
     private lateinit var packetLog: TextView
     private val localIP = Utils.getLocalIP()
+    private var nrlpHandler: NRLPoverUDPhandler? = null
     private var udpHandler: UDPHandler? = null
     private var altUdpHandler: UDPHandler? = null
 
@@ -96,6 +98,8 @@ class MainActivity : AppCompatActivity() {
                 statusLabel.text = getString(R.string.status_starting)
                 udpHandler = UDPHandler(this, 5000)
                 udpHandler!!.start()
+                nrlpHandler = NRLPoverUDPhandler(this, 5757)
+                nrlpHandler!!.start()
                 //altUdpHandler = UDPHandler(this, 62743)
                 //altUdpHandler!!.start()
             } else {

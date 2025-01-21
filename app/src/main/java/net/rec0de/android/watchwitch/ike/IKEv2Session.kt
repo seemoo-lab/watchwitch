@@ -2,7 +2,6 @@ package net.rec0de.android.watchwitch.ike
 
 import net.rec0de.android.watchwitch.Logger
 import net.rec0de.android.watchwitch.LongTermStorage
-import net.rec0de.android.watchwitch.TunnelBuilder
 import net.rec0de.android.watchwitch.Utils
 import net.rec0de.android.watchwitch.bitmage.ByteOrder
 import net.rec0de.android.watchwitch.bitmage.fromBytes
@@ -20,16 +19,11 @@ import org.bouncycastle.crypto.params.X25519PublicKeyParameters
 import org.bouncycastle.crypto.params.X448KeyGenerationParameters
 import org.bouncycastle.crypto.params.X448PublicKeyParameters
 import org.bouncycastle.crypto.signers.Ed25519Signer
-import java.net.DatagramPacket
-import java.net.DatagramSocket
-import java.net.InetAddress
 import java.security.SecureRandom
 
 
 class IKEv2Session(
-    private val socket: DatagramSocket,
-    private val sourceAddress: InetAddress,
-    private val sourcePort: Int,
+    private val transport: IKETransport,
     private val initiatorSPI: ByteArray
 ) {
     private val random = SecureRandom()
@@ -97,8 +91,7 @@ class IKEv2Session(
         when(IKEDefs.exchangeType(exchange)) {
             "SA_INIT" -> {
                 val reply = replyToSAInit(isX448Session)
-                val packet = DatagramPacket(reply, reply.size, sourceAddress, sourcePort)
-                socket.send(packet)
+                transport.send(reply)
                 Logger.logIKE("snd: SA_INIT", 0)
                 Logger.logIKE(reply.hex(), 3)
 
@@ -113,8 +106,7 @@ class IKEv2Session(
                 if(!sessionKeysReady)
                     return
                 val reply = replyToAuth()
-                val packet = DatagramPacket(reply, reply.size, sourceAddress, sourcePort)
-                socket.send(packet)
+                transport.send(reply)
                 Logger.logIKE("snd: AUTH", 0)
                 Logger.logIKE(reply.hex(), 3)
             }
@@ -122,8 +114,7 @@ class IKEv2Session(
                 if(!sessionKeysReady)
                     return
                 val reply = replyToHeartbeat()
-                val packet = DatagramPacket(reply, reply.size, sourceAddress, sourcePort)
-                socket.send(packet)
+                transport.send(reply)
                 Logger.logIKE("snd: HEARTBEAT", 0)
                 Logger.logIKE(reply.hex(), 3)
             }
@@ -419,12 +410,15 @@ class IKEv2Session(
         if(!sessionKeysReady || !cryptoValues.containsKey("espSPIi") || !cryptoValues.containsKey("espSPIr"))
             return
 
-        // ip xfrm expects key and salt material in a single bytestring
-        val ki = cryptoValues["espKeyI"]!! + cryptoValues["espSaltI"]!!
-        val kr = cryptoValues["espKeyR"]!! + cryptoValues["espSaltR"]!!
-
-        val thread = TunnelBuilder(sourceAddress.hostAddress!!, cryptoValues["espSPIi"]!!, cryptoValues["espSPIr"]!!, ki, kr, dataProtectionClass == 3)
-        thread.start()
+        transport.setupTunnel(
+            cryptoValues["espSPIi"]!!,
+            cryptoValues["espSPIr"]!!,
+            cryptoValues["espKeyI"]!!,
+            cryptoValues["espSaltI"]!!,
+            cryptoValues["espKeyR"]!!,
+            cryptoValues["espSaltR"]!!,
+            dataProtectionClass == 3
+        )
     }
 
     private fun generateAuthSignature(): ByteArray {
